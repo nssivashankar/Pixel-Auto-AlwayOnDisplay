@@ -43,10 +43,12 @@ window.decorView.systemUiVisibility = 0
             })
 
             val pm = requireContext().packageManager
-            val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-val apps = pm.queryIntentActivities(mainIntent, 0)
-    .map { it.activityInfo.applicationInfo }
-    .distinctBy { it.packageName }
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+    .filter { app ->
+        val isUserApp = (app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
+        val isUpdatedSystemApp = (app.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+        isUserApp || isUpdatedSystemApp
+    }
     .sortedBy { pm.getApplicationLabel(it).toString() }
 
             screen.addPreference(MultiSelectListPreference(requireContext()).apply {
