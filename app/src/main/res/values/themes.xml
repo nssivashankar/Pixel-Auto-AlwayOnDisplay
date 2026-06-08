@@ -6,5 +6,7 @@
         <item name="colorAccent">#FFFFFF</item>
         <item name="android:windowFullscreen">false</item>
         <item name="android:fitsSystemWindows">true</item>
+        <item name="android:statusBarColor">#000000</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>
