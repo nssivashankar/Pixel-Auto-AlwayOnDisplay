@@ -33,9 +33,9 @@
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 <receiver android:name=".ChargingReceiver" android:exported="true">
     <intent-filter>
+        <action android:name="android.intent.action.ACTION_POWER_CONNECTED"/>
+        <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED"/>
         <action android:name="android.intent.action.BATTERY_CHANGED"/>
-        <action android:name="android.intent.action.POWER_CONNECTED"/>
-        <action android:name="android.intent.action.POWER_DISCONNECTED"/>
     </intent-filter>
 </receiver>
 
