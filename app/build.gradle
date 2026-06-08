@@ -34,6 +34,8 @@ kotlinOptions {
 }
 
 dependencies {
+implementation 'androidx.appcompat:appcompat:1.7.0'
+implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
