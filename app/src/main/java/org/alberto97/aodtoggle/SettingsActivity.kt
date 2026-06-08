@@ -42,7 +42,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
 
             val pm = requireContext().packageManager
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
+                .filter { (it.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0 || pm.getLaunchIntentForPackage(it.packageName) != null }
                 .sortedBy { pm.getApplicationLabel(it).toString() }
 
             screen.addPreference(MultiSelectListPreference(requireContext()).apply {
