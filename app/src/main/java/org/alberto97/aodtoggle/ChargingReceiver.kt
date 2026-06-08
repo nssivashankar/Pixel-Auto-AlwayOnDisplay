@@ -9,22 +9,18 @@ import android.widget.Toast
 
 class ChargingReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        // Show toast regardless of prefs to confirm receiver is firing
+        val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+        if (!prefs.getBoolean("charging_mode", false)) return
+
+        val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
+        val isCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
+                         status == BatteryManager.BATTERY_STATUS_FULL
+
         Toast.makeText(
             context,
-            "Battery event received! action=${intent.action}",
-            Toast.LENGTH_LONG
+            "status=$status isCharging=$isCharging",
+            Toast.LENGTH_SHORT
         ).show()
-
-        val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
-        if (!prefs.getBoolean("charging_mode", false)) {
-            Toast.makeText(context, "Charging mode is OFF in settings", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
-        val isCharging = batteryManager.isCharging
-        Toast.makeText(context, "isCharging=$isCharging", Toast.LENGTH_LONG).show()
 
         Settings.Secure.putInt(
             context.contentResolver,
