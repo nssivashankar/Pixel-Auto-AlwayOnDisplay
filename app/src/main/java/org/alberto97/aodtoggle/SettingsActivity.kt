@@ -43,7 +43,7 @@ window.decorView.systemUiVisibility = 0
             })
 
             val pm = requireContext().packageManager
-            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA or PackageManager.MATCH_UNINSTALLED_PACKAGES)
     .filter { app ->
         val isUserApp = (app.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0
         val isUpdatedSystemApp = (app.flags and android.content.pm.ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
