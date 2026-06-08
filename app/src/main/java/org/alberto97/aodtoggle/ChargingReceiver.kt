@@ -15,11 +15,10 @@ class ChargingReceiver : BroadcastReceiver() {
         val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val isCharging = batteryManager.isCharging
 
-        // Debug toast - remove later
         Toast.makeText(
             context,
-            "Charger event! isCharging=$isCharging action=${intent.action}",
-            Toast.LENGTH_LONG
+            "Charging: $isCharging",
+            Toast.LENGTH_SHORT
         ).show()
 
         Settings.Secure.putInt(
