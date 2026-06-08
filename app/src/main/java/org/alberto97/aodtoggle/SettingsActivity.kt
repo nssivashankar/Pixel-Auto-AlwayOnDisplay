@@ -41,9 +41,11 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             })
 
             val pm = requireContext().packageManager
-            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .filter { true }
-                .sortedBy { pm.getApplicationLabel(it).toString() }
+            val mainIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+val apps = pm.queryIntentActivities(mainIntent, 0)
+    .map { it.activityInfo.applicationInfo }
+    .distinctBy { it.packageName }
+    .sortedBy { pm.getApplicationLabel(it).toString() }
 
             screen.addPreference(MultiSelectListPreference(requireContext()).apply {
                 key = "watched_apps"
