@@ -18,6 +18,8 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             id = android.R.id.content
         }
         setContentView(container)
+window.statusBarColor = android.graphics.Color.BLACK
+window.decorView.systemUiVisibility = 0
         supportFragmentManager.beginTransaction()
             .replace(android.R.id.content, SettingsFragment())
             .commit()
