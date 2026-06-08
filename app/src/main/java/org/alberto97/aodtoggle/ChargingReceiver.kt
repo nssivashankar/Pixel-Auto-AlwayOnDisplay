@@ -11,16 +11,8 @@ class ChargingReceiver : BroadcastReceiver() {
         val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
         if (!prefs.getBoolean("charging_mode", false)) return
 
-        val isCharging = when (intent.action) {
-            Intent.ACTION_POWER_CONNECTED -> true
-            Intent.ACTION_POWER_DISCONNECTED -> false
-            Intent.ACTION_BATTERY_CHANGED -> {
-                val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-                status == BatteryManager.BATTERY_STATUS_CHARGING ||
-                status == BatteryManager.BATTERY_STATUS_FULL
-            }
-            else -> return
-        }
+        val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
+        val isCharging = batteryManager.isCharging
 
         Settings.Secure.putInt(
             context.contentResolver,
