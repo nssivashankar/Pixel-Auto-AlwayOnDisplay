@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.BatteryManager
 import android.provider.Settings
+import android.widget.Toast
 
 class ChargingReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -13,6 +14,13 @@ class ChargingReceiver : BroadcastReceiver() {
 
         val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val isCharging = batteryManager.isCharging
+
+        // Debug toast - remove later
+        Toast.makeText(
+            context,
+            "Charger event! isCharging=$isCharging action=${intent.action}",
+            Toast.LENGTH_LONG
+        ).show()
 
         Settings.Secure.putInt(
             context.contentResolver,
