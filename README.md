@@ -1,15 +1,6 @@
 # Pixel Auto Always on Display!!!
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png"
-     alt="Get it on F-Droid"
-     height="80"
-     align="right">](https://f-droid.org/packages/org.alberto97.aodtoggle/)
-
-[![GitHub release](https://img.shields.io/github/release/Alberto97/AlwaysOnDisplayToggle.svg?logo=github)](https://github.com/Alberto97/AlwaysOnDisplayToggle/releases/latest)
-[![F-Droid](https://img.shields.io/f-droid/v/org.alberto97.aodtoggle.svg?logo=F-Droid)](https://f-droid.org/en/packages/org.alberto97.aodtoggle/)
-[![GitHub license](https://img.shields.io/github/license/Alberto97/AlwaysOnDisplayToggle)](https://github.com/Alberto97/AlwaysOnDisplayToggle/blob/master/LICENSE)
-
-An Android quick setting that turns Always on Display on or off.
+Pixel Auto Always On Display automatically manages Always-On Display on Google Pixel devices. Enable AOD while charging, react to important notifications, and automate display behavior without manually changing system settings.
 
 ## Permissions
 
