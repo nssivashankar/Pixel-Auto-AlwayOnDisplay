@@ -1,18 +1,18 @@
-package org.alberto97.aodtoggle
+package com.nssivashankar.pixelaod
 
 import android.Manifest
-import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import android.util.Log
-import org.alberto97.aodtoggle.TileServiceExtensions.collapseQSPanel
-import org.alberto97.aodtoggle.config.AmbientDisplayConfiguration
-import org.alberto97.aodtoggle.config.Settings
-import org.alberto97.aodtoggle.permissions.GrantWriteSecureSettingsUseCase
-import org.alberto97.aodtoggle.permissions.ShizukuStatus
-import org.alberto97.aodtoggle.permissions.ShizukuUtils
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.nssivashankar.pixelaod.TileServiceExtensions.collapseQSPanel
+import com.nssivashankar.pixelaod.config.AmbientDisplayConfiguration
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
+import com.nssivashankar.pixelaod.permissions.ShizukuStatus
+import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import rikka.shizuku.Shizuku
 
 class AodTileService : TileService() {
@@ -21,21 +21,33 @@ class AodTileService : TileService() {
         super.onStartListening()
 
         val config = AmbientDisplayConfiguration()
-        if (config.isAvailable()) {
-            val enabled = isAodEnabled()
-            setTileActive(enabled)
-        } else {
+        if (!config.isAvailable()) {
             setTileUnavailable()
+            return
         }
+
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        val masterEnabled = prefs.getBoolean("master_switch", false)
+        setTileActive(masterEnabled)
     }
 
     override fun onClick() {
         super.onClick()
 
-        if (hasPermission()) {
-            toggleAod()
-        } else {
+        if (!hasPermission()) {
             handleMissingPermission()
+            return
+        }
+
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        val currentState = prefs.getBoolean("master_switch", false)
+        val newState = !currentState
+
+        prefs.edit().putBoolean("master_switch", newState).apply()
+        setTileActive(newState)
+
+        if (!newState) {
+            AodSettings.setAodEnabled(contentResolver, false)
         }
     }
 
@@ -64,7 +76,8 @@ class AodTileService : TileService() {
         val grantWriteSecureSettingsUseCase = GrantWriteSecureSettingsUseCase()
         val granted = grantWriteSecureSettingsUseCase.execute(baseContext)
         if (granted) {
-            toggleAod()
+            // Permission granted, toggle now
+            onClick()
         } else {
             showWriteSecureSettingsPermissionDialog()
         }
@@ -74,9 +87,9 @@ class AodTileService : TileService() {
         val msg = getString(
             R.string.grant_write_secure_settings,
             this.packageName,
-            Manifest.permission.WRITE_SECURE_SETTINGS
+            Manifest.permission.WRITE_SECURE_SETTINGS,
         )
-        val dialog = AlertDialog.Builder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setMessage(msg)
             .setNeutralButton(android.R.string.ok, null)
             .create()
@@ -87,7 +100,7 @@ class AodTileService : TileService() {
     private fun showMissingShizukuPermissionDialog() {
         val appName = getString(R.string.app_name)
         val msg = getString(R.string.grant_shizuku_permission, appName)
-        val dialog = AlertDialog.Builder(this)
+        val dialog = MaterialAlertDialogBuilder(this)
             .setMessage(msg)
             .setNeutralButton(android.R.string.ok, null)
             .create()
@@ -97,47 +110,20 @@ class AodTileService : TileService() {
 
     private fun hasPermission(): Boolean {
         val writeSecureSettings = checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
-        val granted = writeSecureSettings == PackageManager.PERMISSION_GRANTED
-        Log.d("package", "${Manifest.permission.WRITE_SECURE_SETTINGS} granted: $granted")
-
-        return granted
-    }
-
-    private fun toggleAod() {
-        val enabled = !isAodEnabled()
-        setAodEnabled(enabled)
-        setTileActive(enabled)
+        return writeSecureSettings == PackageManager.PERMISSION_GRANTED
     }
 
     private fun setTileUnavailable() {
         val tile = qsTile
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
             tile.subtitle = getString(R.string.unsupported_device)
-
         tile.state = Tile.STATE_UNAVAILABLE
         tile.updateTile()
     }
 
     private fun setTileActive(active: Boolean) {
-        val tile = qsTile
+        val tile = qsTile ?: return
         tile.state = if (active) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
         tile.updateTile()
-    }
-
-    private fun isAodEnabled(): Boolean {
-        val enabled = try {
-            android.provider.Settings.Secure.getInt(contentResolver, Settings.DOZE_ALWAYS_ON) == 1
-        } catch (e: Exception) {
-            false
-        }
-        Log.d("package", "AOD enabled: $enabled")
-        return enabled
-    }
-
-    private fun setAodEnabled(state: Boolean): Boolean {
-        val intState = if (state) 1 else 0
-        android.provider.Settings.Secure.putInt(contentResolver, Settings.DOZE_ALWAYS_ON, intState)
-        return isAodEnabled()
     }
 }

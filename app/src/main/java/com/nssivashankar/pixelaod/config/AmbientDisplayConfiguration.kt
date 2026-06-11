@@ -1,4 +1,4 @@
-package org.alberto97.aodtoggle.config
+package com.nssivashankar.pixelaod.config
 
 import android.annotation.SuppressLint
 import android.content.res.Resources
@@ -18,7 +18,7 @@ class AmbientDisplayConfiguration {
         val available = try {
             val res = getAndroidIdentifier("config_dozeAlwaysOnDisplayAvailable", "bool")
             Resources.getSystem().getBoolean(res)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             false
         }
         Log.d("package", "AOD available: $available")
@@ -29,7 +29,7 @@ class AmbientDisplayConfiguration {
         val component = try {
             val res = getAndroidIdentifier("config_dozeComponent", "string")
             Resources.getSystem().getString(res)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             null
         }
         val available = !TextUtils.isEmpty(component)

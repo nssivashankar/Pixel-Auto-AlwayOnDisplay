@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'org.alberto97.aodtoggle'
+    namespace 'com.nssivashankar.pixelaod'
     compileSdk 35
 
     defaultConfig {
-        applicationId "org.alberto97.aodtoggle"
+        applicationId "com.nssivashankar.pixelaod"
         minSdkVersion 26
         targetSdkVersion 35
         versionCode 4
@@ -34,7 +34,9 @@ kotlinOptions {
 }
 
 dependencies {
-implementation 'androidx.fragment:fragment-ktx:1.8.0'
+    implementation 'com.google.android.material:material:1.12.0'
+    implementation 'androidx.activity:activity-ktx:1.9.0'
+    implementation 'androidx.fragment:fragment-ktx:1.8.0'
 implementation 'androidx.appcompat:appcompat:1.7.0'
 implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation fileTree(dir: 'libs', include: ['*.jar'])

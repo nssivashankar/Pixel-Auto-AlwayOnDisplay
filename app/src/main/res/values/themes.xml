@@ -1,9 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTheme" parent="Theme.AppCompat">
-        <item name="colorPrimary">#000000</item>
-        <item name="colorPrimaryDark">#000000</item>
-        <item name="colorAccent">#FFFFFF</item>
-        <item name="android:fitsSystemWindows">true</item>
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
     </style>
 </resources>

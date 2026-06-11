@@ -1,4 +1,4 @@
-package org.alberto97.aodtoggle.permissions
+package com.nssivashankar.pixelaod.permissions
 
 import android.os.UserHandle
 

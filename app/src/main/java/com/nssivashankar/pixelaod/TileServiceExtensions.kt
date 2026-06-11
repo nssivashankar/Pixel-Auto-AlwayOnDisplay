@@ -1,4 +1,4 @@
-package org.alberto97.aodtoggle
+package com.nssivashankar.pixelaod
 
 import android.app.AlertDialog
 import android.service.quicksettings.TileService

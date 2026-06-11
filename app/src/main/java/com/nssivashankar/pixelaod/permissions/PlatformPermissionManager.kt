@@ -1,6 +1,6 @@
-package org.alberto97.aodtoggle.permissions
+package com.nssivashankar.pixelaod.permissions
 
-import android.annotation.TargetApi
+import androidx.annotation.RequiresApi
 import android.content.Context
 import android.content.pm.IPackageManager
 import android.os.Build
@@ -26,14 +26,14 @@ class PlatformPermissionManager {
         return LegacyImpl.grantRuntimePermission(packageName, permissionName, userId)
     }
 
-    @TargetApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     object Api34Impl {
         private const val PERSISTENT_DEVICE_ID_DEFAULT = "default:" + Context.DEVICE_ID_DEFAULT
 
         private val permissionManager: IPermissionManager by lazy {
             HiddenApiBypass.addHiddenApiExemptions("Landroid/permission")
             IPermissionManager.Stub.asInterface(
-                ShizukuBinderWrapper(SystemServiceHelper.getSystemService(PERMISSION_MANAGER_SERVICE))
+                ShizukuBinderWrapper(SystemServiceHelper.getSystemService(PERMISSION_MANAGER_SERVICE)),
             )
         }
 
@@ -44,10 +44,10 @@ class PlatformPermissionManager {
                     packageName,
                     permissionName,
                     PERSISTENT_DEVICE_ID_DEFAULT,
-                    userId
+                    userId,
                 )
                 return
-            } catch (e: NoSuchMethodError) {
+            } catch (_: NoSuchMethodError) {
                 // No-op
             }
 
@@ -57,29 +57,29 @@ class PlatformPermissionManager {
                     packageName,
                     permissionName,
                     Context.DEVICE_ID_DEFAULT,
-                    userId
+                    userId,
                 )
                 return
-            } catch (e2: NoSuchMethodError) {
+            } catch (_: NoSuchMethodError) {
                 // No-op
             }
 
             // Android 14 initial release
-            permissionManager.grantRuntimePermission(packageName, permissionName, userId)
+            permissionManager.grantRuntimePermission(packageName, permissionName, userId,)
         }
     }
 
-    @TargetApi(Build.VERSION_CODES.R)
+    @RequiresApi(Build.VERSION_CODES.R)
     object Api30Impl {
         private val permissionManager: IPermissionManager by lazy {
             HiddenApiBypass.addHiddenApiExemptions("Landroid/permission")
             IPermissionManager.Stub.asInterface(
-                ShizukuBinderWrapper(SystemServiceHelper.getSystemService(PERMISSION_MANAGER_SERVICE))
+                ShizukuBinderWrapper(SystemServiceHelper.getSystemService(PERMISSION_MANAGER_SERVICE)),
             )
         }
 
         fun grantRuntimePermission(packageName: String, permissionName: String, userId: Int) {
-            permissionManager.grantRuntimePermission(packageName, permissionName, userId)
+            permissionManager.grantRuntimePermission(packageName, permissionName, userId,)
         }
     }
 
