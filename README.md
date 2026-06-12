@@ -30,16 +30,18 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 ---
 
 ## 📱 Screenshots
-APP UI:
-<img width="1080" height="2400" alt="Screenshot_20260612_134933" src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" />
-<img width="1080" height="2400" alt="Screenshot_20260612_135018" src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" />
-AOD:
-<img width="1080" height="2400" alt="Screenshot_20260612_134809" src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" />
-<img width="1080" height="2400" alt="Screenshot_20260612_134907" src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" />
 
+### App UI & Configuration
+<p align="left">
+  <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" width="200" /></a>
+  <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" width="200" /></a>
+</p>
 
-
-
+### AOD in Action
+<p align="left">
+  <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" width="200" /></a>
+  <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" width="200" /></a>
+</p>
 
 ---
 
