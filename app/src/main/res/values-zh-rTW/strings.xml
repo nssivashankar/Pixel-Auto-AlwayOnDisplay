@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">切換微光螢幕</string>
+    <string name="app_name">Pixel 自動 AOD</string>
     <string name="toggle_name">微光螢幕</string>
     <string name="grant_write_secure_settings">請安裝 Shizuku 或連接您的電腦並執行下列指令：
 \nadb shell pm grant %1$s %2$s</string>

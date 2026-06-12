@@ -5,5 +5,5 @@ pluginManagement {
         mavenCentral()
     }
 }
-rootProject.name='AOD Toggle'
+rootProject.name='Pixel Auto AOD'
 include ':app'

@@ -1,1 +1,1 @@
-Toggle Always on Display from the quick settings panel
+Automate your Pixel's Always-On Display intelligently.
