@@ -10,7 +10,7 @@ Pixel Auto AOD is a lightweight utility designed specifically for Google Pixel d
 
 -   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged (100%), it turns off instantly.
 -   **🔔 Per-App Notifications**: Select specific apps (WhatsApp, Mail, etc.) to trigger AOD. When a notification arrives, AOD wakes up; when you clear it, AOD goes back to sleep.
--   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Lyft rides, or food delivery tracking (Swiggy/Zomato).
+-   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Rapido rides, or food delivery tracking (Swiggy/Zomato).
 -   **🌙 Respect System DND**: Optionally silence all AOD triggers when your phone is in Do Not Disturb mode.
 -   **⏰ Scheduled Quiet Hours**: Set a custom in-app schedule (e.g., 11 PM to 7 AM) to ensure your room stays dark while you sleep.
 -   **🛠 Quick Settings Tile**: A master toggle in your notification shade for instant control.
@@ -30,7 +30,16 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 ---
 
 ## 📱 Screenshots
-*(Screenshots coming soon!)*
+APP UI:
+<img width="1080" height="2400" alt="Screenshot_20260612_134933" src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" />
+<img width="1080" height="2400" alt="Screenshot_20260612_135018" src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" />
+AOD:
+<img width="1080" height="2400" alt="Screenshot_20260612_134809" src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" />
+<img width="1080" height="2400" alt="Screenshot_20260612_134907" src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" />
+
+
+
+
 
 ---
 
