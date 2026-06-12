@@ -1,6 +1,7 @@
 package com.nssivashankar.pixelaod
 
 import android.Manifest
+import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -26,6 +27,8 @@ import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import rikka.shizuku.Shizuku
+import java.util.Calendar
+import java.util.Locale
 
 class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
 
@@ -136,58 +139,110 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceManager.sharedPreferencesName = "aod_prefs"
             val screen = preferenceManager.createPreferenceScreen(requireContext())
+            preferenceScreen = screen
 
             val automationCategory = PreferenceCategory(requireContext()).apply {
-                title = "Automation"
+                setTitle("Automation")
             }
             screen.addPreference(automationCategory)
 
             automationCategory.addPreference(
                 SwitchPreferenceCompat(requireContext()).apply {
                     key = "charging_mode"
-                    title = "Charging Mode"
-                    summary = "Turn on AoD automatically when charger is connected"
+                    setTitle("Charging Mode")
+                    setSummary("Turn on AoD automatically when charger is connected")
                 },
             )
 
             automationCategory.addPreference(
                 SwitchPreferenceCompat(requireContext()).apply {
                     key = "live_notif_mode"
-                    title = "Live Notification Mode"
-                    summary = "Turn on AoD for live updates (Maps, Swiggy, Uber etc.)"
+                    setTitle("Live Notification Mode")
+                    setSummary("Turn on AoD for live updates (Maps, Swiggy, Uber etc.)")
                 },
             )
 
+            automationCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "dnd_mode"
+                    setTitle(R.string.dnd_mode_title)
+                    setSummary(R.string.dnd_mode_summary)
+                },
+            )
+
+            val quietHoursCategory = PreferenceCategory(requireContext()).apply {
+                setTitle(R.string.scheduled_dnd_title)
+            }
+            screen.addPreference(quietHoursCategory)
+
+            quietHoursCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "scheduled_dnd"
+                    setTitle(R.string.scheduled_dnd_title)
+                    setSummary(R.string.scheduled_dnd_summary)
+                }
+            )
+
+            val startPref = createTimePreference("scheduled_dnd_start", R.string.start_time_title, "22:00")
+            quietHoursCategory.addPreference(startPref)
+            startPref.dependency = "scheduled_dnd"
+
+            val endPref = createTimePreference("scheduled_dnd_end", R.string.end_time_title, "07:00")
+            quietHoursCategory.addPreference(endPref)
+            endPref.dependency = "scheduled_dnd"
+
             val notificationsCategory = PreferenceCategory(requireContext()).apply {
-                title = "Notifications"
+                setTitle("Notifications")
             }
             screen.addPreference(notificationsCategory)
 
             notificationsCategory.addPreference(
                 AppListPreference(requireContext(), null).apply {
                     key = "watched_apps"
-                    title = "Per-App Notifications"
-                    summary = "AoD turns on when selected apps send a notification"
+                    setTitle("Per-App Notifications")
+                    setSummary("AoD turns on when selected apps send a notification")
                 },
             )
 
             val permissionsCategory = PreferenceCategory(requireContext()).apply {
-                title = "Permissions"
+                setTitle("Permissions")
             }
             screen.addPreference(permissionsCategory)
 
             permissionsCategory.addPreference(
                 Preference(requireContext()).apply {
-                    title = "Grant Notification Access"
-                    summary = "Required for per-app and live notification features"
+                    setTitle("Grant Notification Access")
+                    setSummary("Required for per-app and live notification features")
                     setOnPreferenceClickListener {
                         startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                         true
                     }
                 },
             )
+        }
 
-            preferenceScreen = screen
+        private fun createTimePreference(key: String, titleRes: Int, default: String): Preference {
+            val prefs = requireContext().getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+            return Preference(requireContext()).apply {
+                this.key = key
+                setTitle(titleRes)
+                summary = prefs.getString(key, default)
+                
+                setOnPreferenceClickListener {
+                    val currentTime = prefs.getString(key, default) ?: default
+                    val parts = currentTime.split(":")
+                    val hour = parts[0].toInt()
+                    val minute = parts[1].toInt()
+
+                    TimePickerDialog(requireContext(), { _, h, m ->
+                        val newTime = String.format(Locale.US, "%02d:%02d", h, m)
+                        prefs.edit().putString(key, newTime).apply()
+                        summary = newTime
+                    }, hour, minute, true).show()
+                    true
+                }
+                
+            }
         }
     }
 }

@@ -4,4 +4,10 @@
     <string name="grant_write_secure_settings">Please install Shizuku or run the following command from your pc:\nadb shell pm grant %1$s %2$s</string>
     <string name="grant_shizuku_permission">Please open Shizuku and authorize the app \"%1$s\"</string>
     <string name="unsupported_device">Unsupported device</string>
+    <string name="dnd_mode_title">Respect System DND</string>
+    <string name="dnd_mode_summary">Don\'t trigger AoD when system Do Not Disturb is active</string>
+    <string name="scheduled_dnd_title">Scheduled Quiet Hours</string>
+    <string name="scheduled_dnd_summary">Disable notification triggers during specific times</string>
+    <string name="start_time_title">Start Time</string>
+    <string name="end_time_title">End Time</string>
 </resources>

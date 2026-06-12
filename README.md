@@ -1,19 +1,42 @@
-# Pixel Auto Always on Display!!!
+# ✨ Pixel Auto AOD
 
-Pixel Auto Always On Display automatically manages Always-On Display on Google Pixel devices. Enable AOD while charging, react to important notifications, and automate display behavior without manually changing system settings.
+**The missing automation for your Pixel's Always-On Display.**
 
-## Permissions
+Pixel Auto AOD is a lightweight utility designed specifically for Google Pixel devices. It intelligently manages your Always-On Display (AOD), ensuring it's only active when you actually need it—saving battery and reducing screen wear while keeping you informed.
 
-The app requires the ```WRITE_SECURE_SETTINGS``` permission to be able to toggle AoD on and off.\
-You can grant it with [Shizuku](https://shizuku.rikka.app/) or adb:
+---
 
+## 🚀 Features
+
+-   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged (100%), it turns off instantly.
+-   **🔔 Per-App Notifications**: Select specific apps (WhatsApp, Mail, etc.) to trigger AOD. When a notification arrives, AOD wakes up; when you clear it, AOD goes back to sleep.
+-   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Lyft rides, or food delivery tracking (Swiggy/Zomato).
+-   **🌙 Respect System DND**: Optionally silence all AOD triggers when your phone is in Do Not Disturb mode.
+-   **⏰ Scheduled Quiet Hours**: Set a custom in-app schedule (e.g., 11 PM to 7 AM) to ensure your room stays dark while you sleep.
+-   **🛠 Quick Settings Tile**: A master toggle in your notification shade for instant control.
+
+---
+
+## 🔐 Permissions & Setup
+
+To toggle system settings without Root, this app requires the `WRITE_SECURE_SETTINGS` permission. You can grant this easily via **[Shizuku](https://shizuku.rikka.app/)** (recommended) or ADB.
+
+### Grant via ADB
+Connect your phone to a PC and run:
 ```bash
-adb shell pm grant org.alberto97.aodtoggle android.permission.WRITE_SECURE_SETTINGS
-```
-or in case of multiple users (`<userId>` is listed as first number in output of `adb shell pm list users`):
-```bash
-adb shell pm grant --user <userId> org.alberto97.aodtoggle android.permission.WRITE_SECURE_SETTINGS
+adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SETTINGS
 ```
 
-Please note that this app has only been tested on Google Pixels.\
-Different manufacturers may have implemented AoD their own way and therefore the app might not work.
+---
+
+## 📱 Screenshots
+*(Screenshots coming soon!)*
+
+---
+
+## ⚠️ Compatibility
+-   **Exclusively for Google Pixel**: Tested on Pixel series.
+-   **Android 15/16/17 Support**: Optimized for the latest Android versions, including specialized fixes for AOD refresh issues on newer betas.
+
+---
+*Developed with ❤️ for the Pixel community.*

@@ -17,11 +17,12 @@ import rikka.shizuku.Shizuku
 
 class AodTileService : TileService() {
 
+    private val isAodAvailable by lazy { AmbientDisplayConfiguration().isAvailable() }
+
     override fun onStartListening() {
         super.onStartListening()
 
-        val config = AmbientDisplayConfiguration()
-        if (!config.isAvailable()) {
+        if (!isAodAvailable) {
             setTileUnavailable()
             return
         }
