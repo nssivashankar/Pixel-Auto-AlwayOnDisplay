@@ -5,7 +5,6 @@ import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
@@ -13,6 +12,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.core.content.edit
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -41,10 +41,10 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         setSupportActionBar(toolbar)
 
         val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
-        val prefs = getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
         masterSwitch.isChecked = prefs.getBoolean("master_switch", false)
         masterSwitch.setOnCheckedChangeListener { _, isChecked ->
-            prefs.edit().putBoolean("master_switch", isChecked).apply()
+            prefs.edit { putBoolean("master_switch", isChecked) }
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
@@ -234,11 +234,17 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                     val hour = parts[0].toInt()
                     val minute = parts[1].toInt()
 
-                    TimePickerDialog(requireContext(), { _, h, m ->
-                        val newTime = String.format(Locale.US, "%02d:%02d", h, m)
-                        prefs.edit().putString(key, newTime).apply()
-                        summary = newTime
-                    }, hour, minute, true).show()
+                    TimePickerDialog(
+                        requireContext(),
+                        { _, h, m ->
+                            val newTime = String.format(Locale.US, "%02d:%02d", h, m)
+                            prefs.edit { putString(key, newTime) }
+                            summary = newTime
+                        },
+                        hour,
+                        minute,
+                        true
+                    ).show()
                     true
                 }
                 

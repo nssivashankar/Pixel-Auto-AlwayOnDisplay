@@ -70,7 +70,8 @@ class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSelectLis
             .setTitle(title)
             .setAdapter(adapter, null)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newValues = apps.filterIndexed { index, _ -> checkedItems[index] }
+                val newValues = apps.asSequence()
+                    .filterIndexed { index, _ -> checkedItems[index] }
                     .map { it.packageName }
                     .toSet()
                 if (callChangeListener(newValues)) {

@@ -139,33 +139,42 @@ class NotificationAodService : NotificationListenerService() {
     }
 
     private fun shouldTrigger(sbn: StatusBarNotification, watchedApps: Set<String>, liveMode: Boolean): Boolean {
-        // Ignore system notifications for "Live" mode unless specifically watched
-        val isSystem = sbn.packageName == "android" || sbn.packageName == "com.android.systemui"
+        val packageName = sbn.packageName
         
+        // 1. If explicitly watched, always trigger
+        if (packageName in watchedApps) return true
+
+        // 2. Ignore system UI and android system core to avoid noise
+        val isSystem = packageName == "android" || packageName == "com.android.systemui"
+        if (isSystem) return false
+
+        // 3. Ignore silent/low importance notifications
         val ranking = Ranking()
-        val isSilent = if (currentRanking.getRanking(sbn.key, ranking)) {
-            ranking.importance < NotificationManager.IMPORTANCE_DEFAULT
+        val importance = if (currentRanking.getRanking(sbn.key, ranking)) {
+            ranking.importance
         } else {
-            false
+            NotificationManager.IMPORTANCE_DEFAULT
+        }
+        
+        // Filter out anything below Default importance (Silent/Min)
+        if (importance < NotificationManager.IMPORTANCE_DEFAULT) return false
+
+        // 4. "Live Updates" logic: trigger AOD for any ongoing high-priority notification
+        if (liveMode && sbn.isOngoing) {
+            val category = sbn.notification.category
+            
+            // Exclude media players from auto-triggering AOD (unless explicitly watched)
+            val isMedia = category == Notification.CATEGORY_TRANSPORT || 
+                         sbn.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
+                         sbn.notification.extras.getString(Notification.EXTRA_TEMPLATE)?.contains("MediaStyle") == true
+            
+            if (!isMedia) {
+                Log.d("AodService", "Live update detected from $packageName (category: $category)")
+                return true
+            }
         }
 
-        if (isSilent) return false
-
-        val isWatchedApp = sbn.packageName in watchedApps
-        
-        // Live mode: ongoing notifications from non-system apps
-        val category = sbn.notification.category
-        val isLiveNotif = liveMode && sbn.isOngoing && !isSystem && (
-            category == "navigation" ||
-            category == Notification.CATEGORY_SERVICE ||
-            category == Notification.CATEGORY_TRANSPORT ||
-            category == Notification.CATEGORY_PROGRESS ||
-            sbn.packageName.contains("uber", ignoreCase = true) ||
-            sbn.packageName.contains("grab", ignoreCase = true) ||
-            sbn.packageName.contains("lyft", ignoreCase = true)
-        )
-
-        return isWatchedApp || isLiveNotif
+        return false
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
