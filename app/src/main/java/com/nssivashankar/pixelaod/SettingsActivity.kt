@@ -2,33 +2,26 @@ package com.nssivashankar.pixelaod
 
 import android.Manifest
 import android.app.TimePickerDialog
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.core.content.edit
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import com.google.android.material.materialswitch.MaterialSwitch
-import androidx.preference.MultiSelectListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
 import androidx.preference.SwitchPreferenceCompat
-import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import rikka.shizuku.Shizuku
-import java.util.Calendar
 import java.util.Locale
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
 class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
 
@@ -155,23 +148,26 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             )
 
             automationCategory.addPreference(
-                SwitchPreferenceCompat(requireContext()).apply {
-                    key = "live_notif_mode"
-                    setTitle("Live Notification Mode")
-                    setSummary("Turn on AoD for live updates (Maps, Swiggy, Uber etc.)")
+                AppListPreference(requireContext(), null).apply {
+                    key = "watched_apps"
+                    title = "Per-App Notifications"
+                    summary = "Always trigger AoD for these apps"
+                    dialogTitle = "Select apps to watch"
                 },
             )
 
             automationCategory.addPreference(
-                SwitchPreferenceCompat(requireContext()).apply {
-                    key = "dnd_mode"
-                    setTitle(R.string.dnd_mode_title)
-                    setSummary(R.string.dnd_mode_summary)
+                SwitchAppListPreference(requireContext(), null).apply {
+                    key = "live_notif_blocked_apps"
+                    setTitle("Live Notification Mode \u203A")
+                    setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
+                    setSwitchKey("live_notif_mode")
+                    dialogTitle = "Block list for live notifications"
                 },
             )
 
             val quietHoursCategory = PreferenceCategory(requireContext()).apply {
-                setTitle(R.string.scheduled_dnd_title)
+                title = getString(R.string.scheduled_dnd_title)
             }
             screen.addPreference(quietHoursCategory)
 
@@ -191,41 +187,74 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             quietHoursCategory.addPreference(endPref)
             endPref.dependency = "scheduled_dnd"
 
-            val notificationsCategory = PreferenceCategory(requireContext()).apply {
-                setTitle("Notifications")
+            val systemCategory = PreferenceCategory(requireContext()).apply {
+                title = "System Integration"
             }
-            screen.addPreference(notificationsCategory)
+            screen.addPreference(systemCategory)
 
-            notificationsCategory.addPreference(
-                AppListPreference(requireContext(), null).apply {
-                    key = "watched_apps"
-                    setTitle("Per-App Notifications")
-                    setSummary("AoD turns on when selected apps send a notification")
+            systemCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "dnd_mode"
+                    setTitle(R.string.dnd_mode_title)
+                    setSummary(R.string.dnd_mode_summary)
                 },
             )
 
             val permissionsCategory = PreferenceCategory(requireContext()).apply {
-                setTitle("Permissions")
+                key = "permissions_category"
+                title = "Permissions"
             }
             screen.addPreference(permissionsCategory)
 
-            permissionsCategory.addPreference(
-                Preference(requireContext()).apply {
-                    setTitle("Grant Notification Access")
-                    setSummary("Required for per-app and live notification features")
-                    setOnPreferenceClickListener {
-                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                        true
-                    }
-                },
-            )
+            val writeSecureSettingsPref = Preference(requireContext()).apply {
+                key = "write_secure_pref"
+                title = "Write Secure Settings"
+                setOnPreferenceClickListener {
+                    (activity as? SettingsActivity)?.handleMissingPermission()
+                    true
+                }
+            }
+            permissionsCategory.addPreference(writeSecureSettingsPref)
+
+            val notificationAccessPref = Preference(requireContext()).apply {
+                key = "notify_access_pref"
+                title = "Notification Access"
+                setOnPreferenceClickListener {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                    true
+                }
+            }
+            permissionsCategory.addPreference(notificationAccessPref)
+
+            updatePermissionSummaries()
+        }
+
+        private fun updatePermissionSummaries() {
+            val writeSecure = findPreference<Preference>("write_secure_pref")
+            val notify = findPreference<Preference>("notify_access_pref")
+
+            if (writeSecure != null) {
+                val hasWriteSecure = requireContext().checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+                writeSecure.summary = if (hasWriteSecure) "Granted" else "Missing - Tap to grant via Shizuku"
+            }
+
+            if (notify != null) {
+                val enabledListeners = Settings.Secure.getString(requireContext().contentResolver, "enabled_notification_listeners")
+                val hasNotifyAccess = enabledListeners?.contains(requireContext().packageName) == true
+                notify.summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection"
+            }
+        }
+
+        override fun onResume() {
+            super.onResume()
+            updatePermissionSummaries()
         }
 
         private fun createTimePreference(key: String, titleRes: Int, default: String): Preference {
-            val prefs = requireContext().getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+            val prefs = requireContext().getSharedPreferences("aod_prefs", MODE_PRIVATE)
             return Preference(requireContext()).apply {
                 this.key = key
-                setTitle(titleRes)
+                title = getString(titleRes)
                 summary = prefs.getString(key, default)
                 
                 setOnPreferenceClickListener {
@@ -243,11 +272,10 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                         },
                         hour,
                         minute,
-                        true
+                        true,
                     ).show()
                     true
                 }
-                
             }
         }
     }

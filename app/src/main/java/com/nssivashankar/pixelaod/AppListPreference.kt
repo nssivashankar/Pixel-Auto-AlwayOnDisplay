@@ -8,22 +8,25 @@ import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ArrayAdapter
-import android.widget.CheckedTextView
 import android.widget.ImageView
-import androidx.appcompat.app.AlertDialog
+import android.widget.TextView
+import androidx.core.widget.addTextChangedListener
 import androidx.preference.MultiSelectListPreference
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.checkbox.MaterialCheckBox
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import java.util.concurrent.ConcurrentHashMap
 
-class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSelectListPreference(context, attrs) {
+open class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSelectListPreference(context, attrs) {
 
-    private val iconCache = ConcurrentHashMap<String, Drawable>()
+    protected val iconCache = ConcurrentHashMap<String, Drawable>()
 
     override fun onClick() {
         val pm = context.packageManager
         
-        // Show loading dialog or just load (usually fast enough for 100-200 apps)
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+        val allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
             .asSequence()
             .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
             .map { appInfo ->
@@ -33,62 +36,101 @@ class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSelectLis
                     appInfo = appInfo
                 )
             }
-            .sortedBy { it.label.lowercase() }
+            .sortedWith(compareByDescending<AppItem> { values.contains(it.packageName) }
+                .thenBy { it.label.lowercase() })
             .toList()
 
-        val checkedItems = BooleanArray(apps.size) { values.contains(apps[it].packageName) }
+        val selectedPackages = values.toMutableSet()
+        var filteredApps = allApps
 
-        val adapter = object : ArrayAdapter<AppItem>(context, R.layout.app_list_item, apps) {
-            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
-                val view = convertView ?: LayoutInflater.from(context).inflate(R.layout.app_list_item, parent, false)
-                val item = apps[position]
-                
-                val iconView = view.findViewById<ImageView>(R.id.app_icon)
-                val textView = view.findViewById<CheckedTextView>(R.id.app_name)
-                
-                textView.text = item.label
-                textView.isChecked = checkedItems[position]
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_app_list, null)
+        val recyclerView = dialogView.findViewById<RecyclerView>(R.id.recycler_view)
+        val searchEdit = dialogView.findViewById<TextInputEditText>(R.id.search_edit_text)
 
-                // Load icon from cache or PM
-                val cachedIcon = iconCache[item.packageName]
-                if (cachedIcon != null) {
-                    iconView.setImageDrawable(cachedIcon)
-                } else {
-                    iconView.setImageResource(android.R.color.transparent)
-                    // In a real optimized app, we'd do this in background
-                    // For now, let's at least cache it once loaded
-                    val icon = pm.getApplicationIcon(item.appInfo)
-                    iconCache[item.packageName] = icon
-                    iconView.setImageDrawable(icon)
-                }
-                
-                return view
+        val adapter = AppAdapter(filteredApps, selectedPackages, pm)
+        recyclerView.layoutManager = LinearLayoutManager(context)
+        recyclerView.adapter = adapter
+
+        searchEdit.addTextChangedListener { text ->
+            val query = text?.toString()?.lowercase() ?: ""
+            filteredApps = if (query.isEmpty()) {
+                allApps
+            } else {
+                allApps.filter { it.label.lowercase().contains(query) || it.packageName.lowercase().contains(query) }
             }
+            adapter.updateApps(filteredApps)
         }
 
-        AlertDialog.Builder(context)
-            .setTitle(title)
-            .setAdapter(adapter, null)
+        MaterialAlertDialogBuilder(context)
+            .setTitle(dialogTitle ?: title)
+            .setView(dialogView)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                val newValues = apps.asSequence()
-                    .filterIndexed { index, _ -> checkedItems[index] }
-                    .map { it.packageName }
-                    .toSet()
-                if (callChangeListener(newValues)) {
-                    values = newValues
+                if (callChangeListener(selectedPackages)) {
+                    values = selectedPackages
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
-            .apply {
-                listView.setOnItemClickListener { _, _, position, _ ->
-                    checkedItems[position] = !checkedItems[position]
-                    adapter.notifyDataSetChanged()
-                }
-            }
     }
 
-    private data class AppItem(
+    private inner class AppAdapter(
+        private var apps: List<AppItem>,
+        private val selected: MutableSet<String>,
+        private val pm: PackageManager
+    ) : RecyclerView.Adapter<AppAdapter.ViewHolder>() {
+
+        fun updateApps(newApps: List<AppItem>) {
+            apps = newApps
+            notifyDataSetChanged()
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.app_list_item, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val item = apps[position]
+            holder.appName.text = item.label
+            holder.checkBox.isChecked = selected.contains(item.packageName)
+
+            val cachedIcon = iconCache[item.packageName]
+            if (cachedIcon != null) {
+                holder.appIcon.setImageDrawable(cachedIcon)
+            } else {
+                holder.appIcon.setImageResource(android.R.color.transparent)
+                // Using a simple thread for icon loading to keep UI smooth
+                Thread {
+                    val icon = pm.getApplicationIcon(item.appInfo)
+                    iconCache[item.packageName] = icon
+                    holder.itemView.post {
+                        if (holder.adapterPosition == position) {
+                            holder.appIcon.setImageDrawable(icon)
+                        }
+                    }
+                }.start()
+            }
+
+            holder.itemView.setOnClickListener {
+                if (selected.contains(item.packageName)) {
+                    selected.remove(item.packageName)
+                } else {
+                    selected.add(item.packageName)
+                }
+                notifyItemChanged(position)
+            }
+        }
+
+        override fun getItemCount() = apps.size
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val appIcon: ImageView = view.findViewById(R.id.app_icon)
+            val appName: TextView = view.findViewById(R.id.app_name)
+            val checkBox: MaterialCheckBox = view.findViewById(R.id.app_checkbox)
+        }
+    }
+
+    protected data class AppItem(
         val packageName: String,
         val label: String,
         val appInfo: ApplicationInfo

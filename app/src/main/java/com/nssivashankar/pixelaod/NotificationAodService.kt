@@ -1,6 +1,7 @@
 package com.nssivashankar.pixelaod
 
 import android.app.Notification
+import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -12,8 +13,8 @@ import android.os.BatteryManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
-import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import java.util.Calendar
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
 class NotificationAodService : NotificationListenerService() {
 
@@ -54,8 +55,16 @@ class NotificationAodService : NotificationListenerService() {
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         when (key) {
-            "master_switch", "watched_apps", "live_notif_mode", "charging_mode", "dnd_mode",
-            "scheduled_dnd", "scheduled_dnd_start", "scheduled_dnd_end" -> {
+            "master_switch",
+            "watched_apps",
+            "live_notif_mode",
+            "live_notif_blocked_apps",
+            "charging_mode",
+            "dnd_mode",
+            "scheduled_dnd",
+            "scheduled_dnd_start",
+            "scheduled_dnd_end",
+            -> {
                 syncActiveNotifications()
             }
         }
@@ -109,6 +118,7 @@ class NotificationAodService : NotificationListenerService() {
 
         val watchedApps = prefs.getStringSet("watched_apps", emptySet()) ?: emptySet()
         val liveMode = prefs.getBoolean("live_notif_mode", false)
+        val blockedLiveApps = prefs.getStringSet("live_notif_blocked_apps", emptySet()) ?: emptySet()
         val activeNotifs = try { activeNotifications } catch (e: Exception) { 
             Log.e("NotificationAodService", "Error getting active notifications", e)
             null 
@@ -116,7 +126,7 @@ class NotificationAodService : NotificationListenerService() {
 
         activeNotifKeys.clear()
         activeNotifs.forEach { sbn ->
-            if (shouldTrigger(sbn, watchedApps, liveMode)) {
+            if (shouldTrigger(sbn, watchedApps, liveMode, blockedLiveApps)) {
                 activeNotifKeys.add(sbn.key)
             }
         }
@@ -129,8 +139,9 @@ class NotificationAodService : NotificationListenerService() {
 
         val watchedApps = prefs.getStringSet("watched_apps", emptySet()) ?: emptySet()
         val liveMode = prefs.getBoolean("live_notif_mode", false)
+        val blockedLiveApps = prefs.getStringSet("live_notif_blocked_apps", emptySet()) ?: emptySet()
 
-        if (shouldTrigger(sbn, watchedApps, liveMode)) {
+        if (shouldTrigger(sbn, watchedApps, liveMode, blockedLiveApps)) {
             activeNotifKeys.add(sbn.key)
         } else {
             activeNotifKeys.remove(sbn.key)
@@ -138,39 +149,56 @@ class NotificationAodService : NotificationListenerService() {
         updateAodState()
     }
 
-    private fun shouldTrigger(sbn: StatusBarNotification, watchedApps: Set<String>, liveMode: Boolean): Boolean {
+    private fun shouldTrigger(
+        sbn: StatusBarNotification,
+        watchedApps: Set<String>,
+        liveMode: Boolean,
+        blockedLiveApps: Set<String>
+    ): Boolean {
         val packageName = sbn.packageName
         
-        // 1. If explicitly watched, always trigger
+        // 1. Explicitly watched apps always trigger
         if (packageName in watchedApps) return true
 
-        // 2. Ignore system UI and android system core to avoid noise
-        val isSystem = packageName == "android" || packageName == "com.android.systemui"
-        if (isSystem) return false
+        // 2. Ignore system-level noise
+        if ((packageName == "android") || (packageName == "com.android.systemui")) return false
 
-        // 3. Ignore silent/low importance notifications
-        val ranking = Ranking()
-        val importance = if (currentRanking.getRanking(sbn.key, ranking)) {
-            ranking.importance
-        } else {
-            NotificationManager.IMPORTANCE_DEFAULT
-        }
-        
-        // Filter out anything below Default importance (Silent/Min)
-        if (importance < NotificationManager.IMPORTANCE_DEFAULT) return false
+        // 3. Live Notification Mode detection
+        if (liveMode && packageName !in blockedLiveApps) {
+            val notification = sbn.notification
+            val isOngoing = (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
+            
+            if (isOngoing) {
+                val extras = notification.extras
+                val category = notification.category
+                
+                // Exclude media playback notifications (Spotify, YouTube, etc.)
+                val isMedia = category == Notification.CATEGORY_TRANSPORT || 
+                             extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
+                             extras.getString(Notification.EXTRA_TEMPLATE)?.contains("MediaStyle") == true
+                
+                if (!isMedia) {
+                    // Detect high-value ongoing updates (Navigation, Delivery, Rides, Progress)
+                    val hasProgress = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0
+                    
+                    // Category-based detection (broadened)
+                    val isLiveCategory = category in listOf(
+                        "navigation",      // Notification.CATEGORY_NAVIGATION (API 28)
+                        "service",         // Notification.CATEGORY_SERVICE
+                        "progress",        // Notification.CATEGORY_PROGRESS
+                        "location_sharing", // Notification.CATEGORY_LOCATION_SHARING (API 31)
+                        "transport"
+                    )
 
-        // 4. "Live Updates" logic: trigger AOD for any ongoing high-priority notification
-        if (liveMode && sbn.isOngoing) {
-            val category = sbn.notification.category
-            
-            // Exclude media players from auto-triggering AOD (unless explicitly watched)
-            val isMedia = category == Notification.CATEGORY_TRANSPORT || 
-                         sbn.notification.extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
-                         sbn.notification.extras.getString(Notification.EXTRA_TEMPLATE)?.contains("MediaStyle") == true
-            
-            if (!isMedia) {
-                Log.d("AodService", "Live update detected from $packageName (category: $category)")
-                return true
+                    // Keyword-based fallback for apps that don't set categories correctly (Zomato, Uber, etc.)
+                    val appKeywords = listOf("uber", "ride", "delivery", "food", "track", "map", "grab", "rapido", "ola", "zomato", "swiggy")
+                    val hasKeyword = appKeywords.any { packageName.contains(it, ignoreCase = true) }
+
+                    if (isLiveCategory || hasProgress || hasKeyword) {
+                        Log.d("AodService", "Live Update detected: $packageName")
+                        return true
+                    }
+                }
             }
         }
 
@@ -219,7 +247,7 @@ class NotificationAodService : NotificationListenerService() {
     private fun isInQuietHours(startStr: String, endStr: String): Boolean {
         try {
             val now = Calendar.getInstance()
-            val currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+            val currentMinutes = now[Calendar.HOUR_OF_DAY] * 60 + now[Calendar.MINUTE]
 
             val startParts = startStr.split(":")
             val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
@@ -233,7 +261,7 @@ class NotificationAodService : NotificationListenerService() {
                 // Overnight period (e.g., 22:00 to 07:00)
                 currentMinutes >= startMinutes || currentMinutes <= endMinutes
             }
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             return false
         }
     }
@@ -249,12 +277,29 @@ class NotificationAodService : NotificationListenerService() {
         try {
             AodSettings.setAodEnabled(contentResolver, enable)
             
-            // Workaround for newer Android versions (15, 16, 17) where the screen 
-            // might not reflect the Secure.Settings change immediately when on AOD/Lockscreen.
-            // We force a display state refresh by sending a broadcast that SystemUI listens to.
+            // Fix for Android 15/16/17: Force display state refresh when turning OFF.
+            // When unplugged or notifications cleared, we send a "Ghost" notification
+            // to kick the system out of the stale AOD state.
             if (!enable) {
-                val intent = Intent("com.android.systemui.doze.pulse")
-                sendBroadcast(intent)
+                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                val channelId = "aod_refresh_channel"
+                
+                val channel = NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW)
+                notificationManager.createNotificationChannel(channel)
+
+                val ghostNotif = Notification.Builder(this, channelId)
+                    .setSmallIcon(android.R.color.transparent)
+                    .setContentTitle("")
+                    .setGroup("aod_sync_group")
+                    .setGroupAlertBehavior(Notification.GROUP_ALERT_ALL)
+                    .build()
+
+                // Post and immediately cancel to trigger a "wake" and settings re-read
+                notificationManager.notify(999, ghostNotif)
+                notificationManager.cancel(999)
+                
+                // Fallback: system-level pulse intent
+                sendBroadcast(Intent("com.android.systemui.doze.pulse"))
             }
         } catch (e: SecurityException) {
             Log.e("NotificationAodService", "Failed to set AOD state", e)

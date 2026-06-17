@@ -5,15 +5,14 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
-import android.util.Log
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.nssivashankar.pixelaod.TileServiceExtensions.collapseQSPanel
 import com.nssivashankar.pixelaod.config.AmbientDisplayConfiguration
-import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import rikka.shizuku.Shizuku
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
 class AodTileService : TileService() {
 

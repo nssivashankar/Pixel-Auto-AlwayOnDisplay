@@ -2,6 +2,8 @@ name: Build and Release APK
 
 on:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -54,20 +56,19 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: ${{steps.sign_app.outputs.signedReleaseFile}}
-          name: Pixel Auto AOD ${{ github.ref_name }}
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+          name: ${{ github.ref_type == 'tag' && format('Pixel Auto AOD {0}', github.ref_name) || 'Pixel Auto AOD Latest Build' }}
+          prerelease: ${{ github.ref_type != 'tag' }}
+          generate_release_notes: true
           body: |
-            ## Pixel Auto AOD ${{ github.ref_name }}
+            ### Auto-Generated Build
+            This release contains the latest changes from the `${{ github.ref_name }}` branch.
+            
+            **Commit:** ${{ github.sha }}
             
             ### Features
             - Charging Mode: AoD turns on when charger connected
-            - Live Notification Mode: AoD for Maps, Swiggy, Uber etc.
+            - Live Notification Mode: AoD for Maps, Uber etc.
             - Per-App Notifications: Select specific apps to trigger AoD
-            - Settings UI to control all features
-            
-            ### Installation
-            1. Download APK below
-            2. Install on your phone
-            3. Grant WRITE_SECURE_SETTINGS via ADB
-            4. Grant Notification Access in Settings
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
