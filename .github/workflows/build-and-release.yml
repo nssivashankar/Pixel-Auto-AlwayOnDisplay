@@ -22,6 +22,10 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x ./gradlew
 
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > app/pixelautoaod.jks
+
       - name: Build APK
         run: ./gradlew assembleRelease
         env:
