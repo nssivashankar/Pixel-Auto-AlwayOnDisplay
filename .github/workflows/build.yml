@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -34,7 +36,7 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/pixelautoaod.jks
 
-      - name: Build Release APK
+      - name: Build and Sign Release APK
         run: ./gradlew assembleRelease
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
@@ -42,24 +44,21 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
-          alias: ${{ secrets.KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
+      - name: Find APK
+        id: find_apk
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: ${{steps.sign_app.outputs.signedReleaseFile}}
+          files: ${{ steps.find_apk.outputs.apk_path }}
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
           name: ${{ github.ref_type == 'tag' && format('Pixel Auto AOD {0}', github.ref_name) || 'Pixel Auto AOD Latest Build' }}
           prerelease: ${{ github.ref_type != 'tag' }}
           generate_release_notes: true
+          make_latest: ${{ github.ref_type == 'tag' }}
           body: |
             ### Auto-Generated Build
             This release contains the latest changes from the `${{ github.ref_name }}` branch.
