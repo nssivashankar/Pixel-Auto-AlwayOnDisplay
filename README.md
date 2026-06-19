@@ -43,21 +43,30 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 
 ## 📱 Screenshots
 
-| | | | |
-| :---: | :---: | :---: | :---: |
-| <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" height="400" alt="Settings Screen" /></a> | <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" height="400" alt="Advanced Config" /></a> | <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" height="400" alt="AOD Charging" /></a> | <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" height="400" alt="AOD Notification" /></a> |
+<div align="center">
+  <table>
+    <tr>
+      <td align="center"><b>App UI & Configuration</b></td>
+      <td align="center"><b>AOD in Action</b></td>
+    </tr>
+    <tr>
+      <td>
+        <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" width="200" alt="App UI Screenshot 1" /></a>
+        <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" width="200" alt="App UI Screenshot 2" /></a>
+      </td>
+      <td>
+        <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" width="200" alt="AOD Screenshot 1" /></a>
+        <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" width="200" alt="AOD Screenshot 2" /></a>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ---
 
 ## ⚠️ Compatibility
 -   **Exclusively for Google Pixel**: Tested on Pixel series.
 -   **Android 15/16/17 Support**: Optimized for the latest Android versions, including specialized fixes for AOD refresh issues on newer betas.
-
----
-## 📜 Credits & License
-- **Original Author**: [Alberto Pedron](https://github.com/albertopedron) (Original concept and core logic).
-- **Maintenance & Modernization**: Shankar (Modern Android 15+ support, GitHub Actions, and UI enhancements).
-- **License**: This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 *Developed with ❤️ for the Pixel community.*
