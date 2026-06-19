@@ -41,10 +41,8 @@ jobs:
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
         run: |
-          # Strip PEM headers, remove all whitespace/newlines, and decode
-          echo "$KEYSTORE_BASE64" | grep -v "\-" | tr -d '\n\r ' | base64 --decode > app/pixelautoaod.jks
+          echo "$KEYSTORE_BASE64" | base64 --decode > app/pixelautoaod.jks
           
-          # Verify file is not empty
           if [ ! -s app/pixelautoaod.jks ]; then
             echo "❌ Error: Decoded keystore is empty! Check your KEYSTORE_BASE64 secret."
             exit 1
