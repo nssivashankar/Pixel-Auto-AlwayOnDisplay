@@ -39,12 +39,12 @@ jobs:
 
       - name: Decode Keystore
         env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > app/pixelautoaod.jks
+          echo "$KEYSTORE_FILE" | base64 --decode > app/pixelautoaod.jks
           
           if [ ! -s app/pixelautoaod.jks ]; then
-            echo "❌ Error: Decoded keystore is empty! Check your KEYSTORE_BASE64 secret."
+            echo "❌ Error: Decoded keystore is empty! Check your KEYSTORE_FILE secret."
             exit 1
           fi
 
