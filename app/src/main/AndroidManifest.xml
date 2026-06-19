@@ -6,6 +6,10 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
         tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
     <application
         android:name=".AodApplication"
@@ -38,10 +42,13 @@
 <service
     android:name=".NotificationAodService"
     android:exported="true"
+    android:foregroundServiceType="specialUse"
     android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
     <intent-filter>
         <action android:name="android.service.notification.NotificationListenerService"/>
     </intent-filter>
+    <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+              android:value="Charging and AOD automation service for Pixel devices"/>
 </service>
 
 <activity android:name=".SettingsActivity" android:exported="true">

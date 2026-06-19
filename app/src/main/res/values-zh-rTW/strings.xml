@@ -5,4 +5,17 @@
 \nadb shell pm grant %1$s %2$s</string>
     <string name="grant_shizuku_permission">請開啟 Shizuku 並授權應用程式「%1$s」</string>
     <string name="unsupported_device">不支援的裝置</string>
+    <string name="dnd_mode_title">遵循系統勿擾模式</string>
+    <string name="dnd_mode_summary">當系統勿擾模式開啟時不觸發 AOD</string>
+    <string name="scheduled_dnd_title">排程靜音時段</string>
+    <string name="scheduled_dnd_summary">在特定時間內停用通知觸發</string>
+    <string name="start_time_title">開始時間</string>
+    <string name="end_time_title">結束時間</string>
+    <string name="charging_info_title">充電詳情通知</string>
+    <string name="charging_info_summary">充電時顯示功率、溫度和預計充電時間</string>
+    <string name="charging_info_channel_name">充電資訊</string>
+    <string name="charging_info_notification_title">充電中：%1$d%%</string>
+    <string name="charging_info_notification_content">%1$s \u2022 %2$s \u2022 %3$s</string>
+    <string name="charging_info_time_remaining_80">80%% 剩餘 %1$s</string>
+    <string name="charging_info_time_remaining_100">充滿剩餘 %1$s</string>
 </resources>

@@ -148,6 +148,22 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             )
 
             automationCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "charging_info_notif"
+                    setTitle(R.string.charging_info_title)
+                    setSummary(R.string.charging_info_summary)
+                    setOnPreferenceChangeListener { _, newValue ->
+                        if (newValue == true && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                            if (requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                            }
+                        }
+                        true
+                    }
+                },
+            )
+
+            automationCategory.addPreference(
                 AppListPreference(requireContext(), null).apply {
                     key = "watched_apps"
                     title = "Per-App Notifications"
@@ -226,12 +242,25 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             }
             permissionsCategory.addPreference(notificationAccessPref)
 
+            val postNotifPref = Preference(requireContext()).apply {
+                key = "post_notif_pref"
+                title = "Notification Permission"
+                setOnPreferenceClickListener {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                    }
+                    true
+                }
+            }
+            permissionsCategory.addPreference(postNotifPref)
+
             updatePermissionSummaries()
         }
 
         private fun updatePermissionSummaries() {
             val writeSecure = findPreference<Preference>("write_secure_pref")
             val notify = findPreference<Preference>("notify_access_pref")
+            val postNotif = findPreference<Preference>("post_notif_pref")
 
             if (writeSecure != null) {
                 val hasWriteSecure = requireContext().checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
@@ -242,6 +271,16 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                 val enabledListeners = Settings.Secure.getString(requireContext().contentResolver, "enabled_notification_listeners")
                 val hasNotifyAccess = enabledListeners?.contains(requireContext().packageName) == true
                 notify.summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection"
+            }
+
+            if (postNotif != null) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    val hasPostNotif = requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    postNotif.summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info"
+                    postNotif.isVisible = true
+                } else {
+                    postNotif.isVisible = false
+                }
             }
         }
 

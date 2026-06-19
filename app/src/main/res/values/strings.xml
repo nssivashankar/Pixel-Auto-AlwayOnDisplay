@@ -10,4 +10,11 @@
     <string name="scheduled_dnd_summary">Disable notification triggers during specific times</string>
     <string name="start_time_title">Start Time</string>
     <string name="end_time_title">End Time</string>
+    <string name="charging_info_title">Charging Details Notification</string>
+    <string name="charging_info_summary">Show wattage, temp and estimated charge time when charging</string>
+    <string name="charging_info_channel_name">Charging Information</string>
+    <string name="charging_info_notification_title">Charging: %1$d%%</string>
+    <string name="charging_info_notification_content">%1$s \u2022 %2$s \u2022 %3$s</string>
+    <string name="charging_info_time_remaining_80">80%% in %1$s</string>
+    <string name="charging_info_time_remaining_100">Full in %1$s</string>
 </resources>
