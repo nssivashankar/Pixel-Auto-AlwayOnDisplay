@@ -24,7 +24,7 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_FILE }}" | base64 -d > app/pixelautoaod.jks
+          echo "${{ secrets.KEYSTORE_FILE }}" | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g' | tr -d '\n ' | base64 -d > app/pixelautoaod.jks
 
       - name: Build APK
         run: ./gradlew assembleRelease

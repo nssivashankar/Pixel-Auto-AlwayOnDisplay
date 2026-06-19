@@ -215,6 +215,7 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         // 1. Explicitly watched apps always trigger
+        if (packageName in watchedApps) return true
 
         // 2. Ignore system-level noise
         if ((packageName == "android") || (packageName == "com.android.systemui")) return false
@@ -393,7 +394,7 @@ class NotificationAodService : NotificationListenerService() {
         
         val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
         val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
-        val currentWattage = (Math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
+        val currentWattage = (kotlin.math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
         
         val wattageStr = if (batteryPct >= 95 && currentWattage < 3.0) {
             "Trickle Charging"
@@ -408,7 +409,7 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         // Manual fallback: If system fails to calculate (heat/low power), we do the math
-        if (timeToFull <= 0 && currentNow > 0 && batteryPct != -1 && batteryPct < 100) {
+        if (timeToFull <= 0 && currentNow > 0 && batteryPct != -1) {
             val currentMa = Math.abs(currentNow) / 1000.0
             if (currentMa > 50) { // Need at least some current to estimate
                 val pctRemaining = (100 - batteryPct)
@@ -440,7 +441,6 @@ class NotificationAodService : NotificationListenerService() {
             "Calculating..."
         }
 
-        val wattageStrFinal = wattageStr
         val tempStr = String.format(java.util.Locale.US, "%.1f°C", temperature)
 
         val contentIntent = android.app.PendingIntent.getActivity(
@@ -448,7 +448,7 @@ class NotificationAodService : NotificationListenerService() {
             android.app.PendingIntent.FLAG_IMMUTABLE
         )
 
-        val contentText = "$timeStr \u2022 $wattageStrFinal \u2022 $tempStr"
+        val contentText = "$timeStr \u2022 $wattageStr \u2022 $tempStr"
         
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)

@@ -39,7 +39,9 @@ jobs:
 
       - name: Decode Keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/pixelautoaod.jks
+          # Strip PEM headers if they exist and decode
+          sed -i '/---/d' app/keystore_base64.txt || true
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g' | tr -d '\n ' | base64 --decode > app/pixelautoaod.jks
 
       - name: Build and Sign Release APK
         run: ./gradlew assembleRelease
