@@ -49,12 +49,13 @@ jobs:
           fi
 
       - name: Build and Sign Release APK
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleRelease publish
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Find APK
         id: find_apk
