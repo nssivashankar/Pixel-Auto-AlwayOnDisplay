@@ -69,7 +69,7 @@ afterEvaluate {
             release(MavenPublication) {
                 groupId = 'com.nssivashankar.pixelaod'
                 artifactId = 'pixelautoaod'
-                version = '1.0.1'
+                version = project.hasProperty('versionName') ? project.property('versionName') : '1.0.1'
 
                 // Directly publish the APK file
                 artifact(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
