@@ -41,9 +41,8 @@ jobs:
 
       - name: Create/Update Release
         uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           tag_name: latest
           name: Pixel Auto AOD Latest Build
           body: |
@@ -60,3 +59,4 @@ jobs:
             **Full Changelog**: https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}
           draft: false
           prerelease: true
+          overwrite: true
