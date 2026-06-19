@@ -67,8 +67,8 @@ afterEvaluate {
     publishing {
         publications {
             release(MavenPublication) {
-                groupId = 'com.nssivashankar.pixelaod'
-                artifactId = 'pixelautoaod'
+                groupId = 'com.nssivashankar'
+                artifactId = 'pixelaod'
                 
                 // Maven versions must be SemVer. We strip the 'v' prefix if present.
                 def rawVersion = project.hasProperty('versionName') ? project.property('versionName') : '1.0.1'
@@ -76,6 +76,12 @@ afterEvaluate {
 
                 // Directly publish the APK file
                 artifact(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
+                
+                pom {
+                    name = "Pixel Auto AOD"
+                    description = "Automated Always-On Display management for Pixel devices"
+                    url = "https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay"
+                }
             }
         }
         repositories {
