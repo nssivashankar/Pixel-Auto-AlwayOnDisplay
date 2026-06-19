@@ -69,7 +69,10 @@ afterEvaluate {
             release(MavenPublication) {
                 groupId = 'com.nssivashankar.pixelaod'
                 artifactId = 'pixelautoaod'
-                version = project.hasProperty('versionName') ? project.property('versionName') : '1.0.1'
+                
+                // Maven versions must be SemVer. We strip the 'v' prefix if present.
+                def rawVersion = project.hasProperty('versionName') ? project.property('versionName') : '1.0.1'
+                version = rawVersion.startsWith('v') ? rawVersion.substring(1) : rawVersion
 
                 // Directly publish the APK file
                 artifact(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))

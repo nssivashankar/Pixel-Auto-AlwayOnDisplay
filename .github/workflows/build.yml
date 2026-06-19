@@ -48,18 +48,29 @@ jobs:
           fi
 
       - name: Build and Sign Release APK
-        run: ./gradlew assembleRelease publish -PversionName=${{ github.ref_type == 'tag' && github.ref_name || 'latest' }}
+        run: ./gradlew assembleRelease
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Publish to GitHub Packages
+        # Only publish to packages if it's a tag or a fresh master build to avoid conflicts
+        run: |
+          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || format('1.0.1-build{0}', github.run_number) }}"
+          ./gradlew publish -PversionName=$VERSION_NAME
+        env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Find APK
         id: find_apk
         run: |
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ Error: APK not found!"
+            exit 1
+          fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
@@ -70,16 +81,17 @@ jobs:
           name: ${{ github.ref_type == 'tag' && format('Pixel Auto AOD {0}', github.ref_name) || 'Pixel Auto AOD Latest Build' }}
           prerelease: ${{ github.ref_type != 'tag' }}
           generate_release_notes: true
-          make_latest: ${{ github.ref_type == 'tag' }}
+          make_latest: true
           body: |
-            ### Auto-Generated Build
-            This release contains the latest changes from the `${{ github.ref_name }}` branch.
+            ### Pixel Auto AOD Release
+            This build was automatically generated.
             
+            **Version:** ${{ github.ref_type == 'tag' && github.ref_name || 'Development Build (Latest)' }}
             **Commit:** ${{ github.sha }}
             
             ### Features
-            - Charging Mode: AoD turns on when charger connected
-            - Live Notification Mode: AoD for Maps, Uber etc.
-            - Per-App Notifications: Select specific apps to trigger AoD
+            - Charging Mode: AoD automation
+            - Live Notification Mode: Maps, Uber etc.
+            - Per-App Notifications
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
