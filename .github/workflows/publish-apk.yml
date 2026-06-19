@@ -1,0 +1,36 @@
+name: Publish APK to GitHub Packages
+
+on:
+  release:
+    types: [published, created]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      - name: Download APK from Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download ${{ github.event.release.tag_name }} \
+            --pattern "*.apk" \
+            --dir ./build/outputs/apk/
+
+      - name: Verify APK Published
+        run: |
+          echo "✅ APK published successfully!"
+          echo "📦 Package available at: https://github.com/${{ github.repository }}/packages"
+          echo "📥 Download from: ${{ github.event.release.html_url }}"

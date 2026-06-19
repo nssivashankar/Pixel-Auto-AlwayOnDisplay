@@ -28,6 +28,11 @@ jobs:
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.11.1'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 35
+          build-tools-version: 35.0.0
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
