@@ -8,12 +8,24 @@ Pixel Auto AOD is a lightweight utility designed specifically for Google Pixel d
 
 ## 🚀 Features
 
--   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged (100%), it turns off instantly.
+-   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged (100%), it turns off instantly to protect your battery and screen overnight.
+-   **📊 Enhanced Charging Info**: A rich notification showing real-time charging wattage, battery temperature, and precise ETA.
+    -   **Smart ETA**: Automatically switches between System-provided time and a custom internal calculation if the device is thermal throttling (heat protection).
+    -   **80% Health Target**: Intelligently calculates the time to reach 80% for users who want to maximize battery longevity.
+    -   **Trickle Status**: Identifies and labels the final "Trickle Charging" phase for better clarity.
 -   **🔔 Per-App Notifications**: Select specific apps (WhatsApp, Mail, etc.) to trigger AOD. When a notification arrives, AOD wakes up; when you clear it, AOD goes back to sleep.
 -   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Rapido rides, or food delivery tracking (Swiggy/Zomato).
 -   **🌙 Respect System DND**: Optionally silence all AOD triggers when your phone is in Do Not Disturb mode.
 -   **⏰ Scheduled Quiet Hours**: Set a custom in-app schedule (e.g., 11 PM to 7 AM) to ensure your room stays dark while you sleep.
 -   **🛠 Quick Settings Tile**: A master toggle in your notification shade for instant control.
+
+---
+
+## 🔋 Battery Impact
+Pixel Auto AOD is designed for zero-drain performance:
+- **Event-Driven**: It only runs when the system triggers an update (notification, battery change, or time tick).
+- **No WakeLocks**: The app never forces the CPU to stay awake.
+- **Low Footprint**: Minimal memory usage (~15MB), making it significantly lighter than most system utilities.
 
 ---
 
