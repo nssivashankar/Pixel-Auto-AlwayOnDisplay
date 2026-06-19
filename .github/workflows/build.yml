@@ -13,7 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      packages: write
 
     steps:
       - name: Checkout code
@@ -54,14 +53,6 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Publish to GitHub Packages
-        # Only publish to packages if it's a tag or a fresh master build to avoid conflicts
-        run: |
-          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || format('1.0.1-build{0}', github.run_number) }}"
-          ./gradlew publish -PversionName=$VERSION_NAME
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Find APK
         id: find_apk

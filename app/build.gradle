@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
-    id 'maven-publish'
 }
 
 android {
@@ -53,46 +52,6 @@ android {
     kotlin {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_21)
-        }
-    }
-
-    publishing {
-        singleVariant("release") {
-            withSourcesJar()
-        }
-    }
-}
-
-afterEvaluate {
-    publishing {
-        publications {
-            release(MavenPublication) {
-                groupId = 'com.nssivashankar'
-                artifactId = 'pixelaod'
-                
-                // Maven versions must be SemVer. We strip the 'v' prefix if present.
-                def rawVersion = project.hasProperty('versionName') ? project.property('versionName') : '1.0.1'
-                version = rawVersion.startsWith('v') ? rawVersion.substring(1) : rawVersion
-
-                // Directly publish the APK file
-                artifact(layout.buildDirectory.file("outputs/apk/release/app-release.apk"))
-                
-                pom {
-                    name = "Pixel Auto AOD"
-                    description = "Automated Always-On Display management for Pixel devices"
-                    url = "https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay"
-                }
-            }
-        }
-        repositories {
-            maven {
-                name = "GitHubPackages"
-                url = uri("https://maven.pkg.github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay")
-                credentials {
-                    username = System.getenv("GITHUB_ACTOR")
-                    password = System.getenv("GITHUB_TOKEN")
-                }
-            }
         }
     }
 }
