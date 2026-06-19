@@ -25,8 +25,8 @@ android {
         minSdkVersion 26
         //noinspection OldTargetApi
         targetSdkVersion 35
-        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 6
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.0.6"
+        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 8
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.0.8"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

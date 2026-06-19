@@ -48,7 +48,7 @@ jobs:
 
       - name: Build and Sign Release APK
         run: |
-          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || '1.0.6-debug' }}"
+          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || '1.0.8' }}"
           ./gradlew assembleRelease -PversionName=$VERSION_NAME
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
