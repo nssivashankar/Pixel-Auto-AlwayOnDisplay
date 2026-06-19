@@ -47,7 +47,9 @@ jobs:
           fi
 
       - name: Build and Sign Release APK
-        run: ./gradlew assembleRelease
+        run: |
+          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || '1.0.6-debug' }}"
+          ./gradlew assembleRelease -PversionName=$VERSION_NAME
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
