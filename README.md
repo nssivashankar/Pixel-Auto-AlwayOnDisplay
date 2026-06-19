@@ -43,12 +43,9 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 
 ## 📱 Screenshots
 
-<div align="center">
-  <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" width="160" alt="Settings Screen" /></a>
-  <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" width="160" alt="Advanced Config" /></a>
-  <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" width="160" alt="AOD Charging" /></a>
-  <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" width="160" alt="AOD Notification" /></a>
-</div>
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" height="400" alt="Settings Screen" /></a> | <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" height="400" alt="Advanced Config" /></a> | <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" height="400" alt="AOD Charging" /></a> | <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" height="400" alt="AOD Notification" /></a> |
 
 ---
 
