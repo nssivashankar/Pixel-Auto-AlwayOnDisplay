@@ -5,7 +5,8 @@ plugins {
 
 android {
     namespace 'com.nssivashankar.pixelaod'
-    compileSdk 35
+    //noinspection GradleDependency
+    compileSdk = 35
 
     signingConfigs {
         release {
@@ -13,13 +14,13 @@ android {
             storePassword System.getenv("KEYSTORE_PASSWORD")
             keyAlias System.getenv("KEY_ALIAS")
             keyPassword System.getenv("KEY_PASSWORD")
-            storeType "pkcs12"
         }
     }
 
     defaultConfig {
         applicationId "com.nssivashankar.pixelaod"
         minSdkVersion 26
+        //noinspection OldTargetApi
         targetSdkVersion 35
         versionCode 2
         versionName "1.0.1"
@@ -45,16 +46,18 @@ android {
         targetCompatibility JavaVersion.VERSION_21
     }
 
-    kotlinOptions {
-        jvmTarget = '21'
+    kotlin {
+        compilerOptions {
+            jvmTarget = JvmTarget.JVM_21
+        }
     }
 }
 
 dependencies {
-    implementation 'com.google.android.material:material:1.12.0'
-    implementation 'androidx.activity:activity-ktx:1.9.0'
-    implementation 'androidx.fragment:fragment-ktx:1.8.0'
-    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation 'com.google.android.material:material:1.14.0'
+    implementation 'androidx.activity:activity-ktx:1.13.0'
+    implementation 'androidx.fragment:fragment-ktx:1.8.9'
+    implementation 'androidx.appcompat:appcompat:1.7.1'
     implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
@@ -64,5 +67,5 @@ dependencies {
     implementation "dev.rikka.shizuku:api:$shizuku_version"
     implementation "dev.rikka.shizuku:provider:$shizuku_version"
 
-    compileOnly "dev.rikka.hidden:stub:4.3.3"
+    compileOnly "dev.rikka.hidden:stub:4.4.0"
 }

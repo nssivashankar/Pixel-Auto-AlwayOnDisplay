@@ -25,8 +25,17 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Decode Keystore
+        env:
+          KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
         run: |
-          echo "${{ secrets.KEYSTORE_FILE }}" | sed 's/-----BEGIN CERTIFICATE-----//g' | sed 's/-----END CERTIFICATE-----//g' | tr -d '\n ' | base64 -d > app/pixelautoaod.jks
+          # Strip PEM headers, remove all whitespace/newlines, and decode
+          echo "$KEYSTORE_FILE" | grep -v "\-" | tr -d '\n\r ' | base64 -d > app/pixelautoaod.jks
+
+          # Verify file is not empty
+          if [ ! -s app/pixelautoaod.jks ]; then
+            echo "❌ Error: Decoded keystore is empty! Check your KEYSTORE_FILE secret."
+            exit 1
+          fi
 
       - name: Build APK
         run: ./gradlew assembleRelease
