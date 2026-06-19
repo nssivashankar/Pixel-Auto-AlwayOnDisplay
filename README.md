@@ -43,30 +43,21 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 
 ## 📱 Screenshots
 
-<div align="center">
-  <table>
-    <tr>
-      <td align="center"><b>App UI & Configuration</b></td>
-      <td align="center"><b>AOD in Action</b></td>
-    </tr>
-    <tr>
-      <td>
-        <a href="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4"><img src="https://github.com/user-attachments/assets/fce10889-84d4-4d4e-9789-8cdcfb8bd0b4" width="200" alt="App UI Screenshot 1" /></a>
-        <a href="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee"><img src="https://github.com/user-attachments/assets/6e19fbf0-60e1-47d2-b6a4-eab1dce7deee" width="200" alt="App UI Screenshot 2" /></a>
-      </td>
-      <td>
-        <a href="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a"><img src="https://github.com/user-attachments/assets/b9f4f33f-8d48-4092-8caf-1ea99fa16e7a" width="200" alt="AOD Screenshot 1" /></a>
-        <a href="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40"><img src="https://github.com/user-attachments/assets/e9b9555b-1cdf-4496-a505-8496fc51cd40" width="200" alt="AOD Screenshot 2" /></a>
-      </td>
-    </tr>
-  </table>
-</div>
+| | | | |
+| :---: | :---: | :---: | :---: |
+| <a href="https://github.com/user-attachments/assets/10219f8a-379b-451e-988a-ac798108e225"><img src="https://github.com/user-attachments/assets/10219f8a-379b-451e-988a-ac798108e225" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d"><img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" height="400" alt="Charging Info" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
 
 ---
 
 ## ⚠️ Compatibility
 -   **Exclusively for Google Pixel**: Tested on Pixel series.
 -   **Android 15/16/17 Support**: Optimized for the latest Android versions, including specialized fixes for AOD refresh issues on newer betas.
+
+---
+## 📜 Credits & License
+- **Original Author**: [Alberto Pedron](https://github.com/albertopedron) (Original concept and core logic).
+- **Maintenance & Modernization**: Shankar (Modern Android 15+ support, GitHub Actions, and UI enhancements).
+- **License**: This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 *Developed with ❤️ for the Pixel community.*
