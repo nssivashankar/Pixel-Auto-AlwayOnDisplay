@@ -57,4 +57,10 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 -   **Android 15/16/17 Support**: Optimized for the latest Android versions, including specialized fixes for AOD refresh issues on newer betas.
 
 ---
+## 📜 Credits & License
+- **Original Author**: [Alberto Pedron](https://github.com/albertopedron) (Original concept and core logic).
+- **Maintenance & Modernization**: Shankar (Modern Android 15+ support, GitHub Actions, and UI enhancements).
+- **License**: This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
 *Developed with ❤️ for the Pixel community.*
