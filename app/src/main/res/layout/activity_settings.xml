@@ -4,10 +4,9 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
-    android:fitsSystemWindows="true">
+    android:background="?android:attr/colorBackground">
 
-    <!-- Content scrolls UNDER the bar from the very top -->
+    <!-- Content scrolls directly behind the header -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -19,7 +18,7 @@
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="12dp"
+            android:paddingHorizontal="16dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -31,15 +30,11 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/glass_header"
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="#E61D1B20"
-            app:cardElevation="12dp"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.GlassBar"
-            app:strokeColor="?attr/colorOutlineVariant"
-            app:strokeWidth="1dp">
+            android:orientation="vertical"
+            android:background="#D91D1B20"> <!-- Glass Tint (Adjusts for Dark/Light) -->
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
@@ -58,7 +53,14 @@
 
             </com.google.android.material.appbar.MaterialToolbar>
 
-        </com.google.android.material.card.MaterialCardView>
+            <!-- Sharp Bottom Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="0.5dp"
+                android:background="?attr/colorOutlineVariant"
+                android:alpha="0.4" />
+
+        </LinearLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 

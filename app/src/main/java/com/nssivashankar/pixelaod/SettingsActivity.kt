@@ -51,11 +51,11 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Position the glass bar below the status bar
+            // Full-width bar including status bar area
             appBar.setPadding(0, systemBars.top, 0, 0)
 
-            // Start list content exactly where the glass bar ends for a seamless transition
-            container.setPadding(0, systemBars.top + toolbar.height + 12, 0, 0)
+            // Start scrolling content just below the visible header
+            container.setPadding(0, systemBars.top + 56, 0, 0)
 
             insets
         }
