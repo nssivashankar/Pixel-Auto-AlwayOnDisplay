@@ -4,9 +4,15 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="@android:color/transparent">
 
-    <!-- 1. The Main Content -->
+    <!-- 1. The Opaque Background for the settings list -->
+    <View
+        android:id="@+id/content_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?android:attr/colorBackground" />
+
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -22,7 +28,6 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 2. The Glass Header (Layered) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -35,13 +40,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Glass Background Layer (This will have the frosted look) -->
+            <!-- 2. The Glass Layer (Blurs both Status Bar and Title Bar area) -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?attr/colorSurfaceContainerHigh"
-                android:alpha="0.85" />
+                android:alpha="0.7" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -65,7 +70,6 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- Thin Sharp Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"

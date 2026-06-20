@@ -34,22 +34,14 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- REAL BLUR IMPLEMENTATION (Android 12+) ---
+        // --- OFFICIAL WINDOW BLUR (Android 12+) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // 1. Blur the wallpaper behind the app
             window.setBackgroundBlurRadius(150)
-            
-            // 2. Add the system blur flag
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            
-            // 3. Set the blur radius for everything behind the window
-            // Use reflection to avoid compile errors on older SDKs
             try {
                 val method = window::class.java.getMethod("setBlurBehindRadius", Int::class.javaPrimitiveType)
                 method.invoke(window, 150)
-            } catch (e: Exception) {
-                // Fallback for some ROMs
-            }
+            } catch (e: Exception) { }
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -68,21 +60,28 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val density = resources.displayMetrics.density
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+            val glassBg = findViewById<View>(R.id.header_glass_bg)
+            val contentBg = findViewById<View>(R.id.content_background)
             val container = findViewById<View>(R.id.settings_container)
 
-            // 1. Position Header including Status Bar
+            // 1. Position the blurred zone (Status Bar + Toolbar)
             appBar.setPadding(0, systemBars.top, 0, 0)
-            val toolbarHeight = (56 * density).toInt() + systemBars.top
+            val headerHeight = (56 * density).toInt() + systemBars.top
             
-            // 2. WINDOW BLUR (Android 12+)
-            // This blurs the wallpaper behind the app, which is visible through the semi-transparent header
+            // 2. Apply a secondary Frosted Blur to the glass layer for depth
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                window.setBackgroundBlurRadius(150)
+                glassBg.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(50f, 50f, android.graphics.Shader.TileMode.CLAMP)
+                )
             }
 
-            // 3. Dynamic Spacing for content
-            container.setPadding(0, toolbarHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+            // 3. Offset the opaque content background so it doesn't cover the blur zone
+            val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
+            lp.topMargin = headerHeight
+            contentBg.layoutParams = lp
+
+            // 4. Start the list exactly where the opaque background begins
+            container.setPadding(0, headerHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
         }
