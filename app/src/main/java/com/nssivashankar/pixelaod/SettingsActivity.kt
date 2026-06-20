@@ -53,16 +53,11 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
-            // Adjust blur surface and toolbar to include status bar height
-            val blurSurface = findViewById<View>(R.id.blur_surface)
-            val toolbar = findViewById<View>(R.id.toolbar)
-            val container = findViewById<View>(R.id.settings_container)
-
-            blurSurface.layoutParams.height = systemBars.top + toolbar.height
-            container.setPadding(container.paddingLeft, systemBars.top + toolbar.height, container.paddingRight, container.paddingBottom)
+            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            appBar.setPadding(0, systemBars.top, 0, 0)
 
             insets
         }
