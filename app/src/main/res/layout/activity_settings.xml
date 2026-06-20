@@ -17,7 +17,6 @@
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="4dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -27,13 +26,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:elevation="0dp">
+        app:elevation="0dp"
+        app:liftOnScroll="false"> <!-- Prevent system fade animations -->
 
         <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Glass Background Layer -->
+            <!-- This layer now covers the entire top, including Status Bar -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
@@ -63,7 +63,6 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- Thin Modern Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"

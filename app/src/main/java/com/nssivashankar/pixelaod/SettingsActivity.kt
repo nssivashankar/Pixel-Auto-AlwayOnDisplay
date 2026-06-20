@@ -49,29 +49,30 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Full-width bar including status bar area
-            appBar.setPadding(0, systemBars.top, 0, 0)
+            // Adjust ONLY the toolbar padding, let GlassBg cover the status bar
+            toolbar.setPadding(0, systemBars.top, 0, 0)
             
-            // Apply Real Blur to Header on Android 12+
+            // Re-calculate Toolbar height to include status bar
+            val params = toolbar.layoutParams
+            params.height = systemBars.top + (56 * density).toInt()
+            toolbar.layoutParams = params
+            
+            // Apply Heavy Blur to the Background Layer
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glassBg.setRenderEffect(
                     RenderEffect.createBlurEffect(100f, 100f, Shader.TileMode.CLAMP)
                 )
             }
 
-            // Calculate heights in pixels: (Toolbar 56dp + Gap 24dp) * density
-            val headerContentHeight = ((56 + 24) * density).toInt()
-            val sideMargin = (16 * density).toInt()
-
-            // Push content down: Status Bar + Header height
+            // Push content down by the exact visible height of the header
             container.setPadding(
-                sideMargin,
-                systemBars.top + headerContentHeight,
-                sideMargin,
+                0, // Removed manual 16dp gap
+                params.height + (12 * density).toInt(), // Dynamic spacing
+                0,
                 (48 * density).toInt()
             )
 
