@@ -6,20 +6,19 @@
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground">
 
+    <!-- Content starts from the very top to scroll under the bar -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:overScrollMode="never"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:overScrollMode="never">
 
         <FrameLayout
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="8dp"
-            android:paddingTop="16dp"
+            android:paddingHorizontal="12dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -29,25 +28,28 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:elevation="0dp"
-        app:liftOnScroll="true">
+        app:elevation="0dp">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/glass_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
+            app:cardElevation="8dp"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.GlassBar"
+            app:strokeWidth="0dp">
 
             <FrameLayout
+                android:id="@+id/blur_container"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content">
 
-                <!-- Telegram-Style Glass Surface -->
+                <!-- The surface we apply the blur effect to -->
                 <View
                     android:id="@+id/blur_surface"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:background="?attr/colorSurfaceContainer"
-                    android:alpha="0.85" />
+                    android:alpha="0.8" />
 
                 <com.google.android.material.appbar.MaterialToolbar
                     android:id="@+id/toolbar"
@@ -67,13 +69,7 @@
                 </com.google.android.material.appbar.MaterialToolbar>
             </FrameLayout>
 
-            <!-- Telegram-Style Bottom Divider -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="1dp"
-                android:background="?attr/colorOutlineVariant"
-                android:alpha="0.3" />
-        </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
 
     </com.google.android.material.appbar.AppBarLayout>
 
