@@ -13,45 +13,34 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <com.google.android.material.appbar.CollapsingToolbarLayout
-            android:id="@+id/collapsing_toolbar"
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
             android:layout_width="match_parent"
-            android:layout_height="128dp"
-            app:expandedTitleMarginBottom="16dp"
-            app:expandedTitleMarginStart="24dp"
-            app:expandedTitleTextAppearance="@style/TextAppearance.Material3.HeadlineMedium"
-            app:layout_scrollFlags="scroll|exitUntilCollapsed"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@android:color/transparent"
+            app:contentInsetStart="24dp"
             app:title="Pixel AOD"
-            app:titleCollapseMode="fade">
+            app:titleMarginTop="8dp">
 
-            <!-- Blur surface covers the entire header area -->
-            <View
-                android:id="@+id/blur_surface"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="?attr/colorSurface"
-                android:alpha="0.8"
-                app:layout_collapseMode="parallax" />
+            <com.google.android.material.materialswitch.MaterialSwitch
+                android:id="@+id/master_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginEnd="16dp" />
 
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@android:color/transparent"
-                app:layout_collapseMode="pin">
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/master_switch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="end"
-                    android:layout_marginEnd="16dp" />
-
-            </com.google.android.material.appbar.MaterialToolbar>
-
-        </com.google.android.material.appbar.CollapsingToolbarLayout>
+        </com.google.android.material.appbar.MaterialToolbar>
 
     </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- The Blur Surface sits behind the toolbar but above the content -->
+    <View
+        android:id="@+id/blur_surface"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:background="?attr/colorSurface"
+        android:alpha="0.7"
+        android:elevation="4dp" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
@@ -66,7 +55,6 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="8dp"
-            android:paddingTop="16dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>

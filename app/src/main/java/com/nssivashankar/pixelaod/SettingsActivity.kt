@@ -37,14 +37,6 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
-        // Apply Android 12+ Blur Effect for the top bar only
-        val blurSurface = findViewById<View>(R.id.blur_surface)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            blurSurface.setRenderEffect(
-                RenderEffect.createBlurEffect(30f, 30f, Shader.TileMode.CLAMP)
-            )
-        }
-
         val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
         masterSwitch.isChecked = prefs.getBoolean("master_switch", false)
@@ -53,11 +45,27 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { v, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
+            // 1. Move the AppBarLayout down below status bar
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             appBar.setPadding(0, systemBars.top, 0, 0)
+
+            // 2. Make the blur surface cover the status bar AND toolbar
+            val blurSurface = findViewById<View>(R.id.blur_surface)
+            val totalHeaderHeight = systemBars.top + toolbar.height
+            
+            val params = blurSurface.layoutParams
+            params.height = totalHeaderHeight
+            blurSurface.layoutParams = params
+            
+            // Apply the actual blur effect (Android 12+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                blurSurface.setRenderEffect(
+                    RenderEffect.createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                )
+            }
 
             insets
         }
