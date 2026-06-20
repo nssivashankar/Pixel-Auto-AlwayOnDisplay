@@ -51,11 +51,13 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             val blurSurface = findViewById<View>(R.id.blur_surface)
 
+            // Ensure the top bar properly covers the status bar
             appBar.setPadding(0, systemBars.top, 0, 0)
             
+            // Apply a visible "Frosted Glass" effect (Android 12+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 blurSurface.setRenderEffect(
-                    RenderEffect.createBlurEffect(80f, 80f, Shader.TileMode.CLAMP)
+                    RenderEffect.createBlurEffect(35f, 35f, Shader.TileMode.CLAMP)
                 )
             }
 
