@@ -4,8 +4,12 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.RenderEffect
+import android.graphics.Shader
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
@@ -32,6 +36,15 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayShowTitleEnabled(false)
+
+        // Apply Android 12+ Blur Effect for "Android 17" feel
+        val blurSurface = findViewById<View>(R.id.blur_surface)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            blurSurface.setRenderEffect(
+                RenderEffect.createBlurEffect(60f, 60f, Shader.TileMode.CLAMP)
+            )
+        }
 
         val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
@@ -41,15 +54,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.toolbar)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(0, systemBars.top, 0, 0)
-            insets
-        }
-
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.settings_container)) { v, insets ->
-            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            v.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             insets
         }
 
@@ -153,7 +158,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                     setTitle(R.string.charging_info_title)
                     setSummary(R.string.charging_info_summary)
                     setOnPreferenceChangeListener { _, newValue ->
-                        if (newValue == true && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        if (newValue == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                             if (requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                                 requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
                             }
@@ -246,7 +251,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                 key = "post_notif_pref"
                 title = "Notification Permission"
                 setOnPreferenceClickListener {
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
                     }
                     true
@@ -274,7 +279,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             }
 
             if (postNotif != null) {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     val hasPostNotif = requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
                     postNotif.summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info"
                     postNotif.isVisible = true
