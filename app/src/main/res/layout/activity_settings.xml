@@ -4,21 +4,23 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="@android:color/transparent">
 
-    <!-- Content starts from the very top to scroll under the bar -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:overScrollMode="never">
+        android:overScrollMode="never"
+        android:background="#1A000000"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <FrameLayout
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="12dp"
+            android:paddingTop="16dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -28,46 +30,33 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:elevation="0dp">
+        app:elevation="0dp"
+        app:liftOnScroll="true">
 
         <com.google.android.material.card.MaterialCardView
-            android:id="@+id/glass_card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="?attr/colorSurfaceContainerHigh"
-            app:cardElevation="8dp"
+            app:cardBackgroundColor="#CC1D1B20"
+            app:cardElevation="12dp"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.GlassBar"
             app:strokeWidth="0dp">
 
-            <FrameLayout
-                android:id="@+id/blur_container"
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="?attr/actionBarSize"
+                android:background="@android:color/transparent"
+                app:title="Pixel AOD"
+                app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
 
-                <!-- The surface we apply the blur effect to -->
-                <View
-                    android:id="@+id/blur_surface"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:alpha="0.8" />
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/master_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginEnd="16dp" />
 
-                <com.google.android.material.appbar.MaterialToolbar
-                    android:id="@+id/toolbar"
-                    android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:background="@android:color/transparent"
-                    app:title="Pixel AOD"
-                    app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/master_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:layout_marginEnd="16dp" />
-
-                </com.google.android.material.appbar.MaterialToolbar>
-            </FrameLayout>
+            </com.google.android.material.appbar.MaterialToolbar>
 
         </com.google.android.material.card.MaterialCardView>
 
