@@ -47,6 +47,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
@@ -62,12 +63,16 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                 )
             }
 
-            // Push content down: Status Bar + Header height + extra margin for first section
+            // Calculate heights in pixels: (Toolbar 56dp + Gap 24dp) * density
+            val headerContentHeight = ((56 + 24) * density).toInt()
+            val sideMargin = (16 * density).toInt()
+
+            // Push content down: Status Bar + Header height
             container.setPadding(
-                container.paddingLeft,
-                systemBars.top + 80,
-                container.paddingRight,
-                container.paddingBottom
+                sideMargin,
+                systemBars.top + headerContentHeight,
+                sideMargin,
+                (48 * density).toInt()
             )
 
             insets
