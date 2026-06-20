@@ -34,6 +34,13 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
+        // --- THE BLUR SECRET ---
+        // This blurs the wallpaper behind the app.
+        // By making the app transparent under the header, we see this blur.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setBackgroundBlurRadius(150)
+        }
+
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -49,32 +56,29 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
+            val opaqueBg = findViewById<View>(R.id.list_opaque_bg)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Adjust ONLY the toolbar padding, let GlassBg cover the status bar
-            toolbar.setPadding(0, systemBars.top, 0, 0)
+            // Calculate exact Header Height
+            val toolbarHeight = (56 * density).toInt() + systemBars.top
             
-            // Re-calculate Toolbar height to include status bar
-            val params = toolbar.layoutParams
-            params.height = systemBars.top + (56 * density).toInt()
-            toolbar.layoutParams = params
-            
-            // Apply Heavy Blur to the Background Layer
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                glassBg.setRenderEffect(
-                    RenderEffect.createBlurEffect(100f, 100f, Shader.TileMode.CLAMP)
-                )
-            }
+            // Adjust Glass Background
+            glassBg.layoutParams.height = toolbarHeight
+            glassBg.requestLayout()
 
-            // Push content down by the exact visible height of the header
-            container.setPadding(
-                0, // Removed manual 16dp gap
-                params.height + (12 * density).toInt(), // Dynamic spacing
-                0,
-                (48 * density).toInt()
-            )
+            // Adjust Opaque Background to start exactly where the glass ends
+            (opaqueBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams).topMargin = toolbarHeight
+            opaqueBg.requestLayout()
+
+            // Toolbar padding
+            toolbar.setPadding(0, systemBars.top, 0, 0)
+            val params = toolbar.layoutParams
+            params.height = toolbarHeight
+            toolbar.layoutParams = params
+
+            // Content padding
+            container.setPadding(0, toolbarHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
         }
