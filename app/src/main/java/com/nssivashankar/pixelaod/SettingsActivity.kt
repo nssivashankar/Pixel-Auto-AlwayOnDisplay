@@ -68,23 +68,20 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val density = resources.displayMetrics.density
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            val glassContainer = findViewById<View>(R.id.glass_container)
+            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             val container = findViewById<View>(R.id.settings_container)
 
-            // 1. Position Header
+            // 1. Position Header including Status Bar
             appBar.setPadding(0, systemBars.top, 0, 0)
             val toolbarHeight = (56 * density).toInt() + systemBars.top
             
-            // 2. APPLY REAL BLUR TO THE HEADER ZONE (Android 12+)
+            // 2. WINDOW BLUR (Android 12+)
+            // This blurs the wallpaper behind the app, which is visible through the semi-transparent header
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                // This blurs the content inside the glass container.
-                // To blur what's BEHIND it, we need a high radius and low alpha.
-                glassContainer.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
-                )
+                window.setBackgroundBlurRadius(150)
             }
 
-            // 3. Spacing
+            // 3. Dynamic Spacing for content
             container.setPadding(0, toolbarHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets

@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground">
 
-    <!-- 1. The Main Sharp Content -->
+    <!-- 1. The Main Content -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -22,7 +22,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 2. The Glass Header Layer (Mirror Trick) -->
+    <!-- 2. The Glass Header (Layered) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -32,22 +32,16 @@
         app:liftOnScroll="false">
 
         <FrameLayout
-            android:id="@+id/glass_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Mirror Container: This will contain a BLURRED duplicate of the list -->
-            <FrameLayout
-                android:id="@+id/mirror_container"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent" />
-
-            <!-- Frosted Tint Layer -->
+            <!-- Glass Background Layer (This will have the frosted look) -->
             <View
+                android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?attr/colorSurfaceContainerHigh"
-                android:alpha="0.75" />
+                android:alpha="0.85" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -71,6 +65,7 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
+                <!-- Thin Sharp Divider -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"
