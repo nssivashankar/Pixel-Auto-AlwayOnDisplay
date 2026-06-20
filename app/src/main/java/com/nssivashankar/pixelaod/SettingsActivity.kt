@@ -49,10 +49,18 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val glassBg = findViewById<View>(R.id.header_glass_bg)
             val container = findViewById<View>(R.id.settings_container)
 
             // Full-width bar including status bar area
             appBar.setPadding(0, systemBars.top, 0, 0)
+            
+            // Apply Real Blur to Header on Android 12+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                glassBg.setRenderEffect(
+                    RenderEffect.createBlurEffect(100f, 100f, Shader.TileMode.CLAMP)
+                )
+            }
 
             // Start scrolling content just below the visible header
             container.setPadding(0, systemBars.top + 56, 0, 0)
@@ -141,8 +149,9 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val screen = preferenceManager.createPreferenceScreen(requireContext())
             preferenceScreen = screen
 
+            // --- Section 1: Automation & Triggers ---
             val automationCategory = PreferenceCategory(requireContext()).apply {
-                setTitle("Automation")
+                title = "Automation & Triggers"
             }
             screen.addPreference(automationCategory)
 
@@ -151,22 +160,6 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                     key = "charging_mode"
                     setTitle("Charging Mode")
                     setSummary("Turn on AoD automatically when charger is connected")
-                },
-            )
-
-            automationCategory.addPreference(
-                SwitchPreferenceCompat(requireContext()).apply {
-                    key = "charging_info_notif"
-                    setTitle(R.string.charging_info_title)
-                    setSummary(R.string.charging_info_summary)
-                    setOnPreferenceChangeListener { _, newValue ->
-                        if (newValue == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            if (requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
-                            }
-                        }
-                        true
-                    }
                 },
             )
 
@@ -189,10 +182,41 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                 },
             )
 
+            // --- Section 2: UI & Appearance ---
+            val uiCategory = PreferenceCategory(requireContext()).apply {
+                title = "UI & Appearance"
+            }
+            screen.addPreference(uiCategory)
+
+            uiCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "charging_info_notif"
+                    setTitle(R.string.charging_info_title)
+                    setSummary(R.string.charging_info_summary)
+                    setOnPreferenceChangeListener { _, newValue ->
+                        if (newValue == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                            if (requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                            }
+                        }
+                        true
+                    }
+                },
+            )
+
+            // --- Section 3: Restrictions ---
             val quietHoursCategory = PreferenceCategory(requireContext()).apply {
-                title = getString(R.string.scheduled_dnd_title)
+                title = "Restrictions"
             }
             screen.addPreference(quietHoursCategory)
+
+            quietHoursCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "dnd_mode"
+                    setTitle(R.string.dnd_mode_title)
+                    setSummary(R.string.dnd_mode_summary)
+                },
+            )
 
             quietHoursCategory.addPreference(
                 SwitchPreferenceCompat(requireContext()).apply {
@@ -210,22 +234,10 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             quietHoursCategory.addPreference(endPref)
             endPref.dependency = "scheduled_dnd"
 
-            val systemCategory = PreferenceCategory(requireContext()).apply {
-                title = "System Integration"
-            }
-            screen.addPreference(systemCategory)
-
-            systemCategory.addPreference(
-                SwitchPreferenceCompat(requireContext()).apply {
-                    key = "dnd_mode"
-                    setTitle(R.string.dnd_mode_title)
-                    setSummary(R.string.dnd_mode_summary)
-                },
-            )
-
+            // --- Section 4: Service Status (Permissions) ---
             val permissionsCategory = PreferenceCategory(requireContext()).apply {
                 key = "permissions_category"
-                title = "Permissions"
+                title = "Service Status"
             }
             screen.addPreference(permissionsCategory)
 

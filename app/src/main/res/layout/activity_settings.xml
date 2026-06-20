@@ -6,7 +6,6 @@
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground">
 
-    <!-- Content scrolls directly behind the header -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -18,7 +17,7 @@
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="4dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -30,37 +29,49 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#D91D1B20"> <!-- Glass Tint (Adjusts for Dark/Light) -->
+            android:layout_height="wrap_content">
 
-            <com.google.android.material.appbar.MaterialToolbar
-                android:id="@+id/toolbar"
-                android:layout_width="match_parent"
-                android:layout_height="?attr/actionBarSize"
-                android:background="@android:color/transparent"
-                app:title="Pixel AOD"
-                app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/master_switch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="end"
-                    android:layout_marginEnd="16dp" />
-
-            </com.google.android.material.appbar.MaterialToolbar>
-
-            <!-- Sharp Bottom Divider -->
+            <!-- Glass Background Layer -->
             <View
+                android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
-                android:layout_height="0.5dp"
-                android:background="?attr/colorOutlineVariant"
-                android:alpha="0.4" />
+                android:layout_height="match_parent"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:alpha="0.85" />
 
-        </LinearLayout>
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.appbar.MaterialToolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    android:background="@android:color/transparent"
+                    app:title="Pixel AOD"
+                    app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/master_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginEnd="16dp" />
+
+                </com.google.android.material.appbar.MaterialToolbar>
+
+                <!-- Thin Modern Divider -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0.5dp"
+                    android:background="?attr/colorOutlineVariant"
+                    android:alpha="0.3" />
+
+            </LinearLayout>
+        </FrameLayout>
 
     </com.google.android.material.appbar.AppBarLayout>
 
