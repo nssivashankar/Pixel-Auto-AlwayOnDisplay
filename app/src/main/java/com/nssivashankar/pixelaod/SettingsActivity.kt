@@ -34,6 +34,11 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
+        // Android 12+ System Wallpaper Blur
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setBackgroundBlurRadius(80)
+        }
+
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -49,17 +54,8 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            val blurSurface = findViewById<View>(R.id.blur_surface)
-
-            // Ensure the top bar properly covers the status bar
-            appBar.setPadding(0, systemBars.top, 0, 0)
-            
-            // Apply a visible "Frosted Glass" effect (Android 12+)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                blurSurface.setRenderEffect(
-                    RenderEffect.createBlurEffect(35f, 35f, Shader.TileMode.CLAMP)
-                )
-            }
+            // Ensure the floating bar is below status bar
+            appBar.setPadding(appBar.paddingLeft, systemBars.top + 12, appBar.paddingRight, appBar.paddingBottom)
 
             insets
         }
