@@ -4,13 +4,12 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.View
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -27,23 +26,13 @@ import rikka.shizuku.Shizuku
 import java.util.Locale
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
-class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
+class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- OFFICIAL WINDOW BLUR (Android 12+) ---
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(150)
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            try {
-                val method = window::class.java.getMethod("setBlurBehindRadius", Int::class.javaPrimitiveType)
-                method.invoke(window, 150)
-            } catch (e: Exception) { }
-        }
-
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -55,34 +44,9 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { view, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            val density = resources.displayMetrics.density
-            
-            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            val glassBg = findViewById<View>(R.id.header_glass_bg)
-            val contentBg = findViewById<View>(R.id.content_background)
-            val container = findViewById<View>(R.id.settings_container)
-
-            // 1. Position the blurred zone (Status Bar + Toolbar)
-            appBar.setPadding(0, systemBars.top, 0, 0)
-            val headerHeight = (56 * density).toInt() + systemBars.top
-            
-            // 2. Apply a secondary Frosted Blur to the glass layer for depth
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(50f, 50f, android.graphics.Shader.TileMode.CLAMP)
-                )
-            }
-
-            // 3. Offset the opaque content background so it doesn't cover the blur zone
-            val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.topMargin = headerHeight
-            contentBg.layoutParams = lp
-
-            // 4. Start the list exactly where the opaque background begins
-            container.setPadding(0, headerHeight + (12 * density).toInt(), 0, (48 * density).toInt())
-
+            view.setPadding(systemBars.left, 0, systemBars.right, systemBars.bottom)
             insets
         }
 
@@ -252,7 +216,7 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             quietHoursCategory.addPreference(endPref)
             endPref.dependency = "scheduled_dnd"
 
-            // --- Section 4: Service Status (Permissions) ---
+            // --- Section 4: Service Status ---
             val permissionsCategory = PreferenceCategory(requireContext()).apply {
                 key = "permissions_category"
                 title = "Service Status"
