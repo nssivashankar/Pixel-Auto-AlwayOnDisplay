@@ -36,13 +36,12 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
-        supportActionBar?.setDisplayShowTitleEnabled(false)
 
-        // Apply Android 12+ Blur Effect for "Android 17" feel
+        // Apply Android 12+ Blur Effect for the top bar only
         val blurSurface = findViewById<View>(R.id.blur_surface)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             blurSurface.setRenderEffect(
-                RenderEffect.createBlurEffect(60f, 60f, Shader.TileMode.CLAMP)
+                RenderEffect.createBlurEffect(30f, 30f, Shader.TileMode.CLAMP)
             )
         }
 
@@ -55,6 +54,16 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            // Adjust blur surface and toolbar to include status bar height
+            val blurSurface = findViewById<View>(R.id.blur_surface)
+            val toolbar = findViewById<View>(R.id.toolbar)
+            val container = findViewById<View>(R.id.settings_container)
+
+            blurSurface.layoutParams.height = systemBars.top + toolbar.height
+            container.setPadding(container.paddingLeft, systemBars.top + toolbar.height, container.paddingRight, container.paddingBottom)
+
             insets
         }
 
