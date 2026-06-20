@@ -48,22 +48,14 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
-            // 1. Move the AppBarLayout down below status bar
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            appBar.setPadding(0, systemBars.top, 0, 0)
-
-            // 2. Make the blur surface cover the status bar AND toolbar
             val blurSurface = findViewById<View>(R.id.blur_surface)
-            val totalHeaderHeight = systemBars.top + toolbar.height
+
+            appBar.setPadding(0, systemBars.top, 0, 0)
             
-            val params = blurSurface.layoutParams
-            params.height = totalHeaderHeight
-            blurSurface.layoutParams = params
-            
-            // Apply the actual blur effect (Android 12+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 blurSurface.setRenderEffect(
-                    RenderEffect.createBlurEffect(40f, 40f, Shader.TileMode.CLAMP)
+                    RenderEffect.createBlurEffect(80f, 80f, Shader.TileMode.CLAMP)
                 )
             }
 
