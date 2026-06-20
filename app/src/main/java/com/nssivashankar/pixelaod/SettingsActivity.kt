@@ -34,11 +34,6 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // Official Android 12+ Window Blur (Glassmorphism)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(150)
-        }
-
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -56,11 +51,11 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Adjust Top Bar to include Status Bar space
+            // Position the glass bar below the status bar
             appBar.setPadding(0, systemBars.top, 0, 0)
 
-            // Start content high enough so it scrolls behind the glass
-            container.setPadding(0, systemBars.top + toolbar.height, 0, 0)
+            // Start list content exactly where the glass bar ends for a seamless transition
+            container.setPadding(0, systemBars.top + toolbar.height + 12, 0, 0)
 
             insets
         }

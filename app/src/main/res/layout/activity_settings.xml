@@ -4,23 +4,22 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent">
+    android:background="?android:attr/colorBackground"
+    android:fitsSystemWindows="true">
 
+    <!-- Content scrolls UNDER the bar from the very top -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:overScrollMode="never"
-        android:background="#1A000000"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:overScrollMode="never">
 
         <FrameLayout
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingHorizontal="12dp"
-            android:paddingTop="16dp"
             android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
@@ -30,16 +29,17 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:elevation="0dp"
-        app:liftOnScroll="true">
+        app:elevation="0dp">
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/glass_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardBackgroundColor="#CC1D1B20"
+            app:cardBackgroundColor="#E61D1B20"
             app:cardElevation="12dp"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.GlassBar"
-            app:strokeWidth="0dp">
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:strokeWidth="1dp">
 
             <com.google.android.material.appbar.MaterialToolbar
                 android:id="@+id/toolbar"
