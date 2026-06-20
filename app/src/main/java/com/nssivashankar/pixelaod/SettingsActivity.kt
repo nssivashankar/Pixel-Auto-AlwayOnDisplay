@@ -34,11 +34,22 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- THE BLUR SECRET ---
-        // This blurs the wallpaper behind the app.
-        // By making the app transparent under the header, we see this blur.
+        // --- REAL BLUR IMPLEMENTATION (Android 12+) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // 1. Blur the wallpaper behind the app
             window.setBackgroundBlurRadius(150)
+            
+            // 2. Add the system blur flag
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            
+            // 3. Set the blur radius for everything behind the window
+            // Use reflection to avoid compile errors on older SDKs
+            try {
+                val method = window::class.java.getMethod("setBlurBehindRadius", Int::class.javaPrimitiveType)
+                method.invoke(window, 150)
+            } catch (e: Exception) {
+                // Fallback for some ROMs
+            }
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -56,28 +67,24 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val glassBg = findViewById<View>(R.id.header_glass_bg)
-            val opaqueBg = findViewById<View>(R.id.list_opaque_bg)
+            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val glassContainer = findViewById<View>(R.id.glass_container)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Calculate exact Header Height
+            // 1. Position Header
+            appBar.setPadding(0, systemBars.top, 0, 0)
             val toolbarHeight = (56 * density).toInt() + systemBars.top
             
-            // Adjust Glass Background
-            glassBg.layoutParams.height = toolbarHeight
-            glassBg.requestLayout()
+            // 2. APPLY REAL BLUR TO THE HEADER ZONE (Android 12+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // This blurs the content inside the glass container.
+                // To blur what's BEHIND it, we need a high radius and low alpha.
+                glassContainer.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
+                )
+            }
 
-            // Adjust Opaque Background to start exactly where the glass ends
-            (opaqueBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams).topMargin = toolbarHeight
-            opaqueBg.requestLayout()
-
-            // Toolbar padding
-            toolbar.setPadding(0, systemBars.top, 0, 0)
-            val params = toolbar.layoutParams
-            params.height = toolbarHeight
-            toolbar.layoutParams = params
-
-            // Content padding
+            // 3. Spacing
             container.setPadding(0, toolbarHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
