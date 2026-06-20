@@ -62,8 +62,13 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
                 )
             }
 
-            // Start scrolling content just below the visible header
-            container.setPadding(0, systemBars.top + 56, 0, 0)
+            // Push content down: Status Bar + Header height + extra margin for first section
+            container.setPadding(
+                container.paddingLeft,
+                systemBars.top + 80,
+                container.paddingRight,
+                container.paddingBottom
+            )
 
             insets
         }
