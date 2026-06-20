@@ -34,11 +34,6 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // Android 12+ System Wallpaper Blur
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(80)
-        }
-
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -54,8 +49,13 @@ class SettingsActivity : androidx.appcompat.app.AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             
             val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
-            // Ensure the floating bar is below status bar
-            appBar.setPadding(appBar.paddingLeft, systemBars.top + 12, appBar.paddingRight, appBar.paddingBottom)
+            val container = findViewById<View>(R.id.settings_container)
+
+            // Adjust Top Bar to include Status Bar space
+            appBar.setPadding(0, systemBars.top, 0, 0)
+            
+            // Ensure content starts behind the glass bar for immersion
+            container.setPadding(0, 0, 0, 0)
 
             insets
         }
