@@ -10,7 +10,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ### 🔋 Integrated Battery Health (Pixel Only)
 -   **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.
--   **Integrated Health Notification**: A specialized live notification (see screenshot below) that lets you switch battery modes instantly without opening the app.
+-   **Integrated Health Notification**: A specialized live notification (see screenshot below) that lets you switch battery modes instantly from your lockscreen.
 -   **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions.
 
 ### ⚡ Smart Charging Intelligence
@@ -29,8 +29,8 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 | | | | | |
 | :---: | :---: | :---: | :---: | :---: |
-| <a href="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f"><img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974"><img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" height="400" alt="Integrated Health Notif" /></a> | <a href="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d"><img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" height="400" alt="Notification" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
-| **Main UI** | **Settings** | **⭐ Integrated Health** | **Standard Notif** | **Live Tracking** |
+| <a href="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f"><img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" height="400" alt="Main UI" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="Settings" /></a> | <a href="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974"><img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" height="400" alt="Integrated Health" /></a> | <a href="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d"><img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" height="400" alt="AOD Info" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Live Tracking" /></a> |
+| **Main UI - Features** | **Settings - Per-App Customization** | **⭐ Control charging modes in lockscreen itself** | **Charging info in AOD (exact time and temp)** | **Live notifications for apps that support live notifications** |
 
 ---
 
