@@ -76,16 +76,12 @@ class SettingsActivity : AppCompatActivity() {
                     val density = resources.displayMetrics.density
                     
                     // 3. DUAL-EDGE GLOW SUPPRESSION
-                    // We add a safety buffer at BOTH top and bottom.
-                    // This prevents the blur from sampling sharp text at the edges,
-                    // which causes the "glowing halo" effect.
                     val topBuffer = (32 * density).toInt()
                     val bottomBuffer = (32 * density).toInt()
                     
                     canvas.save()
-                    // Strictly clip the list content away from the physical edges
                     canvas.clipRect(0, topBuffer, mirror.width, mirror.height - bottomBuffer)
-
+                    
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
                     canvas.restore()
@@ -118,7 +114,7 @@ class SettingsActivity : AppCompatActivity() {
             toolbar.layoutParams = params
 
             // Fine-tune the tint for extra "milky" depth
-            tint.alpha = 0.4f
+            tint.alpha = 0.4f 
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
@@ -208,6 +204,7 @@ class SettingsActivity : AppCompatActivity() {
             // --- Section 1: Automation & Triggers ---
             val automationCategory = PreferenceCategory(requireContext()).apply {
                 title = "Automation & Triggers"
+                key = "cat_automation"
             }
             screen.addPreference(automationCategory)
 
@@ -216,6 +213,7 @@ class SettingsActivity : AppCompatActivity() {
                     key = "charging_mode"
                     setTitle("Charging Mode")
                     setSummary("Turn on AoD automatically when charger is connected")
+                    icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_idle_low_battery)
                 },
             )
 
@@ -225,22 +223,14 @@ class SettingsActivity : AppCompatActivity() {
                     title = "Per-App Notifications"
                     summary = "Always trigger AoD for these apps"
                     dialogTitle = "Select apps to watch"
-                },
-            )
-
-            automationCategory.addPreference(
-                SwitchAppListPreference(requireContext(), null).apply {
-                    key = "live_notif_blocked_apps"
-                    setTitle("Live Notification Mode \u203A")
-                    setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
-                    setSwitchKey("live_notif_mode")
-                    dialogTitle = "Block list for live notifications"
+                    icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_agenda)
                 },
             )
 
             // --- Section 2: Battery Health (Pixel Specific) ---
             val batteryCategory = PreferenceCategory(requireContext()).apply {
                 title = getString(R.string.battery_health_title)
+                key = "cat_battery"
             }
             screen.addPreference(batteryCategory)
 
@@ -250,17 +240,15 @@ class SettingsActivity : AppCompatActivity() {
                     title = getString(R.string.charge_optimization_title)
                     entries = arrayOf("Off", "Limit to 80%", "Adaptive Charging")
                     entryValues = arrayOf("0", "1", "2")
+                    icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_power_off)
                     
                     val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
                     value = currentMode.toString()
-                    
-                    // Use SummaryProvider to avoid IllegalFormatConversionException with '%'
                     summaryProvider = ListPreference.SimpleSummaryProvider.getInstance()
 
                     setOnPreferenceChangeListener { _, newValue ->
                         val mode = (newValue as String).toInt()
                         AodSettings.setChargeOptimizationMode(requireContext().contentResolver, mode)
-                        
                         if (mode == 0) {
                             AodSettings.setAdaptiveChargingEnabled(requireContext().contentResolver, false)
                             findPreference<SwitchPreferenceCompat>("adaptive_charging_legacy")?.isChecked = false
@@ -270,23 +258,10 @@ class SettingsActivity : AppCompatActivity() {
                 }
             )
 
-            batteryCategory.addPreference(
-                SwitchPreferenceCompat(requireContext()).apply {
-                    key = "adaptive_charging_legacy"
-                    title = getString(R.string.adaptive_charging_title)
-                    summary = getString(R.string.adaptive_charging_summary)
-                    isChecked = AodSettings.isAdaptiveChargingEnabled(requireContext().contentResolver)
-
-                    setOnPreferenceChangeListener { _, newValue ->
-                        AodSettings.setAdaptiveChargingEnabled(requireContext().contentResolver, newValue as Boolean)
-                        true
-                    }
-                }
-            )
-
             // --- Section 3: UI & Appearance ---
             val uiCategory = PreferenceCategory(requireContext()).apply {
                 title = "UI & Appearance"
+                key = "cat_ui"
             }
             screen.addPreference(uiCategory)
 
@@ -295,14 +270,7 @@ class SettingsActivity : AppCompatActivity() {
                     key = "charging_info_notif"
                     setTitle(R.string.charging_info_title)
                     setSummary(R.string.charging_info_summary)
-                    setOnPreferenceChangeListener { _, newValue ->
-                        if (newValue == true && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                            if (requireContext().checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
-                            }
-                        }
-                        true
-                    }
+                    icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_info_details)
                 },
             )
 
@@ -376,6 +344,11 @@ class SettingsActivity : AppCompatActivity() {
             permissionsCategory.addPreference(postNotifPref)
 
             updatePermissionSummaries()
+        }
+
+        override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+            listView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
         }
 
         private fun updatePermissionSummaries() {

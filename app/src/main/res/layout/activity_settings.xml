@@ -61,7 +61,8 @@
                     android:layout_height="?attr/actionBarSize"
                     android:background="@android:color/transparent"
                     app:title="Pixel AOD"
-                    app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
+                    app:titleTextAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                    app:titleTextColor="?attr/colorOnSurface">
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/master_switch"
