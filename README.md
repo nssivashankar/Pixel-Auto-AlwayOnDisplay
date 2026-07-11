@@ -1,4 +1,4 @@
-# ✨ Pixel Auto AOD v1.2.0
+# ✨ Pixel Auto AOD v1.1.0
 
 **The missing automation for your Pixel's Always-On Display.**
 
@@ -6,7 +6,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
-## 🚀 Key Features
+## 🚀 Key Features (v1.1.0)
 
 ### 🔋 Integrated Battery Health (Pixel Only)
 -   **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.
