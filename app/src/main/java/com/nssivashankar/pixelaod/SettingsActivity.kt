@@ -366,6 +366,16 @@ class SettingsActivity : AppCompatActivity() {
         override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
             super.onViewCreated(view, savedInstanceState)
             listView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+            
+            val density = resources.displayMetrics.density
+            val margin = (16 * density).toInt()
+            listView.setPadding(margin, 0, margin, 0)
+            listView.clipToPadding = false
+        }
+
+        override fun onCreateAdapter(preferenceScreen: androidx.preference.PreferenceScreen): androidx.recyclerview.widget.RecyclerView.Adapter<*> {
+            val adapter = super.onCreateAdapter(preferenceScreen)
+            return adapter
         }
 
         private fun updatePermissionSummaries() {
