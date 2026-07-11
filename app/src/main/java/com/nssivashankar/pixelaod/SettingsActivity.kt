@@ -50,7 +50,7 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE STABLE MIRROR ENGINE (No Glow / High-Performance) ---
+        // --- THE STABLE MIRROR ENGINE (Zero-Glow / High-Performance) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
@@ -58,9 +58,9 @@ class SettingsActivity : AppCompatActivity() {
                 this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
             )
 
-            // 1. Revert to CLAMP: Most stable for hardware blurs
+            // 1. Native stability with 80f radius for better edge containment
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -70,16 +70,21 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    // 2. Draw Solid Base: Hides sharp text behind
+                    // 2. Solid base for the frost
                     canvas.drawColor(surfaceColor)
                     
-                    canvas.save()
-                    // 3. GLOW SUPPRESSION: Clip the mirrored content slightly before the bottom
-                    // This creates a "Safety Zone" of solid color that the blur engine samples,
-                    // preventing the white text below from creating a "glow" halo.
                     val density = resources.displayMetrics.density
-                    val safetyZone = (24 * density).toInt() 
-                    canvas.clipRect(0, 0, mirror.width, mirror.height - safetyZone)
+                    
+                    // 3. DUAL-EDGE GLOW SUPPRESSION
+                    // We add a safety buffer at BOTH top and bottom.
+                    // This prevents the blur from sampling sharp text at the edges,
+                    // which causes the "glowing halo" effect.
+                    val topBuffer = (32 * density).toInt()
+                    val bottomBuffer = (32 * density).toInt()
+                    
+                    canvas.save()
+                    // Strictly clip the list content away from the physical edges
+                    canvas.clipRect(0, topBuffer, mirror.width, mirror.height - bottomBuffer)
 
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
