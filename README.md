@@ -9,28 +9,19 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 ## 🚀 Key Features
 
 ### 🔋 Integrated Battery Health (Pixel Only)
--   **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.
--   **Integrated Health Notification**: A specialized live notification (see screenshot below) that lets you switch battery modes instantly from your lockscreen.
--   **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions.
+| Feature Details | Preview |
+| :--- | :---: |
+| - **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.<br><br>- **⭐ Control charging modes in lockscreen itself**: A specialized live notification that lets you switch battery modes instantly from your lockscreen.<br><br>- **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions. | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="200" alt="Integrated Health" /> |
 
 ### ⚡ Smart Charging Intelligence
--   **Automated Activation**: Automatically enables AOD when the charger is connected and disables it upon disconnection or full charge.
--   **Enhanced Charging Notification**: A live update showing real-time **Charging Wattage**, **Battery Temperature**, and **Precise ETA**.
--   **Smart ETA Engine**: Automatically switches between System time and custom internal calculations if the device is thermal throttling.
--   **80% Health Target**: Calculates exactly when the device will reach the 80% limit.
+| Feature Details | Preview |
+| :--- | :---: |
+| - **Automated Activation**: Automatically enables AOD when the charger is connected and disables it upon disconnection or full charge.<br><br>- **Charging info in AOD (exact time and temp)**: A live update showing real-time **Charging Wattage**, **Battery Temperature**, and **Precise ETA**.<br><br>- **Smart ETA Engine**: Automatically switches between System time and custom internal calculations if the device is thermal throttling. | <img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" width="200" alt="AOD Info" /> |
 
 ### 🔔 Smart Notification Management
--   **Per-App Triggers**: Choose specific apps (Messaging, Mail, etc.) to trigger the AOD.
--   **Live Notification Mode**: Intelligent detection for ongoing events like **Google Maps navigation**, **Uber/Ride-sharing**, and **Food Delivery tracking**.
-
----
-
-## 📱 Screenshots
-
-| | | | | |
-| :---: | :---: | :---: | :---: | :---: |
-| <img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" width="180" alt="Main UI" /> | <img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" width="180" alt="Settings" /> | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="180" alt="Integrated Health" /> | <img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" width="180" alt="AOD Info" /> | <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="180" alt="Live Tracking" /> |
-| **Main UI - Features** | **Settings - Per-App Customization** | **⭐ Control charging modes in lockscreen itself** | **Charging info in AOD (exact time and temp)** | **Live notifications for apps that support live notifications** |
+| Feature Details | Preview |
+| :--- | :---: |
+| - **Settings - Per-App Customization**: Choose specific apps (Messaging, Mail, etc.) to trigger the AOD.<br><br>- **Live notifications for apps that support live notifications**: Intelligent detection for ongoing events like **Google Maps navigation**, **Uber/Ride-sharing**, and **Food Delivery tracking**.<br><br>- **Automatic Cleanup**: AOD is automatically disabled once the relevant notifications are cleared. | <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="200" alt="Live Tracking" /> |
 
 ---
 
