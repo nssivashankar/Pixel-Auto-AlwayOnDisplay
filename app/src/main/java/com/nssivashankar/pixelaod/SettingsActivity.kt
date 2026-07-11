@@ -50,32 +50,34 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE OPAQUE MIRROR ENGINE (True Backdrop Blur) ---
+        // --- THE STABLE MIRROR ENGINE (No Glow / No Edge Bleed) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
-            // Get the current theme's surface color to make the mirror OPAQUE
             val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
                 this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
             )
 
-            // High-Radius Blur for the "Frosted" look
+            // 1. CLAMP MODE: This is the secret to stopping the "Glow". 
+            // It prevents the blur from sampling pixels outside the header area.
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.DECAL)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
-                private var isDrawing = false // Prevent recursion
+                private var isDrawing = false
 
                 override fun draw(canvas: android.graphics.Canvas) {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    // 1. DRAW SOLID COLOR: This hides the sharp text that is physically behind the header
+                    // 2. HARD CLIP: Strictly contain the drawing to the header area 
+                    // This stops "ghost pixels" from leaking in and causing glows.
+                    canvas.clipRect(0, 0, mirror.width, mirror.height)
+                    
                     canvas.drawColor(surfaceColor)
                     
                     canvas.save()
-                    // 2. Mirror the settings content at the correct scroll position
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
                     canvas.restore()
@@ -87,12 +89,10 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // Sync with every scroll movement
             scroll.viewTreeObserver.addOnScrollChangedListener {
                 mirror.invalidate()
             }
             
-            // Sync with every frame for animations
             mirror.viewTreeObserver.addOnPreDrawListener {
                 mirror.invalidate()
                 true
