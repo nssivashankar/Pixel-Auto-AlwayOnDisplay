@@ -25,17 +25,20 @@ class SwitchAppListPreference(context: Context, attrs: AttributeSet?) : AppListP
         if (switch != null && key != null) {
             val prefs = preferenceManager.sharedPreferences
             switch.setOnCheckedChangeListener(null)
-            switch.isChecked = prefs?.getBoolean(key, false) ?: false
+            val currentValue = prefs?.getBoolean(key, false) ?: false
+            switch.isChecked = currentValue
             
             switch.setOnCheckedChangeListener { _, isChecked ->
-                prefs?.edit { putBoolean(key, isChecked) }
-                // Notify listener so the service can update
-                callChangeListener(isChecked)
+                if (prefs?.getBoolean(key, false) != isChecked) {
+                    prefs?.edit { putBoolean(key, isChecked) }
+                    persistBoolean(isChecked) // Sync with standard preference storage
+                    callChangeListener(isChecked)
+                }
             }
             
-            // Prevent the switch click from propagating to the preference (opening the dialog)
-            switch.setOnClickListener { 
-                // Just consume the click
+            // Allow clicking the card to toggle the switch if it's a switch preference
+            holder.itemView.setOnClickListener {
+                switch.toggle()
             }
         }
     }

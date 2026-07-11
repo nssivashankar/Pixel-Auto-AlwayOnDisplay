@@ -28,6 +28,7 @@
 
     <style name="CustomSwitchPreference" parent="Preference.SwitchPreference">
         <item name="android:layout">@layout/custom_preference_card</item>
+        <item name="android:widgetLayout">@layout/preference_switch_widget</item>
         <item name="allowDividerAbove">false</item>
         <item name="allowDividerBelow">false</item>
     </style>

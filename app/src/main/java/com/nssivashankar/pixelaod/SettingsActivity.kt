@@ -216,6 +216,7 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle("Charging Mode")
                     setSummary("Turn on AoD automatically when charger is connected")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_idle_low_battery)
+                    setDefaultValue(false)
                 },
             )
 
@@ -237,6 +238,7 @@ class SettingsActivity : AppCompatActivity() {
                     setSwitchKey("live_notif_mode")
                     dialogTitle = "Block list for live notifications"
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_dialog_map)
+                    setDefaultValue(false)
                 },
             )
 
@@ -264,7 +266,6 @@ class SettingsActivity : AppCompatActivity() {
                         AodSettings.setChargeOptimizationMode(requireContext().contentResolver, mode)
                         if (mode == 0) {
                             AodSettings.setAdaptiveChargingEnabled(requireContext().contentResolver, false)
-                            findPreference<SwitchPreferenceCompat>("adaptive_charging_legacy")?.isChecked = false
                         }
                         true
                     }
@@ -284,6 +285,7 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle(R.string.charging_info_title)
                     setSummary(R.string.charging_info_summary)
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_info_details)
+                    setDefaultValue(false)
                 },
             )
 
@@ -298,6 +300,7 @@ class SettingsActivity : AppCompatActivity() {
                     key = "dnd_mode"
                     setTitle(R.string.dnd_mode_title)
                     setSummary(R.string.dnd_mode_summary)
+                    setDefaultValue(false)
                 },
             )
 
@@ -306,6 +309,7 @@ class SettingsActivity : AppCompatActivity() {
                     key = "scheduled_dnd"
                     setTitle(R.string.scheduled_dnd_title)
                     setSummary(R.string.scheduled_dnd_summary)
+                    setDefaultValue(false)
                 }
             )
 
