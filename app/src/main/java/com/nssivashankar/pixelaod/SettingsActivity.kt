@@ -231,12 +231,10 @@ class SettingsActivity : AppCompatActivity() {
             )
 
             automationCategory.addPreference(
-                SwitchAppListPreference(requireContext(), null).apply {
-                    key = "live_notif_blocked_apps"
-                    setTitle("Live Notification Mode \u203A")
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "live_notif_mode"
+                    setTitle("Live Notification Mode")
                     setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
-                    setSwitchKey("live_notif_mode")
-                    dialogTitle = "Block list for live notifications"
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_dialog_map)
                     setDefaultValue(false)
                 },
@@ -366,16 +364,6 @@ class SettingsActivity : AppCompatActivity() {
         override fun onViewCreated(view: android.view.View, savedInstanceState: Bundle?) {
             super.onViewCreated(view, savedInstanceState)
             listView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
-            
-            val density = resources.displayMetrics.density
-            val margin = (16 * density).toInt()
-            listView.setPadding(margin, 0, margin, 0)
-            listView.clipToPadding = false
-        }
-
-        override fun onCreateAdapter(preferenceScreen: androidx.preference.PreferenceScreen): androidx.recyclerview.widget.RecyclerView.Adapter<*> {
-            val adapter = super.onCreateAdapter(preferenceScreen)
-            return adapter
         }
 
         private fun updatePermissionSummaries() {
