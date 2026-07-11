@@ -50,7 +50,7 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE STABLE MIRROR ENGINE (No Glow / No Edge Bleed) ---
+        // --- THE STABLE MIRROR ENGINE (No Glow / High-Performance) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
@@ -58,10 +58,9 @@ class SettingsActivity : AppCompatActivity() {
                 this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
             )
 
-            // 1. CLAMP MODE: This is the secret to stopping the "Glow". 
-            // It prevents the blur from sampling pixels outside the header area.
+            // 1. Revert to CLAMP: Most stable for hardware blurs
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.DECAL)
+                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -71,13 +70,17 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    // 2. HARD CLIP: Strictly contain the drawing to the header area 
-                    // This stops "ghost pixels" from leaking in and causing glows.
-                    canvas.clipRect(0, 0, mirror.width, mirror.height)
-                    
+                    // 2. Draw Solid Base: Hides sharp text behind
                     canvas.drawColor(surfaceColor)
                     
                     canvas.save()
+                    // 3. GLOW SUPPRESSION: Clip the mirrored content slightly before the bottom
+                    // This creates a "Safety Zone" of solid color that the blur engine samples,
+                    // preventing the white text below from creating a "glow" halo.
+                    val density = resources.displayMetrics.density
+                    val safetyZone = (24 * density).toInt() 
+                    canvas.clipRect(0, 0, mirror.width, mirror.height - safetyZone)
+
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
                     canvas.restore()
