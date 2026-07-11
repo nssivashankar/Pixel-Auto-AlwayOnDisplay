@@ -1,10 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Dolby Glass Requirements -->
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:windowIsTranslucent">true</item>
-        <item name="android:windowIsFloating">false</item>
+        <!-- Opaque App Background (No wallpaper bleed) -->
+        <item name="android:windowBackground">?android:attr/colorBackground</item>
+        <item name="android:windowIsTranslucent">false</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

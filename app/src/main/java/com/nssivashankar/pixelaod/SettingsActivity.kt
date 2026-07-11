@@ -30,15 +30,14 @@ import com.nssivashankar.pixelaod.config.Settings as AodSettings
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Enable Immersive Edge-to-Edge with correct icon colors
+        // 1. Enable Immersive Edge-to-Edge
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- DOLBY WINDOW BLUR (Android 12+) ---
+        // --- CLEAN WINDOW (No Wallpaper Blur) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(200)
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.setBackgroundBlurRadius(0)
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -68,11 +67,10 @@ class SettingsActivity : AppCompatActivity() {
             val toolbarHeight = (56 * density).toInt()
             val headerTotalHeight = toolbarHeight + systemBars.top
             
-            // 2. Apply Extra Frosted Blur (Android 12+)
-            // This creates the "Dolby" textured glass look
+            // 2. Apply HEAVY Frosted Blur (Android 12+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
+                    android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
