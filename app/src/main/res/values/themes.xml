@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Opaque Theme for Telegram-style Content Blur -->
-        <item name="android:windowBackground">?android:attr/colorBackground</item>
-        <item name="android:windowIsTranslucent">false</item>
+        <!-- Transparent Window to allow Wallpaper Blur visibility -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowShowWallpaper">true</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

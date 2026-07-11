@@ -4,9 +4,19 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="@android:color/transparent">
 
-    <!-- 1. The Main Content (Sharp) -->
+    <!-- 1. The Blur Portal zone (Status Bar + Toolbar) -->
+    <!-- This zone blurs the wallpaper behind it -->
+
+    <!-- 2. The Opaque Body (Starting exactly below the toolbar) -->
+    <View
+        android:id="@+id/list_opaque_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?android:attr/colorBackground" />
+
+    <!-- 3. The Content (Passes through the portal) -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -22,7 +32,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 2. The Glass Header (Content-Blur Zone) -->
+    <!-- 4. The Glass Header Layer (Sharp Content + Frost Tint) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -32,17 +42,16 @@
         app:liftOnScroll="false">
 
         <FrameLayout
-            android:id="@+id/glass_header_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- This View will blur the APP CONTENT that passes under it -->
+            <!-- Frosted Glass Tint (Adds the milky feel to the wallpaper blur) -->
             <View
-                android:id="@+id/content_blur_surface"
+                android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="?attr/colorSurface"
-                android:alpha="0.75" />
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:alpha="0.8" />
 
             <LinearLayout
                 android:layout_width="match_parent"
