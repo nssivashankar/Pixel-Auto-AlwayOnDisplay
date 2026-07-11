@@ -19,7 +19,7 @@
     <string name="charging_info_time_remaining_100">Full in %1$s</string>
     <string name="battery_health_title">Battery Health (Pixel Only)</string>
     <string name="charge_optimization_title">Charging Optimization</string>
-    <string name="charge_optimization_summary">Limit charging to 80% or use Adaptive Charging</string>
+    <string name="charge_optimization_summary">Limit charging to 80%% or use Adaptive Charging</string>
     <string name="adaptive_charging_title">Legacy Adaptive Charging</string>
     <string name="adaptive_charging_summary">Toggle for older Pixel devices</string>
 </resources>
