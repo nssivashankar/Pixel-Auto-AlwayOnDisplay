@@ -1,4 +1,4 @@
-# ✨ Pixel Auto AOD v1.1.0
+# ✨ Pixel Auto AOD
 
 **The missing automation for your Pixel's Always-On Display.**
 
@@ -6,7 +6,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
-## 🚀 Key Features (v1.1.0)
+## 🚀 Key Features
 
 ### 🔋 Integrated Battery Health (Pixel Only)
 -   **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.
@@ -34,7 +34,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 | | | | |
 | :---: | :---: | :---: | :---: |
-| <a href="https://github.com/user-attachments/assets/10219f8a-379b-451e-988a-ac798108e225"><img src="https://github.com/user-attachments/assets/10219f8a-379b-451e-988a-ac798108e225" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d"><img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" height="400" alt="Charging Info" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
+| <a href="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f"><img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974"><img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" height="400" alt="Charging Info" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
 
 ---
 
@@ -47,7 +47,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ## 🔐 Setup
 
-To toggle system settings without Root, this app requires the `WRITE_SECURE_SETTINGS` permission. You can grant this via **[Shizuku](https://shizuku.rikka.app/)** or ADB.
+To toggle system settings without Root, this app requires the `WRITE_SECURE_SETTINGS` permission. You can grant this via **[Shizuku](https://shizuku.rikka.app/)** (recommended) or ADB.
 
 ### Grant via ADB
 ```bash
