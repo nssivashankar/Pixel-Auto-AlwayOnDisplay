@@ -198,10 +198,20 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     class SettingsFragment : PreferenceFragmentCompat() {
+        
+        private val prefChangeListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == "charge_optimization") {
+                updateBatteryPreference()
+            }
+        }
+
         override fun onCreatePreferences(savedInstanceState: Bundle?, rootKey: String?) {
             preferenceManager.sharedPreferencesName = "aod_prefs"
             val screen = preferenceManager.createPreferenceScreen(requireContext())
             preferenceScreen = screen
+            
+            // Register listener for external changes (like from notification)
+            preferenceManager.sharedPreferences?.registerOnSharedPreferenceChangeListener(prefChangeListener)
 
             // --- Section 1: Automation & Triggers ---
             val automationCategory = PreferenceCategory(requireContext()).apply {
@@ -396,6 +406,20 @@ class SettingsActivity : AppCompatActivity() {
         override fun onResume() {
             super.onResume()
             updatePermissionSummaries()
+            updateBatteryPreference()
+        }
+
+        override fun onDestroy() {
+            super.onDestroy()
+            preferenceManager.sharedPreferences?.unregisterOnSharedPreferenceChangeListener(prefChangeListener)
+        }
+
+        private fun updateBatteryPreference() {
+            val batteryPref = findPreference<ListPreference>("charge_optimization")
+            if (batteryPref != null) {
+                val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
+                batteryPref.value = currentMode.toString()
+            }
         }
 
         private fun createTimePreference(key: String, titleRes: Int, default: String): Preference {
