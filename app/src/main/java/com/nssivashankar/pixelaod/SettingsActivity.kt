@@ -50,41 +50,48 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE PIXEL MIRROR ENGINE (Dolby Ultra-Frost) ---
+        // --- THE ROBUST PIXEL MIRROR ENGINE ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // 1. FORCE Hardware Layer - REQUIRED for RenderEffect to work on background drawables
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-            mirror.alpha = 0.99f // Force hardware layer compositing
             
-            // Ultra-heavy blur for the "Milky" look
+            // 2. Apply a heavy blur EFFECT to the entire View
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(150f, 150f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
             )
 
+            // 3. Implement a custom Mirroring Background
             mirror.background = object : android.graphics.drawable.Drawable() {
+                private var isDrawing = false // Prevent recursion
+
                 override fun draw(canvas: android.graphics.Canvas) {
-                    if (container.width <= 0) return
-                    canvas.save()
+                    if (isDrawing || container.width <= 0) return
+                    isDrawing = true
                     
-                    // 1. Position the capture to match what's behind the header
+                    canvas.save()
+                    // Capture exactly what is under the header
+                    // We translate the canvas so that the top of the container 
+                    // matches the top of the scroll view
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     
-                    // 2. Draw the actual app UI into the blur lens
+                    // CRITICAL: Draw the container into this canvas
+                    // This creates the "Source" for the RenderEffect blur
                     container.draw(canvas)
                     
                     canvas.restore()
+                    isDrawing = false
                 }
                 override fun setAlpha(alpha: Int) {}
                 override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
                 override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
             }
 
-            // High-frequency sync to keep the blur perfectly fluid
-            val syncListener = android.view.ViewTreeObserver.OnScrollChangedListener {
+            // 4. Force a redraw of the mirror whenever the content changes/scrolls
+            scroll.viewTreeObserver.addOnScrollChangedListener {
                 mirror.invalidate()
             }
-            scroll.viewTreeObserver.addOnScrollChangedListener(syncListener)
             
-            // Force redraw on every frame to handle animations (like toggles)
+            // 5. Also sync with frame updates for animations (toggles, etc)
             mirror.viewTreeObserver.addOnPreDrawListener {
                 mirror.invalidate()
                 true
