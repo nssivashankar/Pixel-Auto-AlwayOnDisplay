@@ -30,14 +30,16 @@ import com.nssivashankar.pixelaod.config.Settings as AodSettings
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 1. Enable Immersive Edge-to-Edge
+        // 1. Enable Full-Screen Immersive UI
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- CLEAN WINDOW (No Wallpaper Blur) ---
+        // --- PIXEL ULTIMATE WINDOW BLUR ---
+        // We blur the entire window background (the wallpaper)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(0)
+            window.setBackgroundBlurRadius(200)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -55,32 +57,30 @@ class SettingsActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
             val contentBg = findViewById<View>(R.id.content_background)
             val container = findViewById<View>(R.id.settings_container)
 
-            // 1. Position Content inside the Glass zone
-            // We pad the toolbar so the background (glassBg) flows behind the status bar
-            toolbar.setPadding(0, systemBars.top, 0, 0)
+            // 1. Position the Header Glass to cover Status + Toolbar
+            appBar.setPadding(0, systemBars.top, 0, 0)
+            val headerHeight = (56 * density).toInt() + systemBars.top
             
-            val toolbarHeight = (56 * density).toInt()
-            val headerTotalHeight = toolbarHeight + systemBars.top
-            
-            // 2. Apply ULTRA HEAVY Frosted Blur (Android 12+)
+            // 2. Secondary Frost Effect (Local texture)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(180f, 180f, android.graphics.Shader.TileMode.CLAMP)
+                    android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
-            // 3. The list background starts exactly where the glass header ends
+            // 3. IMPORTANT: The Opaque list background starts BELOW the glass
+            // This creates the "Portal" at the top where the blurred wallpaper is visible
             val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.topMargin = headerTotalHeight
+            lp.topMargin = headerHeight
             contentBg.layoutParams = lp
 
-            // 4. Spacing so the first item is visible below the glass
-            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+            // 4. Spacing for the list items
+            container.setPadding(0, headerHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
         }
