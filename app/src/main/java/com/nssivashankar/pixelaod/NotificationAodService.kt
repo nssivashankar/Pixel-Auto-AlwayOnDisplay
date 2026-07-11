@@ -11,6 +11,7 @@ import android.content.LocusId
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -28,6 +29,10 @@ class NotificationAodService : NotificationListenerService() {
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
         private const val CHARGING_CHANNEL_ID = "charging_live_v10"
+        
+        private const val ACTION_OPT_OFF = "com.nssivashankar.pixelaod.ACTION_OPT_OFF"
+        private const val ACTION_OPT_80 = "com.nssivashankar.pixelaod.ACTION_OPT_80"
+        private const val ACTION_OPT_ADAPTIVE = "com.nssivashankar.pixelaod.ACTION_OPT_ADAPTIVE"
     }
 
     private fun createNotificationChannel() {
@@ -47,6 +52,20 @@ class NotificationAodService : NotificationListenerService() {
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
+                ACTION_OPT_OFF -> {
+                    AodSettings.setChargeOptimizationMode(contentResolver, 0)
+                    AodSettings.setAdaptiveChargingEnabled(contentResolver, false)
+                    updateChargingNotification(null)
+                }
+                ACTION_OPT_80 -> {
+                    AodSettings.setChargeOptimizationMode(contentResolver, 1)
+                    updateChargingNotification(null)
+                }
+                ACTION_OPT_ADAPTIVE -> {
+                    AodSettings.setChargeOptimizationMode(contentResolver, 2)
+                    AodSettings.setAdaptiveChargingEnabled(contentResolver, true)
+                    updateChargingNotification(null)
+                }
                 Intent.ACTION_POWER_CONNECTED -> {
                     isCharging = true
                     plugInTime = System.currentTimeMillis()
@@ -140,8 +159,16 @@ class NotificationAodService : NotificationListenerService() {
             addAction(Intent.ACTION_BATTERY_CHANGED)
             addAction(Intent.ACTION_TIME_TICK)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+            addAction(ACTION_OPT_OFF)
+            addAction(ACTION_OPT_80)
+            addAction(ACTION_OPT_ADAPTIVE)
         }
-        registerReceiver(receiver, filter)
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(receiver, filter)
+        }
     }
 
     private fun updateDndStatus() {
@@ -450,6 +477,17 @@ class NotificationAodService : NotificationListenerService() {
 
         val contentText = "$timeStr \u2022 $wattageStr \u2022 $tempStr"
         
+        val currentMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        val isAdaptiveLegacy = AodSettings.isAdaptiveChargingEnabled(contentResolver)
+
+        val offIntent = android.app.PendingIntent.getBroadcast(this, 1, Intent(ACTION_OPT_OFF).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val opt80Intent = android.app.PendingIntent.getBroadcast(this, 2, Intent(ACTION_OPT_80).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val adaptiveIntent = android.app.PendingIntent.getBroadcast(this, 3, Intent(ACTION_OPT_ADAPTIVE).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+
+        val offLabel = if (currentMode == 0 && !isAdaptiveLegacy) "● Off" else "Off"
+        val opt80Label = if (currentMode == 1) "● 80%" else "80%"
+        val adaptiveLabel = if (currentMode == 2 || (currentMode == 0 && isAdaptiveLegacy)) "● Adaptive" else "Adaptive"
+
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)
             .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_bolt_24))
@@ -462,6 +500,9 @@ class NotificationAodService : NotificationListenerService() {
             .setContentIntent(contentIntent)
             .setColor(getColor(android.R.color.holo_blue_dark))
             .setShortcutId("charging_status")
+            .addAction(Notification.Action.Builder(null, offLabel, offIntent).build())
+            .addAction(Notification.Action.Builder(null, opt80Label, opt80Intent).build())
+            .addAction(Notification.Action.Builder(null, adaptiveLabel, adaptiveIntent).build())
 
         val extras = android.os.Bundle()
         
