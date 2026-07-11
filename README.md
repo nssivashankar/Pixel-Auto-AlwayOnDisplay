@@ -1,31 +1,45 @@
-# ✨ Pixel Auto AOD
+# ✨ Pixel Auto AOD v1.2.0
 
-**The missing automation for your Pixel's Always-On Display.**
+**The missing automation and premium UI for your Pixel's Always-On Display.**
 
-Pixel Auto AOD is a lightweight utility designed specifically for Google Pixel devices. It intelligently manages your Always-On Display (AOD), ensuring it's only active when you actually need it—saving battery and reducing screen wear while keeping you informed.
+Pixel Auto AOD is a high-performance utility designed specifically for Google Pixel devices. It intelligently manages your Always-On Display (AOD) while providing a modern, professional interface and integrated Pixel Battery Health management.
 
 ---
 
-## 🚀 Features
+## 💎 v1.2.0 Modernization
 
--   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged (100%), it turns off instantly to protect your battery and screen overnight.
+The latest update transforms Pixel Auto AOD into a premium system utility with a focus on aesthetics and battery longevity.
+
+### 🧊 Glassmorphism UI
+- **True Backdrop Blur**: Features a "Dolby-style" frosted glass header that blurs content scrolling beneath it in real-time.
+- **Zero-Glow Engine**: Custom rendering engine with dual-edge glow suppression for artifact-free visuals.
+- **Ultra-Bold Typography**: High-impact **30sp Black Weight** headlines for a strong system identity.
+- **Dynamic Theming**: Intelligent Light and Dark mode support with adaptive "milky" frost density and high-contrast Material 3 colors.
+
+### 🔋 Pixel Battery Health (Pixel Only)
+- **Direct Integration**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app or the charging notification.
+- **Real-Time Sync**: Settings stay perfectly synchronized between the system, the app UI, and notification quick actions.
+
+---
+
+## 🚀 Core Features
+
+-   **⚡ Smart Charging Mode**: Automatically enable AOD when you plug in. Once removed or fully charged, it turns off instantly.
 -   **📊 Enhanced Charging Info**: A rich notification showing real-time charging wattage, battery temperature, and precise ETA.
-    -   **Smart ETA**: Automatically switches between System-provided time and a custom internal calculation if the device is thermal throttling (heat protection).
-    -   **80% Health Target**: Intelligently calculates the time to reach 80% for users who want to maximize battery longevity.
-    -   **Trickle Status**: Identifies and labels the final "Trickle Charging" phase for better clarity.
--   **🔔 Per-App Notifications**: Select specific apps (WhatsApp, Mail, etc.) to trigger AOD. When a notification arrives, AOD wakes up; when you clear it, AOD goes back to sleep.
--   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Rapido rides, or food delivery tracking (Swiggy/Zomato).
--   **🌙 Respect System DND**: Optionally silence all AOD triggers when your phone is in Do Not Disturb mode.
--   **⏰ Scheduled Quiet Hours**: Set a custom in-app schedule (e.g., 11 PM to 7 AM) to ensure your room stays dark while you sleep.
+    -   **Smart ETA**: Automatically switches between System time and custom internal calculations.
+    -   **80% Health Target**: Precisely calculates the time to reach the 80% limit for longevity.
+-   **🔔 Per-App Notifications**: Select specific apps to trigger AOD. Wakes on arrival, sleeps on clear.
+-   **📍 Live Updates Support**: Keep AOD on during "Live" events like Google Maps navigation, Uber/Rapido rides, or Zomato/Swiggy tracking.
+-   **🌙 Smart Restrictions**: Optionally silence AOD triggers via **System DND** or **Scheduled Quiet Hours**.
 -   **🛠 Quick Settings Tile**: A master toggle in your notification shade for instant control.
 
 ---
 
 ## 🔋 Battery Impact
 Pixel Auto AOD is designed for zero-drain performance:
-- **Event-Driven**: It only runs when the system triggers an update (notification, battery change, or time tick).
+- **Event-Driven**: It only runs when the system triggers an update (notification, battery change, etc.).
 - **No WakeLocks**: The app never forces the CPU to stay awake.
-- **Low Footprint**: Minimal memory usage (~15MB), making it significantly lighter than most system utilities.
+- **Low Footprint**: Minimal memory usage (~15MB), significantly lighter than standard system utilities.
 
 ---
 
@@ -56,8 +70,8 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 ---
 ## 📜 Credits & License
 - **Original Author**: [Alberto Pedron](https://github.com/albertopedron) (Original concept and core logic).
-- **Maintenance & Modernization**: Shankar (Modern Android 15+ support, GitHub Actions, and UI enhancements).
-- **License**: This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+- **Maintenance & Modernization**: Shankar (Modern Android 15+ support, Glassmorphism UI, and Battery Health features).
+- **License**: MIT License.
 
 ---
 *Developed with ❤️ for the Pixel community.*
