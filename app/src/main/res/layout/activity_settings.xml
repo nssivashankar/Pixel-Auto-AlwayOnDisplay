@@ -6,8 +6,7 @@
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground">
 
-    <!-- 1. The Scrollable Content (Background Layer) -->
-    <!-- It now starts at 0dp so it can scroll BEHIND the header -->
+    <!-- 1. The Real Content (Sharp) -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -23,7 +22,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 2. The Glass Header (Foreground Layer) -->
+    <!-- 2. The Glass Header Layer -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -37,13 +36,19 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- The Frosted Lens: This blurs the text passing behind it -->
+            <!-- MIRROR VIEW: This will be populated in Kotlin to blur the content below -->
             <View
-                android:id="@+id/header_glass_bg"
+                android:id="@+id/header_blur_mirror"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Frosted Tint -->
+            <View
+                android:id="@+id/header_glass_tint"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="?attr/colorSurfaceContainerHigh"
-                android:alpha="0.75" />
+                android:background="?attr/colorSurface"
+                android:alpha="0.7" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -67,7 +72,6 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- Sharp Glass Edge -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"

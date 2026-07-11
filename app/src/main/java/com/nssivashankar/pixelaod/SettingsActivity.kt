@@ -33,12 +33,6 @@ class SettingsActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
-        
-        // --- CLEAN WINDOW (No Wallpaper Bleed) ---
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(0)
-            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-        }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
@@ -51,30 +45,34 @@ class SettingsActivity : AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
+        val scroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.settings_container_scroll)
+        val mirror = findViewById<View>(R.id.header_blur_mirror)
+        val container = findViewById<View>(R.id.settings_container)
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
+            val headerTotalHeight = (56 * density).toInt() + systemBars.top
             
-            val toolbarView = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-            val glassBg = findViewById<View>(R.id.header_glass_bg)
-            val container = findViewById<View>(R.id.settings_container)
+            toolbar.setPadding(0, systemBars.top, 0, 0)
+            
+            val params = toolbar.layoutParams
+            params.height = headerTotalHeight
+            toolbar.layoutParams = params
 
-            val toolbarHeight = (56 * density).toInt()
-            val headerTotalHeight = toolbarHeight + systemBars.top
-            
-            // 1. Position Title below status bar
-            toolbarView.setPadding(0, systemBars.top, 0, 0)
-            
-            // 2. APPLY MILKY FROST TO THE LENS (Android 12+)
+            // 1. Enable Backdrop Blur on the mirror layer (Telegram Style)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(150f, 150f, android.graphics.Shader.TileMode.CLAMP)
+                mirror.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
-            // 3. START CONTENT UNDER THE GLASS
-            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+            // 2. The magic sync: Capture the ScrollView's drawing onto the mirror
+            scroll.setOnScrollChangeListener { _, _, _, _, _ ->
+                mirror.invalidate()
+            }
 
+            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
         }
 
