@@ -30,6 +30,7 @@ import com.nssivashankar.pixelaod.config.Settings as AodSettings
 class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // 1. Enable Immersive Edge-to-Edge with correct icon colors
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
