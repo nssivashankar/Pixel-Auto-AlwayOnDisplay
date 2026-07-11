@@ -34,11 +34,10 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- THE BLUR SECRET ---
-        // This blurs the wallpaper behind the app.
-        // By making the app transparent under the header, we see this blur.
+        // --- CLEAN WINDOW (No Wallpaper Bleed) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(150)
+            window.setBackgroundBlurRadius(0)
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -56,29 +55,25 @@ class SettingsActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
+            val toolbarView = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
-            val opaqueBg = findViewById<View>(R.id.list_opaque_bg)
             val container = findViewById<View>(R.id.settings_container)
 
-            // Calculate exact Header Height
-            val toolbarHeight = (56 * density).toInt() + systemBars.top
+            val toolbarHeight = (56 * density).toInt()
+            val headerTotalHeight = toolbarHeight + systemBars.top
             
-            // Adjust Glass Background
-            glassBg.layoutParams.height = toolbarHeight
-            glassBg.requestLayout()
+            // 1. Position Title below status bar
+            toolbarView.setPadding(0, systemBars.top, 0, 0)
+            
+            // 2. APPLY MILKY FROST TO THE LENS (Android 12+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                glassBg.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(150f, 150f, android.graphics.Shader.TileMode.CLAMP)
+                )
+            }
 
-            // Adjust Opaque Background to start exactly where the glass ends
-            (opaqueBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams).topMargin = toolbarHeight
-            opaqueBg.requestLayout()
-
-            // Toolbar padding
-            toolbar.setPadding(0, systemBars.top, 0, 0)
-            val params = toolbar.layoutParams
-            params.height = toolbarHeight
-            toolbar.layoutParams = params
-
-            // Content padding
-            container.setPadding(0, toolbarHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+            // 3. START CONTENT UNDER THE GLASS
+            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
         }

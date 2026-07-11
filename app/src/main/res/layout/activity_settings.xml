@@ -4,19 +4,10 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent">
+    android:background="?android:attr/colorBackground">
 
-    <!-- 1. The Blur Portal zone (Status Bar + Toolbar) -->
-    <!-- This zone blurs the wallpaper behind it -->
-
-    <!-- 2. The Opaque Body (Starting exactly below the toolbar) -->
-    <View
-        android:id="@+id/list_opaque_bg"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="?android:attr/colorBackground" />
-
-    <!-- 3. The Content (Passes through the portal) -->
+    <!-- 1. The Scrollable Content (Background Layer) -->
+    <!-- It now starts at 0dp so it can scroll BEHIND the header -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -32,7 +23,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 4. The Glass Header Layer (Sharp Content + Frost Tint) -->
+    <!-- 2. The Glass Header (Foreground Layer) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -42,16 +33,17 @@
         app:liftOnScroll="false">
 
         <FrameLayout
+            android:id="@+id/glass_header_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Frosted Glass Tint (Adds the milky feel to the wallpaper blur) -->
+            <!-- The Frosted Lens: This blurs the text passing behind it -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?attr/colorSurfaceContainerHigh"
-                android:alpha="0.8" />
+                android:alpha="0.75" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -75,6 +67,7 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
+                <!-- Sharp Glass Edge -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"
