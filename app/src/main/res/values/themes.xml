@@ -7,5 +7,27 @@
 
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <!-- Modern Card Styling for Preferences -->
+        <item name="preferenceCategoryStyle">@style/CustomPreferenceCategory</item>
+        <item name="preferenceStyle">@style/CustomPreference</item>
+        <item name="switchPreferenceCompatStyle">@style/CustomPreference</item>
+    </style>
+
+    <style name="CustomPreferenceCategory" parent="Preference.Category">
+        <item name="android:layout">@layout/custom_preference_category</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+    </style>
+
+    <style name="CustomPreference" parent="Preference.Material">
+        <item name="android:layout">@layout/custom_preference_card</item>
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+    </style>
+
+    <style name="PixelAodTitle" parent="TextAppearance.Material3.HeadlineSmall">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">28sp</item>
     </style>
 </resources>

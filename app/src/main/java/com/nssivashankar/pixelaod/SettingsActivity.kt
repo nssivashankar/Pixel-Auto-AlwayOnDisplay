@@ -229,6 +229,17 @@ class SettingsActivity : AppCompatActivity() {
                 },
             )
 
+            automationCategory.addPreference(
+                SwitchAppListPreference(requireContext(), null).apply {
+                    key = "live_notif_blocked_apps"
+                    setTitle("Live Notification Mode \u203A")
+                    setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
+                    setSwitchKey("live_notif_mode")
+                    dialogTitle = "Block list for live notifications"
+                    icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_dialog_map)
+                },
+            )
+
             // --- Section 2: Battery Health (Pixel Specific) ---
             val batteryCategory = PreferenceCategory(requireContext()).apply {
                 title = getString(R.string.battery_health_title)
