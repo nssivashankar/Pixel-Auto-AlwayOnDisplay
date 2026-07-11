@@ -32,9 +32,9 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ## 📱 Screenshots
 
-| | | | |
-| :---: | :---: | :---: | :---: |
-| <a href="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f"><img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974"><img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" height="400" alt="Charging Info" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
+| | | | | |
+| :---: | :---: | :---: | :---: | :---: |
+| <a href="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f"><img src="https://github.com/user-attachments/assets/0fe2f4cb-0e64-4c4c-8d38-d4da15adaa7f" height="400" alt="App UI 1" /></a> | <a href="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b"><img src="https://github.com/user-attachments/assets/9a3afe7d-6ee4-4bde-9d69-18ef8d47200b" height="400" alt="App UI 2" /></a> | <a href="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974"><img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" height="400" alt="Charging Info" /></a> | <a href="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d"><img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" height="400" alt="Notification" /></a> | <a href="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706"><img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" height="400" alt="Maps Navigation" /></a> |
 
 ---
 
