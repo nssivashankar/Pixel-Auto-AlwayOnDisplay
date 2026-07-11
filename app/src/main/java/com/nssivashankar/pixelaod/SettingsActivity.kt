@@ -50,13 +50,17 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE iOS MIRROR ENGINE (Ultra-Fluid) ---
+        // --- THE STABLE MIRROR ENGINE (Zero-Glow / High-Performance) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
-            // Soft high-radius blur for iOS feel
+            val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
+                this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
+            )
+
+            // 1. Stable 80f radius - confirmed working by user
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -66,22 +70,19 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-                    
-                    // iOS-style adaptive base color
-                    val baseColor = if (isDark) {
-                        android.graphics.Color.argb(180, 20, 20, 20)
-                    } else {
-                        android.graphics.Color.argb(180, 255, 255, 255)
-                    }
-                    canvas.drawColor(baseColor)
+                    // 2. Solid base for the frost - CRITICAL to prevent transparency
+                    canvas.drawColor(surfaceColor)
                     
                     val density = resources.displayMetrics.density
+                    
+                    // 3. DUAL-EDGE GLOW SUPPRESSION
                     val topBuffer = (32 * density).toInt()
                     val bottomBuffer = (32 * density).toInt()
                     
                     canvas.save()
+                    // Clip list content away from edges to stop "Glow"
                     canvas.clipRect(0, topBuffer, mirror.width, mirror.height - bottomBuffer)
+                    
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
                     canvas.restore()
@@ -113,9 +114,9 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // --- iOS Dynamic Glass Tint ---
+            // Dynamic Glass Tint
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            tint.alpha = if (isDark) 0.35f else 0.5f
+            tint.alpha = if (isDark) 0.4f else 0.6f
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
