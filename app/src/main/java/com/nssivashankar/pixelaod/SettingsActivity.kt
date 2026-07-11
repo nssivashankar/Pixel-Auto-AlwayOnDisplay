@@ -50,17 +50,13 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE STABLE MIRROR ENGINE (Dynamic Mode Support) ---
+        // --- THE iOS MIRROR ENGINE (Ultra-Fluid) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
-            // Dynamic Surface Color based on Theme
-            val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
-                this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
-            )
-
+            // Soft high-radius blur for iOS feel
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -70,7 +66,15 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    canvas.drawColor(surfaceColor)
+                    val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                    
+                    // iOS-style adaptive base color
+                    val baseColor = if (isDark) {
+                        android.graphics.Color.argb(180, 20, 20, 20)
+                    } else {
+                        android.graphics.Color.argb(180, 255, 255, 255)
+                    }
+                    canvas.drawColor(baseColor)
                     
                     val density = resources.displayMetrics.density
                     val topBuffer = (32 * density).toInt()
@@ -109,19 +113,9 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // --- High-Visibility Dynamic Glass ---
+            // --- iOS Dynamic Glass Tint ---
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            
-            if (isDark) {
-                // Dark mode: Deep surface with subtle frost
-                tint.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.BLACK))
-                tint.alpha = 0.85f 
-            } else {
-                // Light mode: Milky "Thick Glass" for maximum contrast
-                // We use a slightly more opaque white to prevent bright text behind from "vibrating"
-                tint.setBackgroundColor(android.graphics.Color.WHITE)
-                tint.alpha = 0.95f
-            }
+            tint.alpha = if (isDark) 0.35f else 0.5f
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
