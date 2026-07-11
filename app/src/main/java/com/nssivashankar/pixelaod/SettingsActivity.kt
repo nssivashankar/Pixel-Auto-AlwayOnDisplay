@@ -37,7 +37,7 @@ class SettingsActivity : AppCompatActivity() {
         
         // --- DOLBY WINDOW BLUR (Android 12+) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(150)
+            window.setBackgroundBlurRadius(200)
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         }
 
@@ -72,7 +72,7 @@ class SettingsActivity : AppCompatActivity() {
             // This creates the "Dolby" textured glass look
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(30f, 30f, android.graphics.Shader.TileMode.CLAMP)
+                    android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
