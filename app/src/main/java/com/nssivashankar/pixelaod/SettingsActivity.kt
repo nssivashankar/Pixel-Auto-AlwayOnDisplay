@@ -175,15 +175,25 @@ class SettingsActivity : AppCompatActivity() {
                 ListPreference(requireContext()).apply {
                     key = "charge_optimization"
                     title = getString(R.string.charge_optimization_title)
-                    summary = getString(R.string.charge_optimization_summary)
                     entries = arrayOf("Off", "Limit to 80%", "Adaptive Charging")
                     entryValues = arrayOf("0", "1", "2")
                     
                     val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
                     value = currentMode.toString()
+                    summary = entries[entryValues.indexOf(value)]
 
                     setOnPreferenceChangeListener { _, newValue ->
-                        AodSettings.setChargeOptimizationMode(requireContext().contentResolver, (newValue as String).toInt())
+                        val mode = (newValue as String).toInt()
+                        AodSettings.setChargeOptimizationMode(requireContext().contentResolver, mode)
+                        
+                        // If turning OFF, also disable legacy adaptive charging to be 100% sure
+                        if (mode == 0) {
+                            AodSettings.setAdaptiveChargingEnabled(requireContext().contentResolver, false)
+                            // Update the legacy toggle UI if it's visible
+                            findPreference<SwitchPreferenceCompat>("adaptive_charging_legacy")?.isChecked = false
+                        }
+                        
+                        summary = entries[entryValues.indexOf(newValue)]
                         true
                     }
                 }
