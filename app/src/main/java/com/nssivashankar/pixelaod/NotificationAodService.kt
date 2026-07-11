@@ -499,6 +499,13 @@ class NotificationAodService : NotificationListenerService() {
         val opt80Label = if (currentMode == 1) "● 80%" else "80%"
         val adaptiveLabel = if (currentMode == 2 || (currentMode == 0 && isAdaptiveLegacy)) "● Adaptive" else "Adaptive"
 
+        val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val accentColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (isDark) getColor(android.R.color.system_accent1_200) else getColor(android.R.color.system_accent1_600)
+        } else {
+            getColor(android.R.color.holo_blue_dark)
+        }
+
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)
             .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_bolt_24))
@@ -509,7 +516,7 @@ class NotificationAodService : NotificationListenerService() {
             .setShowWhen(false) 
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent)
-            .setColor(getColor(android.R.color.holo_blue_dark))
+            .setColor(accentColor)
             .setShortcutId("charging_status")
             .addAction(Notification.Action.Builder(null, offLabel, offIntent).build())
             .addAction(Notification.Action.Builder(null, opt80Label, opt80Intent).build())

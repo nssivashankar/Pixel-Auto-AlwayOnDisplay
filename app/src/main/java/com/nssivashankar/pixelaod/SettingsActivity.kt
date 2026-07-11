@@ -50,15 +50,15 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE STABLE MIRROR ENGINE (Zero-Glow / High-Performance) ---
+        // --- THE STABLE MIRROR ENGINE (Dynamic Mode Support) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
+            // Dynamic Surface Color based on Theme
             val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
                 this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
             )
 
-            // 1. Native stability with 80f radius for better edge containment
             mirror.setRenderEffect(
                 android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
             )
@@ -70,18 +70,14 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
-                    // 2. Solid base for the frost
                     canvas.drawColor(surfaceColor)
                     
                     val density = resources.displayMetrics.density
-                    
-                    // 3. DUAL-EDGE GLOW SUPPRESSION
                     val topBuffer = (32 * density).toInt()
                     val bottomBuffer = (32 * density).toInt()
                     
                     canvas.save()
                     canvas.clipRect(0, topBuffer, mirror.width, mirror.height - bottomBuffer)
-                    
                     canvas.translate(0f, -scroll.scrollY.toFloat())
                     container.draw(canvas)
                     canvas.restore()
@@ -113,8 +109,9 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // Fine-tune the tint for extra "milky" depth
-            tint.alpha = 0.4f 
+            // Dynamic Glass Tint: Lighter in Light Mode, Darker in Dark Mode
+            val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            tint.alpha = if (isDark) 0.4f else 0.6f 
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
