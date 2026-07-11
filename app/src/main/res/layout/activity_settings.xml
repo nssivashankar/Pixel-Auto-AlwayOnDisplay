@@ -4,43 +4,81 @@
     android:id="@+id/main_content"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground">
+    android:background="@android:color/transparent">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/app_bar"
+    <!-- 1. Opaque Background for the List Area -->
+    <View
+        android:id="@+id/content_background"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:liftOnScroll="true">
+        android:layout_height="match_parent"
+        android:background="?android:attr/colorBackground" />
 
-        <com.google.android.material.appbar.MaterialToolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            app:title="Pixel AOD"
-            app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
-
-            <com.google.android.material.materialswitch.MaterialSwitch
-                android:id="@+id/master_switch"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="end"
-                android:layout_marginEnd="16dp" />
-
-        </com.google.android.material.appbar.MaterialToolbar>
-
-    </com.google.android.material.appbar.AppBarLayout>
-
+    <!-- 2. The Scrolling Content (Goes under the glass) -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+        android:clipToPadding="false"
+        android:overScrollMode="never">
 
         <FrameLayout
             android:id="@+id/settings_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:paddingBottom="48dp" />
 
     </androidx.core.widget.NestedScrollView>
+
+    <!-- 3. The Dolby Glass Header -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        app:elevation="0dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <!-- Glass Tint Layer (Blurs both status and title bar) -->
+            <View
+                android:id="@+id/header_glass_bg"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#DD000000" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <com.google.android.material.appbar.MaterialToolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    android:background="@android:color/transparent"
+                    app:title="Pixel AOD"
+                    app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
+
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/master_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginEnd="16dp" />
+
+                </com.google.android.material.appbar.MaterialToolbar>
+
+                <!-- Thin sharp separator -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="0.5dp"
+                    android:background="#33FFFFFF" />
+
+            </LinearLayout>
+        </FrameLayout>
+
+    </com.google.android.material.appbar.AppBarLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

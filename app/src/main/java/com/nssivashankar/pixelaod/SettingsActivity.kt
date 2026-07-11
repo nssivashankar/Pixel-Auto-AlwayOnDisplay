@@ -34,6 +34,12 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
+        // --- DOLBY WINDOW BLUR (Android 12+) ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            window.setBackgroundBlurRadius(150)
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+        }
+
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
@@ -45,9 +51,26 @@ class SettingsActivity : AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { view, insets ->
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            view.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
+            val density = resources.displayMetrics.density
+            
+            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val contentBg = findViewById<View>(R.id.content_background)
+            val container = findViewById<View>(R.id.settings_container)
+
+            // 1. Properly pad the header to include the status bar area
+            appBar.setPadding(0, systemBars.top, 0, 0)
+            val headerTotalHeight = (56 * density).toInt() + systemBars.top
+            
+            // 2. The list background starts exactly where the glass header ends
+            val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
+            lp.topMargin = headerTotalHeight
+            contentBg.layoutParams = lp
+
+            // 3. Spacing so the first item is visible below the glass
+            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+
             insets
         }
 
