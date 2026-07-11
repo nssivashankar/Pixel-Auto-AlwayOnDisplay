@@ -13,6 +13,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import androidx.preference.PreferenceFragmentCompat
@@ -164,7 +165,45 @@ class SettingsActivity : AppCompatActivity() {
                 },
             )
 
-            // --- Section 2: UI & Appearance ---
+            // --- Section 2: Battery Health (Pixel Specific) ---
+            val batteryCategory = PreferenceCategory(requireContext()).apply {
+                title = getString(R.string.battery_health_title)
+            }
+            screen.addPreference(batteryCategory)
+
+            batteryCategory.addPreference(
+                ListPreference(requireContext()).apply {
+                    key = "charge_optimization"
+                    title = getString(R.string.charge_optimization_title)
+                    summary = getString(R.string.charge_optimization_summary)
+                    entries = arrayOf("Off", "Limit to 80%", "Adaptive Charging")
+                    entryValues = arrayOf("0", "1", "2")
+                    
+                    val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
+                    value = currentMode.toString()
+
+                    setOnPreferenceChangeListener { _, newValue ->
+                        AodSettings.setChargeOptimizationMode(requireContext().contentResolver, (newValue as String).toInt())
+                        true
+                    }
+                }
+            )
+
+            batteryCategory.addPreference(
+                SwitchPreferenceCompat(requireContext()).apply {
+                    key = "adaptive_charging_legacy"
+                    title = getString(R.string.adaptive_charging_title)
+                    summary = getString(R.string.adaptive_charging_summary)
+                    isChecked = AodSettings.isAdaptiveChargingEnabled(requireContext().contentResolver)
+
+                    setOnPreferenceChangeListener { _, newValue ->
+                        AodSettings.setAdaptiveChargingEnabled(requireContext().contentResolver, newValue as Boolean)
+                        true
+                    }
+                }
+            )
+
+            // --- Section 3: UI & Appearance ---
             val uiCategory = PreferenceCategory(requireContext()).apply {
                 title = "UI & Appearance"
             }
@@ -186,7 +225,7 @@ class SettingsActivity : AppCompatActivity() {
                 },
             )
 
-            // --- Section 3: Restrictions ---
+            // --- Section 4: Restrictions ---
             val quietHoursCategory = PreferenceCategory(requireContext()).apply {
                 title = "Restrictions"
             }
@@ -216,7 +255,7 @@ class SettingsActivity : AppCompatActivity() {
             quietHoursCategory.addPreference(endPref)
             endPref.dependency = "scheduled_dnd"
 
-            // --- Section 4: Service Status ---
+            // --- Section 5: Service Status ---
             val permissionsCategory = PreferenceCategory(requireContext()).apply {
                 key = "permissions_category"
                 title = "Service Status"
