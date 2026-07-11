@@ -50,17 +50,20 @@ class SettingsActivity : AppCompatActivity() {
         val container = findViewById<View>(R.id.settings_container)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE ROBUST PIXEL MIRROR ENGINE ---
+        // --- THE OPAQUE MIRROR ENGINE (True Backdrop Blur) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // 1. FORCE Hardware Layer - REQUIRED for RenderEffect to work on background drawables
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
-            // 2. Apply a heavy blur EFFECT to the entire View
+            // Get the current theme's surface color to make the mirror OPAQUE
+            val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
+                this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
+            )
+
+            // High-Radius Blur for the "Frosted" look
             mirror.setRenderEffect(
                 android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
             )
 
-            // 3. Implement a custom Mirroring Background
             mirror.background = object : android.graphics.drawable.Drawable() {
                 private var isDrawing = false // Prevent recursion
 
@@ -68,30 +71,28 @@ class SettingsActivity : AppCompatActivity() {
                     if (isDrawing || container.width <= 0) return
                     isDrawing = true
                     
+                    // 1. DRAW SOLID COLOR: This hides the sharp text that is physically behind the header
+                    canvas.drawColor(surfaceColor)
+                    
                     canvas.save()
-                    // Capture exactly what is under the header
-                    // We translate the canvas so that the top of the container 
-                    // matches the top of the scroll view
+                    // 2. Mirror the settings content at the correct scroll position
                     canvas.translate(0f, -scroll.scrollY.toFloat())
-                    
-                    // CRITICAL: Draw the container into this canvas
-                    // This creates the "Source" for the RenderEffect blur
                     container.draw(canvas)
-                    
                     canvas.restore()
+                    
                     isDrawing = false
                 }
                 override fun setAlpha(alpha: Int) {}
                 override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
-                override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+                override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // 4. Force a redraw of the mirror whenever the content changes/scrolls
+            // Sync with every scroll movement
             scroll.viewTreeObserver.addOnScrollChangedListener {
                 mirror.invalidate()
             }
             
-            // 5. Also sync with frame updates for animations (toggles, etc)
+            // Sync with every frame for animations
             mirror.viewTreeObserver.addOnPreDrawListener {
                 mirror.invalidate()
                 true
@@ -108,8 +109,8 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // 3. Enhance the "Glass" feel with a surface tint
-            tint.alpha = 0.85f // More opaque for a premium "heavy" feel
+            // Fine-tune the tint for extra "milky" depth
+            tint.alpha = 0.4f
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
