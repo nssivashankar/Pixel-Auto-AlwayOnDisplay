@@ -49,19 +49,30 @@ class SettingsActivity : AppCompatActivity() {
         val mirror = findViewById<View>(R.id.header_blur_mirror)
         val container = findViewById<View>(R.id.settings_container)
 
-        // --- THE MIRROR ENGINE ---
-        // This drawable "pulls" the pixels from the scroll view and draws them here
-        mirror.background = object : android.graphics.drawable.Drawable() {
-            override fun draw(canvas: android.graphics.Canvas) {
-                canvas.save()
-                // Mirror exactly what is visible under the header
-                canvas.translate(0f, -scroll.scrollY.toFloat())
-                scroll.draw(canvas)
-                canvas.restore()
+        // --- THE PIXEL MIRROR ENGINE (Optimized) ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            // Force hardware layer to enable RenderEffect
+            mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            
+            // Apply the heavy frosted blur lens
+            mirror.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
+            )
+
+            // Mirror the scroll content into the header area
+            mirror.background = object : android.graphics.drawable.Drawable() {
+                override fun draw(canvas: android.graphics.Canvas) {
+                    if (scroll.width <= 0 || scroll.height <= 0) return
+                    canvas.save()
+                    // Translate to capture the exact part of the list currently under the header
+                    canvas.translate(0f, -scroll.scrollY.toFloat())
+                    scroll.draw(canvas)
+                    canvas.restore()
+                }
+                override fun setAlpha(alpha: Int) {}
+                override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+                override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
             }
-            override fun setAlpha(alpha: Int) {}
-            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
-            override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
@@ -74,14 +85,7 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // Apply the Heavy Frosted Effect to the Mirrored pixels
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                mirror.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
-                )
-            }
-
-            // Update the mirror on scroll
+            // Sync the mirror on every scroll movement
             scroll.setOnScrollChangeListener { _, _, _, _, _ ->
                 mirror.invalidate()
             }
