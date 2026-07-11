@@ -49,25 +49,39 @@ class SettingsActivity : AppCompatActivity() {
         val mirror = findViewById<View>(R.id.header_blur_mirror)
         val container = findViewById<View>(R.id.settings_container)
 
+        // --- THE MIRROR ENGINE ---
+        // This drawable "pulls" the pixels from the scroll view and draws them here
+        mirror.background = object : android.graphics.drawable.Drawable() {
+            override fun draw(canvas: android.graphics.Canvas) {
+                canvas.save()
+                // Mirror exactly what is visible under the header
+                canvas.translate(0f, -scroll.scrollY.toFloat())
+                scroll.draw(canvas)
+                canvas.restore()
+            }
+            override fun setAlpha(alpha: Int) {}
+            override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+            override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
+        }
+
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             val headerTotalHeight = (56 * density).toInt() + systemBars.top
             
             toolbar.setPadding(0, systemBars.top, 0, 0)
-            
             val params = toolbar.layoutParams
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // 1. Enable Backdrop Blur on the mirror layer (Telegram Style)
+            // Apply the Heavy Frosted Effect to the Mirrored pixels
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 mirror.setRenderEffect(
                     android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
-            // 2. The magic sync: Capture the ScrollView's drawing onto the mirror
+            // Update the mirror on scroll
             scroll.setOnScrollChangeListener { _, _, _, _, _ ->
                 mirror.invalidate()
             }

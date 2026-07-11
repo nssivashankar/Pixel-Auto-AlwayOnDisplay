@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Solid Theme for App-Content Blur -->
+        <!-- Solid Theme: Required for Content-only Blur -->
         <item name="android:windowBackground">?android:attr/colorBackground</item>
         <item name="android:windowIsTranslucent">false</item>
 
