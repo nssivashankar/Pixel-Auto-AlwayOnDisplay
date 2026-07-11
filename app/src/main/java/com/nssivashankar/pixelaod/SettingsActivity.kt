@@ -48,25 +48,29 @@ class SettingsActivity : AppCompatActivity() {
         val scroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.settings_container_scroll)
         val mirror = findViewById<View>(R.id.header_blur_mirror)
         val container = findViewById<View>(R.id.settings_container)
+        val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- THE PIXEL MIRROR ENGINE (Final Stable Version) ---
+        // --- THE PIXEL MIRROR ENGINE (Dolby Ultra-Frost) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // 1. Force Hardware Acceleration for RenderEffect
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            mirror.alpha = 0.99f // Force hardware layer compositing
             
-            // 2. Apply the Frosted Lens
+            // Ultra-heavy blur for the "Milky" look
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(150f, 150f, android.graphics.Shader.TileMode.CLAMP)
             )
 
-            // 3. Draw the content behind into the mirror
             mirror.background = object : android.graphics.drawable.Drawable() {
                 override fun draw(canvas: android.graphics.Canvas) {
                     if (container.width <= 0) return
                     canvas.save()
-                    // Mirror exactly what is visible under the header area
+                    
+                    // 1. Position the capture to match what's behind the header
                     canvas.translate(0f, -scroll.scrollY.toFloat())
+                    
+                    // 2. Draw the actual app UI into the blur lens
                     container.draw(canvas)
+                    
                     canvas.restore()
                 }
                 override fun setAlpha(alpha: Int) {}
@@ -74,7 +78,13 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
             }
 
-            // 4. Constant Sync: Updates the blur even during animations
+            // High-frequency sync to keep the blur perfectly fluid
+            val syncListener = android.view.ViewTreeObserver.OnScrollChangedListener {
+                mirror.invalidate()
+            }
+            scroll.viewTreeObserver.addOnScrollChangedListener(syncListener)
+            
+            // Force redraw on every frame to handle animations (like toggles)
             mirror.viewTreeObserver.addOnPreDrawListener {
                 mirror.invalidate()
                 true
@@ -90,6 +100,9 @@ class SettingsActivity : AppCompatActivity() {
             val params = toolbar.layoutParams
             params.height = headerTotalHeight
             toolbar.layoutParams = params
+
+            // 3. Enhance the "Glass" feel with a surface tint
+            tint.alpha = 0.85f // More opaque for a premium "heavy" feel
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets

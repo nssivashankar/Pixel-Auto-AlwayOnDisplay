@@ -42,13 +42,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
 
-            <!-- Frosted Tint -->
+            <!-- Frosted Tint: Milky Surface -->
             <View
                 android:id="@+id/header_glass_tint"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?attr/colorSurface"
-                android:alpha="0.7" />
+                android:alpha="0.8" />
 
             <LinearLayout
                 android:layout_width="match_parent"
