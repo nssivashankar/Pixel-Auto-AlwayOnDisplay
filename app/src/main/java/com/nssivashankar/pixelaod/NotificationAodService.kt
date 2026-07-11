@@ -87,7 +87,11 @@ class NotificationAodService : NotificationListenerService() {
                     val pct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
                     
                     isCharging = plugged != 0
-                    isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || pct >= 100
+                    
+                    val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+                    isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || 
+                                   (optMode == 1 && pct >= 80) || 
+                                   pct >= 100
 
                     if (isCharging && plugInTime == 0L) {
                         plugInTime = System.currentTimeMillis()
@@ -145,7 +149,10 @@ class NotificationAodService : NotificationListenerService() {
         val pct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
 
         isCharging = plugged != 0
-        isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || pct >= 100
+        val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || 
+                       (optMode == 1 && pct >= 80) || 
+                       pct >= 100
 
         if (isCharging) {
             plugInTime = System.currentTimeMillis()
@@ -406,7 +413,11 @@ class NotificationAodService : NotificationListenerService() {
         val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
         val batteryPct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
         val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
-        val isFull = status == BatteryManager.BATTERY_STATUS_FULL || batteryPct >= 100
+        
+        val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        val isFull = status == BatteryManager.BATTERY_STATUS_FULL || 
+                    (optMode == 1 && batteryPct >= 80) || 
+                    batteryPct >= 100
 
         if (!enabled || !isPlugged || isFull) {
             activeNotifKeys.remove(this.packageName + "|" + CHARGING_NOTIF_ID)
