@@ -42,13 +42,13 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Dynamic Glass Layer: Uses surface color to adapt to Light/Dark mode -->
+            <!-- Dynamic Glass Layer: Uses surface color with higher opacity for a "Thicker" feel -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:background="?attr/colorSurface"
-                android:alpha="0.7" />
+                android:alpha="0.85" />
 
             <LinearLayout
                 android:layout_width="match_parent"

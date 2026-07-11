@@ -67,10 +67,10 @@ class SettingsActivity : AppCompatActivity() {
             val toolbarHeight = (56 * density).toInt()
             val headerTotalHeight = toolbarHeight + systemBars.top
             
-            // 2. Apply HEAVY Frosted Blur (Android 12+)
+            // 2. Apply ULTRA HEAVY Frosted Blur (Android 12+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
+                    android.graphics.RenderEffect.createBlurEffect(180f, 180f, android.graphics.Shader.TileMode.CLAMP)
                 )
             }
 
