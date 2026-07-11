@@ -7,6 +7,15 @@
 
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+
+        <!-- Rounded Section Backgrounds for Preferences -->
+        <item name="preferenceCategoryStyle">@style/ModernPreferenceCategory</item>
+    </style>
+
+    <style name="ModernPreferenceCategory" parent="Preference.Category">
+        <item name="allowDividerAbove">false</item>
+        <item name="allowDividerBelow">false</item>
+        <item name="android:layout">@layout/modern_preference_category</item>
     </style>
 
     <style name="PixelAodTitle" parent="TextAppearance.Material3.HeadlineSmall">

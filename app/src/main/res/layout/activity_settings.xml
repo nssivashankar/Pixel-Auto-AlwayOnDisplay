@@ -73,13 +73,6 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- iOS Thin Hairline Separator -->
-                <View
-                    android:layout_width="match_parent"
-                    android:layout_height="0.3dp"
-                    android:background="?attr/colorOutlineVariant"
-                    android:alpha="0.4" />
-
             </LinearLayout>
         </FrameLayout>
 
