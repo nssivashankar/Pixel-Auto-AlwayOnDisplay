@@ -20,14 +20,18 @@
         android:layout_height="wrap_content"
         android:minWidth="40dp"
         android:gravity="start|center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:clickable="false"
+        android:focusable="false">
         <ImageView
             android:id="@android:id/icon"
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:scaleType="centerInside"
             app:tint="?attr/colorPrimary"
-            android:contentDescription="@null" />
+            android:contentDescription="@null"
+            android:clickable="false"
+            android:focusable="false" />
     </LinearLayout>
 
     <LinearLayout
@@ -38,7 +42,9 @@
         android:layout_weight="1"
         android:orientation="vertical"
         android:paddingTop="16dp"
-        android:paddingBottom="16dp">
+        android:paddingBottom="16dp"
+        android:clickable="false"
+        android:focusable="false">
 
         <TextView
             android:id="@android:id/title"
@@ -46,7 +52,9 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceListItem"
             android:textStyle="bold"
-            android:ellipsize="marquee" />
+            android:ellipsize="marquee"
+            android:clickable="false"
+            android:focusable="false" />
 
         <TextView
             android:id="@android:id/summary"
@@ -54,17 +62,20 @@
             android:layout_height="wrap_content"
             android:textAppearance="?android:attr/textAppearanceListItemSmall"
             android:textColor="?android:attr/textColorSecondary"
-            android:maxLines="10" />
+            android:maxLines="10"
+            android:clickable="false"
+            android:focusable="false" />
 
     </LinearLayout>
 
-    <!-- CRITICAL: Widget frame for Toggles/Switches -->
     <LinearLayout
         android:id="@android:id/widget_frame"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:minWidth="48dp"
         android:gravity="end|center_vertical"
-        android:orientation="vertical" />
+        android:orientation="vertical"
+        android:clickable="false"
+        android:focusable="false" />
 
 </LinearLayout>

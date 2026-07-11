@@ -5,5 +5,5 @@
     android:layout_height="wrap_content"
     android:paddingStart="16dp"
     android:paddingEnd="8dp"
-    android:clickable="true"
+    android:clickable="false"
     android:focusable="false" />
