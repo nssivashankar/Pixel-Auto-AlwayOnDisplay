@@ -6,14 +6,14 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- 1. Opaque Background for the List Area -->
+    <!-- 1. List Area Background (Starts below the glass) -->
     <View
         android:id="@+id/content_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="?android:attr/colorBackground" />
 
-    <!-- 2. The Scrolling Content (Goes under the glass) -->
+    <!-- 2. The Scrolling Content -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -29,26 +29,29 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 3. The Dolby Glass Header -->
+    <!-- 3. The Continuous Glass Header (Status + Title) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@android:color/transparent"
-        app:elevation="0dp">
+        app:elevation="0dp"
+        app:liftOnScroll="false">
 
         <FrameLayout
+            android:id="@+id/glass_header_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Glass Tint Layer (Blurs both status and title bar) -->
+            <!-- Continuous Glass Layer: This covers the whole bar including status area -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:background="#DD000000" />
+                android:background="#99000000" />
 
             <LinearLayout
+                android:id="@+id/header_content"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
@@ -56,7 +59,8 @@
                 <com.google.android.material.appbar.MaterialToolbar
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
+                    android:layout_height="wrap_content"
+                    android:minHeight="?attr/actionBarSize"
                     android:background="@android:color/transparent"
                     app:title="Pixel AOD"
                     app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
@@ -70,11 +74,10 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
-                <!-- Thin sharp separator -->
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"
-                    android:background="#33FFFFFF" />
+                    android:background="#22FFFFFF" />
 
             </LinearLayout>
         </FrameLayout>

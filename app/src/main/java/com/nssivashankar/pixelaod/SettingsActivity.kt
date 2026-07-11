@@ -55,20 +55,32 @@ class SettingsActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+            val glassBg = findViewById<View>(R.id.header_glass_bg)
             val contentBg = findViewById<View>(R.id.content_background)
             val container = findViewById<View>(R.id.settings_container)
 
-            // 1. Properly pad the header to include the status bar area
-            appBar.setPadding(0, systemBars.top, 0, 0)
-            val headerTotalHeight = (56 * density).toInt() + systemBars.top
+            // 1. Position Content inside the Glass zone
+            // We pad the toolbar so the background (glassBg) flows behind the status bar
+            toolbar.setPadding(0, systemBars.top, 0, 0)
             
-            // 2. The list background starts exactly where the glass header ends
+            val toolbarHeight = (56 * density).toInt()
+            val headerTotalHeight = toolbarHeight + systemBars.top
+            
+            // 2. Apply Extra Frosted Blur (Android 12+)
+            // This creates the "Dolby" textured glass look
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                glassBg.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(30f, 30f, android.graphics.Shader.TileMode.CLAMP)
+                )
+            }
+
+            // 3. The list background starts exactly where the glass header ends
             val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
             lp.topMargin = headerTotalHeight
             contentBg.layoutParams = lp
 
-            // 3. Spacing so the first item is visible below the glass
+            // 4. Spacing so the first item is visible below the glass
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
