@@ -6,14 +6,14 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
 
-    <!-- 1. The Solid Background for the list (Starting below header) -->
+    <!-- 1. The Solid Background for the list (Starting below the glass portal) -->
     <View
         android:id="@+id/content_background"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="?android:attr/colorBackground" />
 
-    <!-- 2. The List (Passes through the "Glass" zone at the top) -->
+    <!-- 2. The Scrolling Content -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/settings_container_scroll"
         android:layout_width="match_parent"
@@ -29,7 +29,7 @@
 
     </androidx.core.widget.NestedScrollView>
 
-    <!-- 3. The Glass Zone (Status Bar + Title Bar) -->
+    <!-- 3. The Continuous Glass Header (Status + Title) -->
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -39,16 +39,17 @@
         app:liftOnScroll="false">
 
         <FrameLayout
+            android:id="@+id/glass_header_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- Frosted Layer: Low alpha allows the system-blurred wallpaper to shine through -->
+            <!-- Glass Tint View -->
             <View
                 android:id="@+id/header_glass_bg"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
                 android:background="?attr/colorSurface"
-                android:alpha="0.4" />
+                android:alpha="0.3" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -58,7 +59,8 @@
                 <com.google.android.material.appbar.MaterialToolbar
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
+                    android:layout_height="wrap_content"
+                    android:minHeight="?attr/actionBarSize"
                     android:background="@android:color/transparent"
                     app:title="Pixel AOD"
                     app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge">
@@ -76,7 +78,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="0.5dp"
                     android:background="?attr/colorOutlineVariant"
-                    android:alpha="0.3" />
+                    android:alpha="0.2" />
 
             </LinearLayout>
         </FrameLayout>

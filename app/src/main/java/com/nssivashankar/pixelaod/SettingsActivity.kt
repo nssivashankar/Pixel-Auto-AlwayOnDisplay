@@ -36,10 +36,12 @@ class SettingsActivity : AppCompatActivity() {
         setContentView(R.layout.activity_settings)
         
         // --- PIXEL ULTIMATE WINDOW BLUR ---
-        // We blur the entire window background (the wallpaper)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.setBackgroundBlurRadius(200)
             window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.setBackgroundBlurRadius(150)
+            val params = window.attributes
+            params.blurBehindRadius = 150
+            window.attributes = params
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -57,30 +59,29 @@ class SettingsActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
-            val appBar = findViewById<com.google.android.material.appbar.AppBarLayout>(R.id.app_bar)
+            val toolbarView = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
             val glassBg = findViewById<View>(R.id.header_glass_bg)
             val contentBg = findViewById<View>(R.id.content_background)
             val container = findViewById<View>(R.id.settings_container)
 
-            // 1. Position the Header Glass to cover Status + Toolbar
-            appBar.setPadding(0, systemBars.top, 0, 0)
-            val headerHeight = (56 * density).toInt() + systemBars.top
+            val toolbarHeight = (56 * density).toInt()
+            val headerTotalHeight = toolbarHeight + systemBars.top
             
-            // 2. Secondary Frost Effect (Local texture)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                glassBg.setRenderEffect(
-                    android.graphics.RenderEffect.createBlurEffect(100f, 100f, android.graphics.Shader.TileMode.CLAMP)
-                )
-            }
+            // 1. Position the Title below the status bar
+            toolbarView.setPadding(0, systemBars.top, 0, 0)
+            
+            // 2. IMPORTANT: Force the glass to cover the WHOLE top area (Portal)
+            val gp = glassBg.layoutParams
+            gp.height = headerTotalHeight
+            glassBg.layoutParams = gp
 
-            // 3. IMPORTANT: The Opaque list background starts BELOW the glass
-            // This creates the "Portal" at the top where the blurred wallpaper is visible
+            // 3. The list background starts exactly where the glass header ends
             val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.topMargin = headerHeight
+            lp.topMargin = headerTotalHeight
             contentBg.layoutParams = lp
 
-            // 4. Spacing for the list items
-            container.setPadding(0, headerHeight + (12 * density).toInt(), 0, (48 * density).toInt())
+            // 4. Spacing for list items
+            container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
         }
