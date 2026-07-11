@@ -112,15 +112,15 @@ class SettingsActivity : AppCompatActivity() {
             // --- High-Visibility Dynamic Glass ---
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             
-            // Adjust frost density and tint based on theme for better contrast
             if (isDark) {
                 // Dark mode: Deep surface with subtle frost
                 tint.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.BLACK))
                 tint.alpha = 0.85f 
             } else {
-                // Light mode: Milky surface with higher opacity to separate from bright content
-                tint.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.WHITE))
-                tint.alpha = 0.92f
+                // Light mode: Milky "Thick Glass" for maximum contrast
+                // We use a slightly more opaque white to prevent bright text behind from "vibrating"
+                tint.setBackgroundColor(android.graphics.Color.WHITE)
+                tint.alpha = 0.95f
             }
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
