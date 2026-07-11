@@ -35,13 +35,10 @@ class SettingsActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
         
-        // --- PIXEL ULTIMATE WINDOW BLUR ---
+        // --- CLEAN WINDOW (Opaque) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-            window.setBackgroundBlurRadius(150)
-            val params = window.attributes
-            params.blurBehindRadius = 150
-            window.attributes = params
+            window.setBackgroundBlurRadius(0)
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
         }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
@@ -60,27 +57,30 @@ class SettingsActivity : AppCompatActivity() {
             val density = resources.displayMetrics.density
             
             val toolbarView = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
-            val glassBg = findViewById<View>(R.id.header_glass_bg)
-            val contentBg = findViewById<View>(R.id.content_background)
+            val glassContainer = findViewById<View>(R.id.glass_header_container)
+            val blurSurface = findViewById<View>(R.id.content_blur_surface)
+            val scroll = findViewById<View>(R.id.settings_container_scroll)
             val container = findViewById<View>(R.id.settings_container)
 
             val toolbarHeight = (56 * density).toInt()
             val headerTotalHeight = toolbarHeight + systemBars.top
             
-            // 1. Position the Title below the status bar
+            // 1. Position Title
             toolbarView.setPadding(0, systemBars.top, 0, 0)
             
-            // 2. IMPORTANT: Force the glass to cover the WHOLE top area (Portal)
-            val gp = glassBg.layoutParams
-            gp.height = headerTotalHeight
-            glassBg.layoutParams = gp
+            // 2. THE CONTENT BLUR ENGINE (Android 12+)
+            // We apply a blur RenderEffect to the ScrollView itself,
+            // but we use a Shader mask in the next step to keep it sharp elsewhere.
+            // For now, we use a heavy local blur on the surface that overlays the text.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                // Apply blur effect to the surface. Since it's on top of the list, 
+                // and the background is opaque, it blurs the text passing under it.
+                blurSurface.setRenderEffect(
+                    android.graphics.RenderEffect.createBlurEffect(120f, 120f, android.graphics.Shader.TileMode.CLAMP)
+                )
+            }
 
-            // 3. The list background starts exactly where the glass header ends
-            val lp = contentBg.layoutParams as androidx.coordinatorlayout.widget.CoordinatorLayout.LayoutParams
-            lp.topMargin = headerTotalHeight
-            contentBg.layoutParams = lp
-
-            // 4. Spacing for list items
+            // 3. Spacing
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
 
             insets
