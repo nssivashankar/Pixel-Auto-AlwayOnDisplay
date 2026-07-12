@@ -39,6 +39,7 @@ fun SettingsScreen(
     // Dialog States
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAppListDialog by remember { mutableStateOf(false) }
+    var showBlockListDialog by remember { mutableStateOf(false) }
     
     if (showBatteryDialog) {
         val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
@@ -80,9 +81,22 @@ fun SettingsScreen(
         )
     }
 
+    if (showBlockListDialog) {
+        val blockedPackages = remember { prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet() }
+        AppListDialog(
+            title = "Manage Block List",
+            selectedPackages = blockedPackages,
+            onDismiss = { showBlockListDialog = false },
+            onConfirm = { packages ->
+                prefs.edit().putStringSet("live_notif_blocklist", packages).apply()
+                showBlockListDialog = false
+            }
+        )
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = Color.Transparent // Allow XML background to show
+        color = Color.Transparent
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -113,10 +127,19 @@ fun SettingsScreen(
             item {
                 PreferenceSwitch(
                     title = "Live Notification Mode",
-                    summary = "AoD for Maps, Uber etc. \u2022 Tap to manage block list",
+                    summary = "AoD for Maps, Uber etc. \u2022 Tap below to manage block list",
                     icon = Icons.Default.Map,
                     checked = prefs.getBoolean("live_notif_mode", false),
                     onCheckedChange = { prefs.edit().putBoolean("live_notif_mode", it).apply() }
+                )
+            }
+            
+            item {
+                PreferenceItem(
+                    title = "Manage Block List",
+                    summary = "Apps to ignore in Live Notification Mode",
+                    icon = Icons.Default.Block,
+                    onClick = { showBlockListDialog = true }
                 )
             }
 

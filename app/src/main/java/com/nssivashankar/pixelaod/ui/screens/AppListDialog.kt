@@ -32,7 +32,6 @@ fun AppListDialog(
     var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     
-    // Using SnapshotStateList for reliable recomposition of selections
     val currentSelected = remember { 
         mutableStateListOf<String>().apply { addAll(selectedPackages) } 
     }
@@ -49,7 +48,9 @@ fun AppListDialog(
                         appInfo = appInfo
                     )
                 }
-                .sortedBy { it.label.lowercase() }
+                // --- OLD FUNCTIONALITY: Sort selected apps to top ---
+                .sortedWith(compareByDescending<AppInfo> { selectedPackages.contains(it.packageName) }
+                    .thenBy { it.label.lowercase() })
                 .toList()
             allApps = apps
             isLoading = false
@@ -156,7 +157,7 @@ fun AppListItem(
             }
             Checkbox(
                 checked = isSelected,
-                onCheckedChange = null // Handled by Row click
+                onCheckedChange = null
             )
         }
     }
