@@ -31,7 +31,8 @@ import java.util.Locale
 @Composable
 fun SettingsScreen(
     onPermissionRequest: () -> Unit,
-    contentPadding: PaddingValues = PaddingValues(0.dp)
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onMasterSwitchChange: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
@@ -46,7 +47,9 @@ fun SettingsScreen(
     DisposableEffect(Unit) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
             if (key == "master_switch") {
-                masterSwitch = p.getBoolean(key, false)
+                val newState = p.getBoolean(key, false)
+                masterSwitch = newState
+                onMasterSwitchChange(newState)
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)

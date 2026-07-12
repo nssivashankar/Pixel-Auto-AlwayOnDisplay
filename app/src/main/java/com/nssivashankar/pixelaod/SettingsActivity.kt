@@ -55,7 +55,10 @@ class SettingsActivity : AppCompatActivity() {
             PixelAodTheme {
                 SettingsScreen(
                     onPermissionRequest = { handleMissingPermission() },
-                    contentPadding = PaddingValues(top = headerHeightDp)
+                    contentPadding = PaddingValues(top = headerHeightDp),
+                    onMasterSwitchChange = { isChecked ->
+                        masterSwitch.isChecked = isChecked
+                    }
                 )
             }
         }
