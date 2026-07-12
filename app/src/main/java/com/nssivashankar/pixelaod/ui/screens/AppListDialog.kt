@@ -2,7 +2,6 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -31,7 +31,11 @@ fun AppListDialog(
     var searchQuery by remember { mutableStateOf("") }
     var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
-    val currentSelected = remember { mutableStateOf(selectedPackages.toMutableSet()) }
+    
+    // Using SnapshotStateList for reliable recomposition of selections
+    val currentSelected = remember { 
+        mutableStateListOf<String>().apply { addAll(selectedPackages) } 
+    }
 
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -42,7 +46,7 @@ fun AppListDialog(
                     AppInfo(
                         packageName = appInfo.packageName,
                         label = pm.getApplicationLabel(appInfo).toString(),
-                        icon = pm.getApplicationIcon(appInfo).toBitmap().asImageBitmap()
+                        appInfo = appInfo
                     )
                 }
                 .sortedBy { it.label.lowercase() }
@@ -61,59 +65,44 @@ fun AppListDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
-            Column(modifier = Modifier.fillMaxHeight(0.8f)) {
+            Column(modifier = Modifier.fillMaxHeight(0.8f).fillMaxWidth()) {
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
                     placeholder = { Text("Search apps...") },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    singleLine = true
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.medium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.align(Alignment.CenterHorizontally))
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 } else {
-                    LazyColumn {
-                        items(filteredApps) { app ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        if (currentSelected.value.contains(app.packageName)) {
-                                            currentSelected.value.remove(app.packageName)
-                                        } else {
-                                            currentSelected.value.add(app.packageName)
-                                        }
-                                        // Force recomposition
-                                        currentSelected.value = currentSelected.value.toMutableSet()
+                    LazyColumn(modifier = Modifier.weight(1f)) {
+                        items(filteredApps, key = { it.packageName }) { app ->
+                            AppListItem(
+                                app = app,
+                                isSelected = currentSelected.contains(app.packageName),
+                                pm = pm,
+                                onToggle = {
+                                    if (currentSelected.contains(app.packageName)) {
+                                        currentSelected.remove(app.packageName)
+                                    } else {
+                                        currentSelected.add(app.packageName)
                                     }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Image(
-                                    bitmap = app.icon,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(40.dp)
-                                )
-                                Spacer(modifier = Modifier.width(16.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(app.label, style = MaterialTheme.typography.bodyLarge)
-                                    Text(app.packageName, style = MaterialTheme.typography.bodySmall)
                                 }
-                                Checkbox(
-                                    checked = currentSelected.value.contains(app.packageName),
-                                    onCheckedChange = null
-                                )
-                            }
+                            )
                         }
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(currentSelected.value) }) {
-                Text("Confirm")
+            Button(onClick = { onConfirm(currentSelected.toSet()) }) {
+                Text("Save")
             }
         },
         dismissButton = {
@@ -124,8 +113,57 @@ fun AppListDialog(
     )
 }
 
+@Composable
+fun AppListItem(
+    app: AppInfo,
+    isSelected: Boolean,
+    pm: PackageManager,
+    onToggle: () -> Unit
+) {
+    var iconBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    
+    LaunchedEffect(app.packageName) {
+        withContext(Dispatchers.IO) {
+            val drawable = pm.getApplicationIcon(app.appInfo)
+            iconBitmap = drawable.toBitmap().asImageBitmap()
+        }
+    }
+
+    Surface(
+        onClick = onToggle,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.small,
+        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(40.dp)) {
+                iconBitmap?.let {
+                    Image(
+                        bitmap = it,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } ?: CircularProgressIndicator(Modifier.size(24.dp).align(Alignment.Center), strokeWidth = 2.dp)
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(app.label, style = MaterialTheme.typography.bodyLarge)
+                Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = null // Handled by Row click
+            )
+        }
+    }
+}
+
 data class AppInfo(
     val packageName: String,
     val label: String,
-    val icon: androidx.compose.ui.graphics.ImageBitmap
+    val appInfo: android.content.pm.ApplicationInfo
 )
