@@ -607,17 +607,13 @@ class NotificationAodService : NotificationListenerService() {
             getColor(android.R.color.holo_blue_dark)
         }
 
-        // Use a dedicated OLED-safe outlined icon for the Lockscreen/AOD notification
-        // while keeping the solid bolt for the small icon pill and app icons.
-        val largeIconRes = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
-        val largeIcon = android.graphics.drawable.Icon.createWithResource(this, largeIconRes)
-        
-        // Only apply the dynamic Material You accent to the outlined icon in Dark Mode
-        if (isDark) largeIcon.setTint(accentColor)
+        // --- Android 15 Live Update Design Standards ---
+        // For Live Updates, we use ONLY the Small Icon (ic_bolt_outlined_24) for both 
+        // the status bar pill and the AOD card to ensure maximum OLED safety.
+        val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_bolt_24)
-            .setLargeIcon(largeIcon)
+            .setSmallIcon(liveUpdateIcon) // System uses this for the Live Update pill and AOD card
             .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
             .setContentText(contentText)
             .setOngoing(true)
