@@ -607,12 +607,14 @@ class NotificationAodService : NotificationListenerService() {
             getColor(android.R.color.holo_blue_dark)
         }
 
-        // Specifically for the large icon in Light mode, we need a dark tint to see it on white
-        val largeIconTint = if (isDark) accentColor else android.graphics.Color.BLACK
+        // Use a dedicated dark icon resource for Light Mode to bypass system tint issues
+        val largeIconRes = if (isDark) R.drawable.ic_bolt_24 else R.drawable.ic_bolt_dark_24
+        val largeIcon = android.graphics.drawable.Icon.createWithResource(this, largeIconRes)
+        if (isDark) largeIcon.setTint(accentColor) // Only tint in dark mode
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)
-            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_bolt_24).setTint(largeIconTint))
+            .setLargeIcon(largeIcon)
             .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
             .setContentText(contentText)
             .setOngoing(true)
