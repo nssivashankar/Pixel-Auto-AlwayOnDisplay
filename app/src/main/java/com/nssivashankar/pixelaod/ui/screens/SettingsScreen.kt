@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.R
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import java.util.Locale
 
 @Composable
@@ -59,10 +60,52 @@ fun SettingsScreen(
     // Dialog States
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
+    var showChargingModeDialog by remember { mutableStateOf(false) }
 
     // Toggle States (For Reactive UI Refresh)
     var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
+    var customLimit by remember { mutableStateOf(prefs.getInt("custom_charging_limit", 80)) }
     
+    if (showChargingModeDialog) {
+        val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
+        val isCustomEnabled = prefs.getBoolean("custom_limit_enabled", false)
+        
+        AlertDialog(
+            onDismissRequest = { showChargingModeDialog = false },
+            title = { Text("Charging Optimization") },
+            text = {
+                Column {
+                    listOf("Off" to 0, "Limit to 80%" to 1, "Adaptive Charging" to 2, "Custom Limit" to 3).forEach { (label, mode) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (mode == 3) {
+                                    prefs.edit().putBoolean("custom_limit_enabled", true).apply()
+                                    // Custom limit actually uses mode 0 (Off) until target is reached
+                                    AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
+                                } else {
+                                    prefs.edit().putBoolean("custom_limit_enabled", false).apply()
+                                    AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
+                                    if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
+                                }
+                                showChargingModeDialog = false
+                            }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = if (mode == 3) isCustomEnabled else (!isCustomEnabled && currentMode == mode),
+                                onClick = null
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showChargingModeDialog = false }) { Text("Cancel") } }
+        )
+    }
+
     if (showAppListDialog) {
         val watchedPackages = remember { prefs.getStringSet("watched_apps", emptySet()) ?: emptySet() }
         AppListDialog(
@@ -112,6 +155,50 @@ fun SettingsScreen(
                         prefs.edit().putBoolean("charging_mode", it).apply() 
                     }
                 )
+            }
+
+            item {
+                val isCustomLimit = prefs.getBoolean("custom_limit_enabled", false)
+                val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
+                val modeSummary = when {
+                    isCustomLimit -> "Custom Limit: ${prefs.getInt("custom_charging_limit", 80)}%"
+                    currentMode == 1 -> "Limit to 80%"
+                    currentMode == 2 -> "Adaptive Charging"
+                    else -> "Off"
+                }
+                
+                PreferenceItem(
+                    title = "Charging Optimization",
+                    summary = modeSummary,
+                    icon = Icons.Default.BatterySaver,
+                    enabled = masterSwitch,
+                    onClick = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showChargingModeDialog = true 
+                    }
+                )
+            }
+
+            if (prefs.getBoolean("custom_limit_enabled", false)) {
+                item {
+                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text(
+                            text = "Custom Limit Percentage: ${customLimit}%",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (masterSwitch) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        )
+                        Slider(
+                            value = customLimit.toFloat(),
+                            onValueChange = { 
+                                customLimit = it.toInt()
+                                prefs.edit().putInt("custom_charging_limit", it.toInt()).apply()
+                            },
+                            valueRange = 81f..95f,
+                            steps = 13,
+                            enabled = masterSwitch
+                        )
+                    }
+                }
             }
 
             item {

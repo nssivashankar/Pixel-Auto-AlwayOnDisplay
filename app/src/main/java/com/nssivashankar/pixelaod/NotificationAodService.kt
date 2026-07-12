@@ -126,9 +126,26 @@ class NotificationAodService : NotificationListenerService() {
                     
                     isCharging = plugged != 0
                     
+                    val prefs = getPrefs()
                     val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+                    val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
+                    val customTarget = prefs.getInt("custom_charging_limit", 80)
+
+                    // --- Custom Limit Logic ---
+                    if (customLimitEnabled && isCharging) {
+                        if (pct >= customTarget && optMode != 1) {
+                            // Target reached: Trick the system by enabling the 80% limit
+                            // Since battery is > 80%, charging will stop immediately
+                            AodSettings.setChargeOptimizationMode(contentResolver, 1)
+                        } else if (pct < customTarget - 2 && optMode == 1) {
+                            // Allow charging if it drops significantly below custom target
+                            AodSettings.setChargeOptimizationMode(contentResolver, 0)
+                        }
+                    }
+
                     isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || 
                                    (optMode == 1 && pct >= 80) || 
+                                   (customLimitEnabled && pct >= customTarget) ||
                                    pct >= 100
 
                     if (isCharging && plugInTime == 0L) {
@@ -504,8 +521,12 @@ class NotificationAodService : NotificationListenerService() {
         val status = batteryIntent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
         
         val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
+        val customTarget = prefs.getInt("custom_charging_limit", 80)
+        
         val isFull = status == BatteryManager.BATTERY_STATUS_FULL || 
                     (optMode == 1 && batteryPct >= 80) || 
+                    (customLimitEnabled && batteryPct >= customTarget) ||
                     batteryPct >= 100
 
         if (!enabled || !isPlugged || isFull) {
@@ -545,18 +566,18 @@ class NotificationAodService : NotificationListenerService() {
 
         val targetTimeMillis = if (timeToFull > 0) {
             val now = System.currentTimeMillis()
-            if (batteryPct != -1 && batteryPct < 80) {
-                // Improved 80% calculation:
-                // Charging is faster below 80%, so we take a proportional slice of the total ETA
-                // but add a small buffer (5 mins) for the final "step down" near 80%
-                val pctTo80 = (80 - batteryPct).toDouble()
+            val limit = if (customLimitEnabled) customTarget else 80
+            
+            if (batteryPct != -1 && batteryPct < limit) {
+                // Proportional ETA to target limit (80% or Custom)
+                val pctToLimit = (limit - batteryPct).toDouble()
                 val totalPctToFull = (100 - batteryPct).toDouble()
-                val ratio = pctTo80 / totalPctToFull
-                val estimatedTimeTo80 = (timeToFull * ratio).toLong()
+                val ratio = pctToLimit / totalPctToFull
+                val estimatedTimeToLimit = (timeToFull * ratio).toLong()
                 
-                // Ensure at least 3 mins per 1% if near 80% to avoid "1 min" jumps
-                val minimumBuffer = (pctTo80 * 2.5 * 60 * 1000).toLong() 
-                now + Math.max(estimatedTimeTo80, minimumBuffer)
+                // Minimum buffer per 1%
+                val minimumBuffer = (pctToLimit * 2.5 * 60 * 1000).toLong() 
+                now + Math.max(estimatedTimeToLimit, minimumBuffer)
             } else {
                 now + timeToFull
             }
@@ -565,8 +586,13 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         val timeStr = if (targetTimeMillis > 0) {
-            if (batteryPct != -1 && batteryPct < 80) {
-                getString(R.string.charging_info_time_remaining_80, formatToClockTime(targetTimeMillis))
+            val limit = if (customLimitEnabled) customTarget else 80
+            if (batteryPct != -1 && batteryPct < limit) {
+                if (customLimitEnabled) {
+                    getString(R.string.charging_info_time_remaining_custom, limit.toString(), formatToClockTime(targetTimeMillis))
+                } else {
+                    getString(R.string.charging_info_time_remaining_80, formatToClockTime(targetTimeMillis))
+                }
             } else {
                 getString(R.string.charging_info_time_remaining_100, formatToClockTime(targetTimeMillis))
             }

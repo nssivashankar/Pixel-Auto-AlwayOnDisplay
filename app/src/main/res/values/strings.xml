@@ -16,6 +16,7 @@
     <string name="charging_info_notification_title">Charging: %1$d%%</string>
     <string name="charging_info_notification_content">%1$s \u2022 %2$s \u2022 %3$s</string>
     <string name="charging_info_time_remaining_80">80%% in %1$s</string>
+    <string name="charging_info_time_remaining_custom">%1$s%% in %2$s</string>
     <string name="charging_info_time_remaining_100">Full in %1$s</string>
     <string name="battery_health_title">Battery Health (Pixel Only)</string>
     <string name="charge_optimization_title">Charging Optimization</string>

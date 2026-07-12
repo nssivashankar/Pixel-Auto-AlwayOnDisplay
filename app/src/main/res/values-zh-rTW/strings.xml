@@ -17,6 +17,7 @@
     <string name="charging_info_notification_title">充電中：%1$d%%</string>
     <string name="charging_info_notification_content">%1$s \u2022 %2$s \u2022 %3$s</string>
     <string name="charging_info_time_remaining_80">80%% 剩餘 %1$s</string>
+    <string name="charging_info_time_remaining_custom">%1$s%% 剩餘 %2$s</string>
     <string name="charging_info_time_remaining_100">充滿剩餘 %1$s</string>
     <string name="battery_health_title">電池健康 (僅限 Pixel)</string>
     <string name="charge_optimization_title">充電最佳化</string>
