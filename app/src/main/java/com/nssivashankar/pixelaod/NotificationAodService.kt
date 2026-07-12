@@ -95,11 +95,14 @@ class NotificationAodService : NotificationListenerService() {
                     val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                     nm.cancel(COMPLETION_NOTIF_ID)
                     
+                    // Disable custom limit if active
+                    getPrefs().edit { 
+                        putBoolean("custom_limit_enabled", false)
+                        putString("charge_optimization", "0") 
+                    }
+                    
                     // Force a local sync so the charging notification reflects the new 'Off' state immediately
                     updateChargingNotification(null)
-                    
-                    // Broadcast local pref change so Settings UI updates if open
-                    getPrefs().edit { putString("charge_optimization", "0") }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     isCharging = true
@@ -232,6 +235,8 @@ class NotificationAodService : NotificationListenerService() {
             "scheduled_dnd_start",
             "scheduled_dnd_end",
             "charging_info_notif",
+            "custom_limit_enabled",
+            "custom_charging_limit"
             -> {
                 syncActiveNotifications()
                 updateChargingNotification(null)
@@ -254,9 +259,14 @@ class NotificationAodService : NotificationListenerService() {
         val pct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
 
         isCharging = plugged != 0
+        val prefs = getPrefs()
         val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
+        val customTarget = prefs.getInt("custom_charging_limit", 80)
+
         isBatteryFull = status == BatteryManager.BATTERY_STATUS_FULL || 
                        (optMode == 1 && pct >= 80) || 
+                       (customLimitEnabled && pct >= customTarget) ||
                        pct >= 100
 
         if (isCharging) {
@@ -575,7 +585,7 @@ class NotificationAodService : NotificationListenerService() {
                 val ratio = pctToLimit / totalPctToFull
                 val estimatedTimeToLimit = (timeToFull * ratio).toLong()
                 
-                // Minimum buffer per 1%
+                // Ensure at least 3 mins per 1%
                 val minimumBuffer = (pctToLimit * 2.5 * 60 * 1000).toLong() 
                 now + Math.max(estimatedTimeToLimit, minimumBuffer)
             } else {
@@ -609,16 +619,15 @@ class NotificationAodService : NotificationListenerService() {
 
         val contentText = "$timeStr \u2022 $wattageStr \u2022 $tempStr"
         
-        val currentMode = AodSettings.getChargeOptimizationMode(contentResolver)
         val isAdaptiveLegacy = AodSettings.isAdaptiveChargingEnabled(contentResolver)
 
         val offIntent = android.app.PendingIntent.getBroadcast(this, 1, Intent(ACTION_OPT_OFF).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
         val opt80Intent = android.app.PendingIntent.getBroadcast(this, 2, Intent(ACTION_OPT_80).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
         val adaptiveIntent = android.app.PendingIntent.getBroadcast(this, 3, Intent(ACTION_OPT_ADAPTIVE).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
 
-        val offLabel = if (currentMode == 0 && !isAdaptiveLegacy) "● Off" else "Off"
-        val opt80Label = if (currentMode == 1) "● 80%" else "80%"
-        val adaptiveLabel = if (currentMode == 2 || (currentMode == 0 && isAdaptiveLegacy)) "● Adaptive" else "Adaptive"
+        val offLabel = if (optMode == 0 && !isAdaptiveLegacy && !customLimitEnabled) "● Off" else "Off"
+        val opt80Label = if (optMode == 1 && !customLimitEnabled) "● 80%" else "80%"
+        val adaptiveLabel = if ((optMode == 2 || (optMode == 0 && isAdaptiveLegacy)) && !customLimitEnabled) "● Adaptive" else "Adaptive"
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
         
@@ -630,13 +639,11 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         // --- Android 15 Live Update Design Standards ---
-        // For Live Updates, we use ONLY the Small Icon (ic_bolt_outlined_24) for both 
-        // the status bar pill and the AOD card to ensure maximum OLED safety.
         val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(liveUpdateIcon)
-            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, liveUpdateIcon)) // Restore Large Icon using safer resource
+            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, liveUpdateIcon))
             .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
             .setContentText(contentText)
             .setOngoing(true)
@@ -646,29 +653,36 @@ class NotificationAodService : NotificationListenerService() {
             .setContentIntent(contentIntent)
             .setColor(accentColor)
             .setShortcutId("charging_status")
-            .addAction(Notification.Action.Builder(null, offLabel, offIntent).build())
-            .addAction(Notification.Action.Builder(null, opt80Label, opt80Intent).build())
-            .addAction(Notification.Action.Builder(null, adaptiveLabel, adaptiveIntent).build())
+
+        // --- Dynamic Actions: Prevent inconsistency when Custom Limit is active ---
+        if (customLimitEnabled) {
+            // When Custom Limit is active, only show "Disable Limit" to go to 100% cleanly
+            val fullChargeIntent = android.app.PendingIntent.getBroadcast(
+                this, 4, Intent(ACTION_FULL_CHARGE).setPackage(packageName), 
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            notificationBuilder.addAction(Notification.Action.Builder(null, "Disable Limit (Full Charge)", fullChargeIntent).build())
+        } else {
+            // Standard system optimization modes
+            notificationBuilder.addAction(Notification.Action.Builder(null, offLabel, offIntent).build())
+            notificationBuilder.addAction(Notification.Action.Builder(null, opt80Label, opt80Intent).build())
+            notificationBuilder.addAction(Notification.Action.Builder(null, adaptiveLabel, adaptiveIntent).build())
+        }
 
         val extras = android.os.Bundle()
-        
-        // Android 15 "Live Update" promotion request
         extras.putBoolean("android.requestPromotedOngoing", true)
 
         if (targetTimeMillis > 0) {
-            // Promote to Live Notification only when time is calculated
             notificationBuilder.setCategory("progress")
             notificationBuilder.setWhen(targetTimeMillis)
-            
-            // Short text for the status bar pill/chip (must be short to fit)
             val timeOnly = formatToClockTime(targetTimeMillis)
-            val pillText = if (batteryPct != -1 && batteryPct < 80) "80% $timeOnly" else "Full $timeOnly"
+            val currentLimit = if (customLimitEnabled) customTarget else 80
+            val pillText = if (batteryPct != -1 && batteryPct < currentLimit) "$currentLimit% $timeOnly" else "Full $timeOnly"
             extras.putString("android.shortCriticalText", pillText)
         } else {
             notificationBuilder.setCategory(Notification.CATEGORY_SERVICE)
         }
 
-        // Essential for Pixel status bar chip and At a Glance integration
         extras.putBoolean("android.substName", true)
         notificationBuilder.addExtras(extras)
 
@@ -688,7 +702,6 @@ class NotificationAodService : NotificationListenerService() {
             startForeground(CHARGING_NOTIF_ID, notification)
         }
         
-        // Force sync local tracking for own notification
         if (activeNotifKeys.add(this.packageName + "|" + CHARGING_NOTIF_ID)) {
             updateAodState()
         }
