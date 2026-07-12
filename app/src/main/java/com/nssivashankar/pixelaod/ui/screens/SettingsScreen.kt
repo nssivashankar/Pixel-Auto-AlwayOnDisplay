@@ -110,11 +110,11 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    // Record content for the mirror
+                    drawContent()
+                    // Record content AFTER drawing so we capture exactly what's on screen
                     contentLayer.record {
                         this@drawWithContent.drawContent()
                     }
-                    drawContent()
                 },
             contentPadding = PaddingValues(top = headerHeight, bottom = 48.dp),
             state = lazyListState
@@ -286,14 +286,14 @@ fun SettingsScreen(
                         val width = size.width
                         val height = size.height
                         
-                        // We translate the underlying list based on its scroll
-                        // but we clip it to avoid the 'edge glow' artifact
                         clipRect(
                             left = 0f,
                             top = topBufferPx,
                             right = width,
                             bottom = height
                         ) {
+                            // We don't need translate here if the record { } captures the whole screen 
+                            // BUT we need to ensure the LazyColumn is recorded CORRECTLY.
                             drawLayer(contentLayer)
                         }
                     }
