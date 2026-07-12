@@ -60,9 +60,9 @@ fun SettingsScreen(
     val headerHeight = headerContentHeight + systemTopPadding
     val isDark = isSystemInDarkTheme()
 
-    // --- Mirror Engine Background Clip Calculation ---
-    // We need to clip the underlying drawing so it doesn't "glow" or smear at the edges
-    val topBufferPx = with(density) { 32.dp.toPx() }
+    // --- Mirror Engine Alignment ---
+    // Remove the buffer to allow the blur to reach the top of the header
+    val topBufferPx = 0f
 
     if (showBatteryDialog) {
         val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
