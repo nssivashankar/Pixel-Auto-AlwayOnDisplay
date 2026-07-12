@@ -40,6 +40,9 @@ fun SettingsScreen(
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
+
+    // Toggle States (For Reactive UI Refresh)
+    var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
     
     if (showBatteryDialog) {
         val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
@@ -176,16 +179,18 @@ fun SettingsScreen(
             }
             
             item {
-                val isScheduledDnd = prefs.getBoolean("scheduled_dnd", false)
                 PreferenceSwitch(
                     title = stringResource(R.string.scheduled_dnd_title),
                     summary = stringResource(R.string.scheduled_dnd_summary),
                     checked = isScheduledDnd,
-                    onCheckedChange = { prefs.edit().putBoolean("scheduled_dnd", it).apply() }
+                    onCheckedChange = { 
+                        isScheduledDnd = it
+                        prefs.edit().putBoolean("scheduled_dnd", it).apply() 
+                    }
                 )
             }
 
-            if (prefs.getBoolean("scheduled_dnd", false)) {
+            if (isScheduledDnd) {
                 item {
                     var startTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00") }
                     PreferenceItem(
