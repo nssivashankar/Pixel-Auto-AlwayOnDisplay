@@ -59,11 +59,11 @@ class AodTileService : TileService() {
         val newState = !currentState
 
         prefs.edit().putBoolean("master_switch", newState).apply()
+        
+        // --- Added: Synchronize system state immediately ---
+        AodSettings.setAodEnabled(contentResolver, newState)
+        
         setTileActive(newState)
-
-        if (!newState) {
-            AodSettings.setAodEnabled(contentResolver, false)
-        }
     }
 
     private fun handleMissingPermission() {
