@@ -235,7 +235,10 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle("Charging Mode")
                     setSummary("Turn on AoD automatically when charger is connected")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_idle_low_battery)
-                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
+                        icon?.setTint(typedValue.data)
+                    }
                     setDefaultValue(false)
                 },
             )
@@ -247,7 +250,10 @@ class SettingsActivity : AppCompatActivity() {
                     summary = "Always trigger AoD for these apps"
                     dialogTitle = "Select apps to watch"
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_agenda)
-                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
+                        icon?.setTint(typedValue.data)
+                    }
                 },
             )
 
@@ -257,7 +263,10 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle("Live Notification Mode")
                     setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_dialog_map)
-                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
+                        icon?.setTint(typedValue.data)
+                    }
                     setDefaultValue(false)
                 },
             )
@@ -276,7 +285,10 @@ class SettingsActivity : AppCompatActivity() {
                     entries = arrayOf("Off", "Limit to 80%", "Adaptive Charging")
                     entryValues = arrayOf("0", "1", "2")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_power_off)
-                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
+                        icon?.setTint(typedValue.data)
+                    }
                     
                     val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
                     value = currentMode.toString()
@@ -306,7 +318,10 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle(R.string.charging_info_title)
                     setSummary(R.string.charging_info_summary)
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_info_details)
-                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
+                    val typedValue = android.util.TypedValue()
+                    if (requireContext().theme.resolveAttribute(android.R.attr.colorPrimary, typedValue, true)) {
+                        icon?.setTint(typedValue.data)
+                    }
                     setDefaultValue(false)
                 },
             )
