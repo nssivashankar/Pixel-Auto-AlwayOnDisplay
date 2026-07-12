@@ -176,10 +176,11 @@ fun SettingsScreen(
             }
             
             item {
+                val isScheduledDnd = prefs.getBoolean("scheduled_dnd", false)
                 PreferenceSwitch(
                     title = stringResource(R.string.scheduled_dnd_title),
                     summary = stringResource(R.string.scheduled_dnd_summary),
-                    checked = prefs.getBoolean("scheduled_dnd", false),
+                    checked = isScheduledDnd,
                     onCheckedChange = { prefs.edit().putBoolean("scheduled_dnd", it).apply() }
                 )
             }
