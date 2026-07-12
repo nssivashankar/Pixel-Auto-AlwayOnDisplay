@@ -87,8 +87,8 @@ fun SettingsScreen(
                                     prefs.edit().putBoolean("custom_limit_enabled", false).apply()
                                     AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
                                     if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
+                                    showChargingModeDialog = false // Close immediately for non-custom
                                 }
-                                showChargingModeDialog = false
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -100,9 +100,33 @@ fun SettingsScreen(
                             Text(label)
                         }
                     }
+
+                    if (isCustomEnabled) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "Limit: ${customLimit}%",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Slider(
+                            value = customLimit.toFloat(),
+                            onValueChange = { 
+                                val rounded = (it.toInt() / 5) * 5
+                                customLimit = rounded
+                                prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                            },
+                            valueRange = 80f..100f,
+                            steps = 3, // 80, 85, 90, 95, 100 (4 intervals = 3 steps between)
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
                 }
             },
-            confirmButton = { TextButton(onClick = { showChargingModeDialog = false }) { Text("Cancel") } }
+            confirmButton = { 
+                TextButton(onClick = { showChargingModeDialog = false }) { 
+                    Text(if (isCustomEnabled) "Done" else "Cancel") 
+                } 
+            }
         )
     }
 
@@ -180,6 +204,7 @@ fun SettingsScreen(
             }
 
             if (prefs.getBoolean("custom_limit_enabled", false)) {
+                // Keep the slider on main screen as well for quick access, but with 5% steps
                 item {
                     Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                         Text(
@@ -190,11 +215,12 @@ fun SettingsScreen(
                         Slider(
                             value = customLimit.toFloat(),
                             onValueChange = { 
-                                customLimit = it.toInt()
-                                prefs.edit().putInt("custom_charging_limit", it.toInt()).apply()
+                                val rounded = (it.toInt() / 5) * 5
+                                customLimit = rounded
+                                prefs.edit().putInt("custom_charging_limit", rounded).apply()
                             },
-                            valueRange = 81f..95f,
-                            steps = 13,
+                            valueRange = 80f..100f,
+                            steps = 3,
                             enabled = masterSwitch
                         )
                     }
