@@ -37,40 +37,12 @@ fun SettingsScreen(
     val lazyListState = rememberLazyListState()
     
     // Dialog States
-    var showBatteryDialog by remember { mutableStateOf(false) }
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
 
     // Toggle States (For Reactive UI Refresh)
     var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
     
-    if (showBatteryDialog) {
-        val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
-        AlertDialog(
-            onDismissRequest = { showBatteryDialog = false },
-            title = { Text(stringResource(R.string.charge_optimization_title)) },
-            text = {
-                Column {
-                    listOf("Off" to 0, "Limit to 80%" to 1, "Adaptive Charging" to 2).forEach { (label, mode) ->
-                        Row(
-                            Modifier.fillMaxWidth().clickable {
-                                AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
-                                if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
-                                showBatteryDialog = false
-                            }.padding(vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(selected = currentMode == mode, onClick = null)
-                            Spacer(Modifier.width(16.dp))
-                            Text(label)
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showBatteryDialog = false }) { Text("Cancel") } }
-        )
-    }
-
     if (showAppListDialog) {
         val watchedPackages = remember { prefs.getStringSet("watched_apps", emptySet()) ?: emptySet() }
         AppListDialog(
@@ -136,22 +108,6 @@ fun SettingsScreen(
                     onCheckedChange = { prefs.edit().putBoolean("live_notif_mode", it).apply() },
                     showSecondaryAction = true,
                     onSecondaryActionClick = { showBlockListDialog = true }
-                )
-            }
-
-            item { PreferenceCategory(title = stringResource(R.string.battery_health_title)) }
-
-            item {
-                val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
-                PreferenceItem(
-                    title = stringResource(R.string.charge_optimization_title),
-                    summary = when(currentMode) {
-                        1 -> "Limit to 80%"
-                        2 -> "Adaptive Charging"
-                        else -> "Off"
-                    },
-                    icon = Icons.Default.BatterySaver,
-                    onClick = { showBatteryDialog = true }
                 )
             }
 
