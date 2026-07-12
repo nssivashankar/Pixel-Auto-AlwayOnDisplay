@@ -17,6 +17,13 @@ import com.nssivashankar.pixelaod.config.Settings as AodSettings
 class AodTileService : TileService() {
 
     private val isAodAvailable by lazy { AmbientDisplayConfiguration().isAvailable() }
+    
+    private val prefListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+        if (key == "master_switch") {
+            val isEnabled = p.getBoolean(key, false)
+            setTileActive(isEnabled)
+        }
+    }
 
     override fun onStartListening() {
         super.onStartListening()
@@ -27,8 +34,16 @@ class AodTileService : TileService() {
         }
 
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+        
         val masterEnabled = prefs.getBoolean("master_switch", false)
         setTileActive(masterEnabled)
+    }
+
+    override fun onStopListening() {
+        super.onStopListening()
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
     }
 
     override fun onClick() {
