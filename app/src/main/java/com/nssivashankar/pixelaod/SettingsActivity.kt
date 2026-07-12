@@ -114,17 +114,17 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // --- High-Visibility Dynamic Glass ---
+            // --- Balanced Dynamic Glass (Blur First) ---
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
             
             if (isDark) {
-                // Dark mode: Deeper surface container for separation
+                // Dark mode: 40% alpha for deep blur visibility
                 tint.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.BLACK))
-                tint.alpha = 0.9f 
+                tint.alpha = 0.4f 
             } else {
-                // Light mode: Ultra-thick white frost to isolate from scrolling list
+                // Light mode: 60% alpha "Milky Frost" to balance visibility and blur
                 tint.setBackgroundColor(android.graphics.Color.WHITE)
-                tint.alpha = 0.96f
+                tint.alpha = 0.6f
             }
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
