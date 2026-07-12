@@ -28,25 +28,42 @@ class NotificationAodService : NotificationListenerService() {
 
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
+        private const val COMPLETION_NOTIF_ID = 1002
         private const val CHARGING_CHANNEL_ID = "charging_live_v10"
+        private const val COMPLETION_CHANNEL_ID = "battery_completion_v1"
         
         private const val ACTION_OPT_OFF = "com.nssivashankar.pixelaod.ACTION_OPT_OFF"
         private const val ACTION_OPT_80 = "com.nssivashankar.pixelaod.ACTION_OPT_80"
         private const val ACTION_OPT_ADAPTIVE = "com.nssivashankar.pixelaod.ACTION_OPT_ADAPTIVE"
+        private const val ACTION_FULL_CHARGE = "com.nssivashankar.pixelaod.ACTION_FULL_CHARGE"
     }
 
     private fun createNotificationChannel() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        val channel = NotificationChannel(
+        
+        // Channel for Ongoing Live Updates (Silent)
+        val liveChannel = NotificationChannel(
             CHARGING_CHANNEL_ID,
             "Live Charging Updates",
-            NotificationManager.IMPORTANCE_HIGH
+            NotificationManager.IMPORTANCE_LOW
         ).apply {
             setShowBadge(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
             description = "Shows real-time charging wattage and completion time"
         }
-        nm.createNotificationChannel(channel)
+        nm.createNotificationChannel(liveChannel)
+
+        // Channel for Completion Alerts (Sound)
+        val completionChannel = NotificationChannel(
+            COMPLETION_CHANNEL_ID,
+            "Battery Completion Alerts",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            enableVibration(true)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            description = "Alerts when battery reaches 80% or 100%"
+        }
+        nm.createNotificationChannel(completionChannel)
     }
 
     private val receiver = object : BroadcastReceiver() {
@@ -66,6 +83,13 @@ class NotificationAodService : NotificationListenerService() {
                     AodSettings.setAdaptiveChargingEnabled(contentResolver, true)
                     updateChargingNotification(null)
                 }
+                ACTION_FULL_CHARGE -> {
+                    AodSettings.setChargeOptimizationMode(contentResolver, 0)
+                    AodSettings.setAdaptiveChargingEnabled(contentResolver, false)
+                    val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    nm.cancel(COMPLETION_NOTIF_ID)
+                    updateChargingNotification(null)
+                }
                 Intent.ACTION_POWER_CONNECTED -> {
                     isCharging = true
                     plugInTime = System.currentTimeMillis()
@@ -78,6 +102,9 @@ class NotificationAodService : NotificationListenerService() {
                     syncActiveNotifications()
                     updateAodState()
                     updateChargingNotification(null)
+                    val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    nm.cancel(COMPLETION_NOTIF_ID)
+                    lastAlertedPct = -1
                 }
                 Intent.ACTION_BATTERY_CHANGED -> {
                     val status = intent.getIntExtra(BatteryManager.EXTRA_STATUS, -1)
@@ -98,6 +125,7 @@ class NotificationAodService : NotificationListenerService() {
                     }
                     updateAodState()
                     updateChargingNotification(intent)
+                    checkBatteryCompletion(pct, status, optMode)
                 }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
                     updateDndStatus()
@@ -113,6 +141,55 @@ class NotificationAodService : NotificationListenerService() {
                 }
             }
         }
+    }
+
+    private var lastAlertedPct = -1
+
+    private fun checkBatteryCompletion(pct: Int, status: Int, optMode: Int) {
+        if (!isCharging || pct == -1) return
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+
+        // Alert for 80% completion when mode is 80%
+        if (optMode == 1 && pct >= 80 && lastAlertedPct < 80) {
+            lastAlertedPct = 80
+            sendCompletionNotification(
+                "80% Charging Complete",
+                "Battery has reached 80% limit. Want to continue to 100%?",
+                true
+            )
+        } 
+        // Alert for 100% completion
+        else if ((status == BatteryManager.BATTERY_STATUS_FULL || pct >= 100) && lastAlertedPct < 100) {
+            lastAlertedPct = 100
+            sendCompletionNotification(
+                "Battery Fully Charged",
+                "Your Pixel is now at 100%.",
+                false
+            )
+        }
+    }
+
+    private fun sendCompletionNotification(title: String, text: String, showFullChargeAction: Boolean) {
+        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        
+        val builder = Notification.Builder(this, COMPLETION_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_bolt_24)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setAutoCancel(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+            .setCategory(Notification.CATEGORY_EVENT)
+            .setOnlyAlertOnce(true)
+
+        if (showFullChargeAction) {
+            val fullChargeIntent = android.app.PendingIntent.getBroadcast(
+                this, 4, Intent(ACTION_FULL_CHARGE).setPackage(packageName), 
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            builder.addAction(Notification.Action.Builder(null, "Full Charge", fullChargeIntent).build())
+        }
+
+        nm.notify(COMPLETION_NOTIF_ID, builder.build())
     }
 
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
