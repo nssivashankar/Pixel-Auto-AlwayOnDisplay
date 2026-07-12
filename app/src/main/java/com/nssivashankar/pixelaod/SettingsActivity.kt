@@ -36,7 +36,14 @@ class SettingsActivity : AppCompatActivity() {
         val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
         masterSwitch.isChecked = prefs.getBoolean("master_switch", false)
-        masterSwitch.setOnCheckedChangeListener { _, isChecked ->
+        masterSwitch.setOnCheckedChangeListener { view, isChecked ->
+            // --- Differentiated Haptics ---
+            if (isChecked) {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            } else {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+
             prefs.edit { putBoolean("master_switch", isChecked) }
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
