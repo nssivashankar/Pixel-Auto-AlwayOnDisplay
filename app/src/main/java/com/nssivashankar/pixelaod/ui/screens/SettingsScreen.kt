@@ -112,8 +112,11 @@ fun SettingsScreen(
                             value = customLimit.toFloat(),
                             onValueChange = { 
                                 val rounded = (it.toInt() / 5) * 5
-                                customLimit = rounded
-                                prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                if (rounded != customLimit) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    customLimit = rounded
+                                    prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                }
                             },
                             valueRange = 80f..100f,
                             steps = 3, // 80, 85, 90, 95, 100 (4 intervals = 3 steps between)
@@ -216,8 +219,11 @@ fun SettingsScreen(
                             value = customLimit.toFloat(),
                             onValueChange = { 
                                 val rounded = (it.toInt() / 5) * 5
-                                customLimit = rounded
-                                prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                if (rounded != customLimit) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    customLimit = rounded
+                                    prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                }
                             },
                             valueRange = 80f..100f,
                             steps = 3,
