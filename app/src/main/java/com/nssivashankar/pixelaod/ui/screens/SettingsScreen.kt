@@ -146,22 +146,6 @@ fun SettingsScreen(
                 )
             }
 
-            item {
-                var isLegacyAdaptive by remember { mutableStateOf(prefs.getBoolean("legacy_adaptive_charging", false)) }
-                PreferenceSwitch(
-                    title = stringResource(R.string.adaptive_charging_title),
-                    summary = stringResource(R.string.adaptive_charging_summary),
-                    icon = Icons.Default.OfflineBolt,
-                    checked = isLegacyAdaptive,
-                    enabled = masterSwitch,
-                    onCheckedChange = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        isLegacyAdaptive = it
-                        prefs.edit().putBoolean("legacy_adaptive_charging", it).apply()
-                    }
-                )
-            }
-
             item { PreferenceCategory(title = "UI & Appearance") }
 
             item {
