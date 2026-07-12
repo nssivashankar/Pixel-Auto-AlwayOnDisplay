@@ -29,7 +29,7 @@ class NotificationAodService : NotificationListenerService() {
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
         private const val COMPLETION_NOTIF_ID = 1002
-        private const val CHARGING_CHANNEL_ID = "charging_live_v10"
+        private const val CHARGING_CHANNEL_ID = "charging_live_v11_fix" // Force new channel for lockscreen visibility
         private const val COMPLETION_CHANNEL_ID = "battery_completion_v1"
         
         private const val ACTION_OPT_OFF = "com.nssivashankar.pixelaod.ACTION_OPT_OFF"
@@ -44,12 +44,15 @@ class NotificationAodService : NotificationListenerService() {
         // Channel for Ongoing Live Updates - MUST be HIGH for lockscreen visibility
         val liveChannel = NotificationChannel(
             CHARGING_CHANNEL_ID,
-            "Live Charging Updates",
+            "Live Charging Status",
             NotificationManager.IMPORTANCE_HIGH
         ).apply {
             setShowBadge(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            description = "Shows real-time charging wattage and completion time"
+            setSound(null, null) // Silent but high importance for lockscreen presence
+            enableLights(false)
+            enableVibration(false)
+            description = "Shows real-time charging wattage and completion time on Lockscreen/AOD"
         }
         nm.createNotificationChannel(liveChannel)
 
