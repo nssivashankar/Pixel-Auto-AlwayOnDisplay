@@ -599,15 +599,20 @@ class NotificationAodService : NotificationListenerService() {
         val adaptiveLabel = if (currentMode == 2 || (currentMode == 0 && isAdaptiveLegacy)) "● Adaptive" else "Adaptive"
 
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+        
+        // Force high-contrast colors for icons in light mode
         val accentColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (isDark) getColor(android.R.color.system_accent1_200) else getColor(android.R.color.system_accent1_600)
+            if (isDark) getColor(android.R.color.system_accent1_200) else getColor(android.R.color.system_accent1_700)
         } else {
             getColor(android.R.color.holo_blue_dark)
         }
 
+        // Specifically for the large icon in Light mode, we need a dark tint to see it on white
+        val largeIconTint = if (isDark) accentColor else android.graphics.Color.BLACK
+
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)
-            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_bolt_24).setTint(accentColor))
+            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_bolt_24).setTint(largeIconTint))
             .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
             .setContentText(contentText)
             .setOngoing(true)
