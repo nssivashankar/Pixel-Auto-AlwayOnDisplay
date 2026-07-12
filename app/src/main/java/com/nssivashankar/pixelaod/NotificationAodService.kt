@@ -607,10 +607,13 @@ class NotificationAodService : NotificationListenerService() {
             getColor(android.R.color.holo_blue_dark)
         }
 
-        // Use a dedicated dark icon resource for Light Mode to bypass system tint issues
-        val largeIconRes = if (isDark) R.drawable.ic_bolt_24 else R.drawable.ic_bolt_dark_24
+        // Use a dedicated OLED-safe outlined icon for the Lockscreen/AOD notification
+        // while keeping the solid bolt for the small icon pill and app icons.
+        val largeIconRes = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
         val largeIcon = android.graphics.drawable.Icon.createWithResource(this, largeIconRes)
-        if (isDark) largeIcon.setTint(accentColor) // Only tint in dark mode
+        
+        // Only apply the dynamic Material You accent to the outlined icon in Dark Mode
+        if (isDark) largeIcon.setTint(accentColor)
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_bolt_24)
