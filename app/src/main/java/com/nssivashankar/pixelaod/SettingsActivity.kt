@@ -39,22 +39,18 @@ class SettingsActivity : AppCompatActivity() {
             AodSettings.setAodEnabled(contentResolver, isChecked)
         }
 
-        val scroll = findViewById<androidx.core.widget.NestedScrollView>(R.id.settings_container_scroll)
         val mirror = findViewById<View>(R.id.header_blur_mirror)
-        val container = findViewById<View>(R.id.settings_container)
+        val composeView = findViewById<ComposeView>(R.id.settings_compose_view)
         val tint = findViewById<View>(R.id.header_glass_tint)
 
-        // --- Bridge Compose Screen into XML Container ---
-        val composeView = ComposeView(this).apply {
-            setContent {
-                PixelAodTheme {
-                    SettingsScreen(
-                        onPermissionRequest = { handleMissingPermission() }
-                    )
-                }
+        // --- Bridge Compose Screen ---
+        composeView.setContent {
+            PixelAodTheme {
+                SettingsScreen(
+                    onPermissionRequest = { handleMissingPermission() }
+                )
             }
         }
-        findViewById<android.widget.FrameLayout>(R.id.settings_container).addView(composeView)
 
         // --- THE STABLE MIRROR ENGINE (Verified View-Based) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -72,7 +68,7 @@ class SettingsActivity : AppCompatActivity() {
                 private var isDrawing = false
 
                 override fun draw(canvas: android.graphics.Canvas) {
-                    if (isDrawing || container.width <= 0) return
+                    if (isDrawing || composeView.width <= 0) return
                     isDrawing = true
                     canvas.drawColor(surfaceColor)
                     
@@ -80,8 +76,10 @@ class SettingsActivity : AppCompatActivity() {
                     // Clip only bottom to suppress glow, top is 0 to cover title
                     canvas.clipRect(0, 0, mirror.width, mirror.height - (32 * resources.displayMetrics.density).toInt())
                     
-                    canvas.translate(0f, -scroll.scrollY.toFloat())
-                    container.draw(canvas)
+                    // Note: In Compose, we don't have a simple scrollY on the View.
+                    // However, because we use a transparent Surface in SettingsScreen,
+                    // we can draw the entire ComposeView and it will match the current frame perfectly.
+                    composeView.draw(canvas)
                     canvas.restore()
                     
                     isDrawing = false
@@ -91,7 +89,7 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            scroll.viewTreeObserver.addOnScrollChangedListener { mirror.invalidate() }
+            // In Compose, we invalidate based on the view drawing itself
             mirror.viewTreeObserver.addOnPreDrawListener { mirror.invalidate(); true }
         }
 
@@ -114,7 +112,8 @@ class SettingsActivity : AppCompatActivity() {
                 tint.alpha = 0.6f
             }
 
-            container.setPadding(0, headerTotalHeight, 0, (48 * density).toInt())
+            // Tell the Compose list to add padding so it doesn't start under the header
+            // This is handled in the Compose Screen via WindowInsets now
             insets
         }
     }

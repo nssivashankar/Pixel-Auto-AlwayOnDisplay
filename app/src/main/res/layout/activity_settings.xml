@@ -6,21 +6,11 @@
     android:layout_height="match_parent"
     android:background="?android:attr/colorBackground">
 
-    <!-- 1. The Real Content (Sharp) -->
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/settings_container_scroll"
+    <!-- 1. The Real Content (Compose) -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/settings_compose_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:overScrollMode="never">
-
-        <FrameLayout
-            android:id="@+id/settings_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingBottom="48dp" />
-
-    </androidx.core.widget.NestedScrollView>
+        android:layout_height="match_parent" />
 
     <!-- 2. The Glass Header Layer -->
     <com.google.android.material.appbar.AppBarLayout
