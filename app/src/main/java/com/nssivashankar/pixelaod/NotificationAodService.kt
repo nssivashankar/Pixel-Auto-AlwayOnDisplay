@@ -15,6 +15,7 @@ import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
+import androidx.core.content.edit
 import java.util.Calendar
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
@@ -87,11 +88,18 @@ class NotificationAodService : NotificationListenerService() {
                     updateChargingNotification(null)
                 }
                 ACTION_FULL_CHARGE -> {
+                    // Force Full Charge by disabling both modern Optimization and legacy Adaptive Charging
                     AodSettings.setChargeOptimizationMode(contentResolver, 0)
                     AodSettings.setAdaptiveChargingEnabled(contentResolver, false)
+                    
                     val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
                     nm.cancel(COMPLETION_NOTIF_ID)
+                    
+                    // Force a local sync so the charging notification reflects the new 'Off' state immediately
                     updateChargingNotification(null)
+                    
+                    // Broadcast local pref change so Settings UI updates if open
+                    getPrefs().edit { putString("charge_optimization", "0") }
                 }
                 Intent.ACTION_POWER_CONNECTED -> {
                     isCharging = true
