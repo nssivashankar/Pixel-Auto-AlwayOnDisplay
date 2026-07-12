@@ -2,6 +2,7 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,6 +19,10 @@ import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.util.concurrent.ConcurrentHashMap
+
+// Global cache for icons to ensure ultra-smooth scrolling across dialog opens
+private val iconCache = ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
 
 @Composable
 fun AppListDialog(
@@ -48,7 +53,6 @@ fun AppListDialog(
                         appInfo = appInfo
                     )
                 }
-                // --- OLD FUNCTIONALITY: Sort selected apps to top ---
                 .sortedWith(compareByDescending<AppInfo> { selectedPackages.contains(it.packageName) }
                     .thenBy { it.label.lowercase() })
                 .toList()
@@ -82,7 +86,10 @@ fun AppListDialog(
                         CircularProgressIndicator()
                     }
                 } else {
-                    LazyColumn(modifier = Modifier.weight(1f)) {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f),
+                        contentPadding = PaddingValues(bottom = 16.dp)
+                    ) {
                         items(filteredApps, key = { it.packageName }) { app ->
                             AppListItem(
                                 app = app,
@@ -121,12 +128,19 @@ fun AppListItem(
     pm: PackageManager,
     onToggle: () -> Unit
 ) {
-    var iconBitmap by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    // Check global cache first for instant rendering
+    var iconBitmap by remember { mutableStateOf(iconCache[app.packageName]) }
     
-    LaunchedEffect(app.packageName) {
-        withContext(Dispatchers.IO) {
-            val drawable = pm.getApplicationIcon(app.appInfo)
-            iconBitmap = drawable.toBitmap().asImageBitmap()
+    // Load icon in background only if not cached
+    if (iconBitmap == null) {
+        LaunchedEffect(app.packageName) {
+            withContext(Dispatchers.IO) {
+                val drawable = pm.getApplicationIcon(app.appInfo)
+                // Downscale bitmap for better scrolling performance and less RAM usage
+                val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
+                iconCache[app.packageName] = bitmap
+                iconBitmap = bitmap
+            }
         }
     }
 
@@ -148,12 +162,12 @@ fun AppListItem(
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize()
                     )
-                } ?: CircularProgressIndicator(Modifier.size(24.dp).align(Alignment.Center), strokeWidth = 2.dp)
+                } ?: Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.extraSmall))
             }
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(app.label, style = MaterialTheme.typography.bodyLarge)
-                Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(app.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                Text(app.packageName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
             Checkbox(
                 checked = isSelected,

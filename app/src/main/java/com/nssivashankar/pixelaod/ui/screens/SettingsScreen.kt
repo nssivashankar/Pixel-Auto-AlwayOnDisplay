@@ -127,19 +127,12 @@ fun SettingsScreen(
             item {
                 PreferenceSwitch(
                     title = "Live Notification Mode",
-                    summary = "AoD for Maps, Uber etc. \u2022 Tap below to manage block list",
+                    summary = "AoD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
                     checked = prefs.getBoolean("live_notif_mode", false),
-                    onCheckedChange = { prefs.edit().putBoolean("live_notif_mode", it).apply() }
-                )
-            }
-            
-            item {
-                PreferenceItem(
-                    title = "Manage Block List",
-                    summary = "Apps to ignore in Live Notification Mode",
-                    icon = Icons.Default.Block,
-                    onClick = { showBlockListDialog = true }
+                    onCheckedChange = { prefs.edit().putBoolean("live_notif_mode", it).apply() },
+                    showSecondaryAction = true,
+                    onSecondaryActionClick = { showBlockListDialog = true }
                 )
             }
 
@@ -291,7 +284,9 @@ fun PreferenceSwitch(
     summary: String? = null,
     icon: ImageVector? = null,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    showSecondaryAction: Boolean = false,
+    onSecondaryActionClick: () -> Unit = {}
 ) {
     var isChecked by remember { mutableStateOf(checked) }
     LaunchedEffect(checked) {
@@ -303,13 +298,24 @@ fun PreferenceSwitch(
         supportingContent = summary?.let { { Text(it) } },
         leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
         trailingContent = {
-            Switch(
-                checked = isChecked,
-                onCheckedChange = {
-                    isChecked = it
-                    onCheckedChange(it)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (showSecondaryAction) {
+                    IconButton(onClick = onSecondaryActionClick) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = "Manage",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-            )
+                Switch(
+                    checked = isChecked,
+                    onCheckedChange = {
+                        isChecked = it
+                        onCheckedChange(it)
+                    }
+                )
+            }
         },
         modifier = Modifier.fillMaxWidth()
     )
