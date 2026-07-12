@@ -19,12 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.R
-import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import java.util.Locale
 
 @Composable
@@ -33,9 +34,25 @@ fun SettingsScreen(
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
     val lazyListState = rememberLazyListState()
     
+    // Global Master Switch State (Read from Prefs, but we need to track it for disabling items)
+    var masterSwitch by remember { mutableStateOf(prefs.getBoolean("master_switch", false)) }
+    
+    // We need to listen to preference changes for the master switch specifically
+    // to ensure the UI items disable/enable correctly when the title toggle changes.
+    DisposableEffect(Unit) {
+        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+            if (key == "master_switch") {
+                masterSwitch = p.getBoolean(key, false)
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
+    }
+
     // Dialog States
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
@@ -83,31 +100,46 @@ fun SettingsScreen(
             item {
                 PreferenceSwitch(
                     title = "Charging Mode",
-                    summary = "Turn on AoD automatically when charger is connected",
+                    summary = "Turn on AOD automatically when charger is connected",
                     icon = Icons.Default.BatteryChargingFull,
                     checked = prefs.getBoolean("charging_mode", false),
-                    onCheckedChange = { prefs.edit().putBoolean("charging_mode", it).apply() }
+                    enabled = masterSwitch,
+                    onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        prefs.edit().putBoolean("charging_mode", it).apply() 
+                    }
                 )
             }
 
             item {
                 PreferenceItem(
                     title = "Per-App Notifications",
-                    summary = "Always trigger AoD for these apps",
+                    summary = "Always trigger AOD for these apps",
                     icon = Icons.Default.Notifications,
-                    onClick = { showAppListDialog = true }
+                    enabled = masterSwitch,
+                    onClick = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showAppListDialog = true 
+                    }
                 )
             }
 
             item {
                 PreferenceSwitch(
                     title = "Live Notification Mode",
-                    summary = "AoD for Maps, Uber etc.",
+                    summary = "AOD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
                     checked = prefs.getBoolean("live_notif_mode", false),
-                    onCheckedChange = { prefs.edit().putBoolean("live_notif_mode", it).apply() },
+                    enabled = masterSwitch,
+                    onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        prefs.edit().putBoolean("live_notif_mode", it).apply() 
+                    },
                     showSecondaryAction = true,
-                    onSecondaryActionClick = { showBlockListDialog = true }
+                    onSecondaryActionClick = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        showBlockListDialog = true 
+                    }
                 )
             }
 
@@ -119,7 +151,11 @@ fun SettingsScreen(
                     summary = stringResource(R.string.charging_info_summary),
                     icon = Icons.Default.Info,
                     checked = prefs.getBoolean("charging_info_notif", false),
-                    onCheckedChange = { prefs.edit().putBoolean("charging_info_notif", it).apply() }
+                    enabled = masterSwitch,
+                    onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        prefs.edit().putBoolean("charging_info_notif", it).apply() 
+                    }
                 )
             }
 
@@ -130,7 +166,11 @@ fun SettingsScreen(
                     title = stringResource(R.string.dnd_mode_title),
                     summary = stringResource(R.string.dnd_mode_summary),
                     checked = prefs.getBoolean("dnd_mode", false),
-                    onCheckedChange = { prefs.edit().putBoolean("dnd_mode", it).apply() }
+                    enabled = masterSwitch,
+                    onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        prefs.edit().putBoolean("dnd_mode", it).apply() 
+                    }
                 )
             }
             
@@ -139,7 +179,9 @@ fun SettingsScreen(
                     title = stringResource(R.string.scheduled_dnd_title),
                     summary = stringResource(R.string.scheduled_dnd_summary),
                     checked = isScheduledDnd,
+                    enabled = masterSwitch,
                     onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         isScheduledDnd = it
                         prefs.edit().putBoolean("scheduled_dnd", it).apply() 
                     }
@@ -152,9 +194,11 @@ fun SettingsScreen(
                     PreferenceItem(
                         title = "Start Time",
                         summary = startTime,
+                        enabled = masterSwitch,
                         onClick = {
                             val parts = startTime.split(":")
                             TimePickerDialog(context, { _, h, m ->
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val time = String.format(Locale.US, "%02d:%02d", h, m)
                                 prefs.edit().putString("scheduled_dnd_start", time).apply()
                                 startTime = time
@@ -167,9 +211,11 @@ fun SettingsScreen(
                     PreferenceItem(
                         title = "End Time",
                         summary = endTime,
+                        enabled = masterSwitch,
                         onClick = {
                             val parts = endTime.split(":")
                             TimePickerDialog(context, { _, h, m ->
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val time = String.format(Locale.US, "%02d:%02d", h, m)
                                 prefs.edit().putString("scheduled_dnd_end", time).apply()
                                 endTime = time
@@ -186,7 +232,10 @@ fun SettingsScreen(
                 PreferenceItem(
                     title = "Write Secure Settings",
                     summary = if (hasWriteSecure) "Granted" else "Missing - Tap to grant via Shizuku",
-                    onClick = onPermissionRequest
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        onPermissionRequest()
+                    }
                 )
             }
             
@@ -196,7 +245,10 @@ fun SettingsScreen(
                 PreferenceItem(
                     title = "Notification Access",
                     summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection",
-                    onClick = { context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                    onClick = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) 
+                    }
                 )
             }
 
@@ -206,7 +258,7 @@ fun SettingsScreen(
                     PreferenceItem(
                         title = "Notification Permission",
                         summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info",
-                        onClick = { /* Handled in Activity normally */ }
+                        onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
                     )
                 }
             }
@@ -230,13 +282,14 @@ fun PreferenceItem(
     title: String,
     summary: String? = null,
     icon: ImageVector? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
-        modifier = Modifier.fillMaxWidth().clickable { onClick() }
+        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onClick() }
     )
 }
 
@@ -246,6 +299,7 @@ fun PreferenceSwitch(
     summary: String? = null,
     icon: ImageVector? = null,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
     showSecondaryAction: Boolean = false,
     onSecondaryActionClick: () -> Unit = {}
@@ -258,20 +312,21 @@ fun PreferenceSwitch(
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = MaterialTheme.colorScheme.primary) } },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (showSecondaryAction) {
-                    IconButton(onClick = onSecondaryActionClick) {
+                    IconButton(onClick = onSecondaryActionClick, enabled = enabled) {
                         Icon(
                             Icons.Default.Settings,
                             contentDescription = "Manage",
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
                 }
                 Switch(
                     checked = isChecked,
+                    enabled = enabled,
                     onCheckedChange = {
                         isChecked = it
                         onCheckedChange(it)
