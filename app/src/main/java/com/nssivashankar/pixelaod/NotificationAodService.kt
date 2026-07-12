@@ -523,11 +523,7 @@ class NotificationAodService : NotificationListenerService() {
         val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
         val currentWattage = (kotlin.math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
         
-        val wattageStr = if (batteryPct >= 95 && currentWattage < 3.0) {
-            "Trickle Charging"
-        } else {
-            String.format(java.util.Locale.US, "%.1fW", currentWattage)
-        }
+        val wattageStr = String.format(java.util.Locale.US, "%.1fW", currentWattage)
 
         var timeToFull = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
             bm.computeChargeTimeRemaining()
@@ -613,7 +609,8 @@ class NotificationAodService : NotificationListenerService() {
         val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
-            .setSmallIcon(liveUpdateIcon) // System uses this for the Live Update pill and AOD card
+            .setSmallIcon(liveUpdateIcon)
+            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, liveUpdateIcon)) // Restore Large Icon using safer resource
             .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
             .setContentText(contentText)
             .setOngoing(true)
