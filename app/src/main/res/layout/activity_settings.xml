@@ -73,6 +73,14 @@
 
                 </com.google.android.material.appbar.MaterialToolbar>
 
+                <!-- Visual Separator for Header vs Content -->
+                <View
+                    android:id="@+id/header_separator"
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="?attr/colorOutlineVariant"
+                    android:alpha="0.2" />
+
             </LinearLayout>
         </FrameLayout>
 

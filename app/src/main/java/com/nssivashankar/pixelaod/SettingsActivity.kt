@@ -114,9 +114,18 @@ class SettingsActivity : AppCompatActivity() {
             params.height = headerTotalHeight
             toolbar.layoutParams = params
 
-            // Dynamic Glass Tint
+            // --- High-Visibility Dynamic Glass ---
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            tint.alpha = if (isDark) 0.4f else 0.6f
+            
+            if (isDark) {
+                // Dark mode: Deeper surface container for separation
+                tint.setBackgroundColor(com.google.android.material.color.MaterialColors.getColor(this, com.google.android.material.R.attr.colorSurfaceContainerHigh, android.graphics.Color.BLACK))
+                tint.alpha = 0.9f 
+            } else {
+                // Light mode: Ultra-thick white frost to isolate from scrolling list
+                tint.setBackgroundColor(android.graphics.Color.WHITE)
+                tint.alpha = 0.96f
+            }
 
             container.setPadding(0, headerTotalHeight + (12 * density).toInt(), 0, (48 * density).toInt())
             insets
@@ -226,6 +235,7 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle("Charging Mode")
                     setSummary("Turn on AoD automatically when charger is connected")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_idle_low_battery)
+                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                     setDefaultValue(false)
                 },
             )
@@ -237,6 +247,7 @@ class SettingsActivity : AppCompatActivity() {
                     summary = "Always trigger AoD for these apps"
                     dialogTitle = "Select apps to watch"
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_agenda)
+                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                 },
             )
 
@@ -246,6 +257,7 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle("Live Notification Mode")
                     setSummary("AoD for Maps, Uber etc. \u2022 Tap to manage block list")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_dialog_map)
+                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                     setDefaultValue(false)
                 },
             )
@@ -264,6 +276,7 @@ class SettingsActivity : AppCompatActivity() {
                     entries = arrayOf("Off", "Limit to 80%", "Adaptive Charging")
                     entryValues = arrayOf("0", "1", "2")
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_lock_power_off)
+                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                     
                     val currentMode = AodSettings.getChargeOptimizationMode(requireContext().contentResolver)
                     value = currentMode.toString()
@@ -293,6 +306,7 @@ class SettingsActivity : AppCompatActivity() {
                     setTitle(R.string.charging_info_title)
                     setSummary(R.string.charging_info_summary)
                     icon = androidx.core.content.ContextCompat.getDrawable(requireContext(), android.R.drawable.ic_menu_info_details)
+                    icon?.setTint(com.google.android.material.color.MaterialColors.getColor(requireContext(), com.google.android.material.R.attr.colorPrimary, android.graphics.Color.BLUE))
                     setDefaultValue(false)
                 },
             )
