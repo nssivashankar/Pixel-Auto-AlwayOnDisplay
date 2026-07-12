@@ -189,6 +189,20 @@ fun SettingsScreen(
             }
 
             item {
+                PreferenceSwitch(
+                    title = stringResource(R.string.charging_info_title),
+                    summary = stringResource(R.string.charging_info_summary),
+                    icon = Icons.Default.Info,
+                    checked = prefs.getBoolean("charging_info_notif", false),
+                    enabled = masterSwitch,
+                    onCheckedChange = { 
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        prefs.edit().putBoolean("charging_info_notif", it).apply()
+                    }
+                )
+            }
+
+            item {
                 val isCustomLimit = prefs.getBoolean("custom_limit_enabled", false)
                 val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
                 val modeSummary = when {
@@ -238,22 +252,6 @@ fun SettingsScreen(
                     onSecondaryActionClick = { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showBlockListDialog = true 
-                    }
-                )
-            }
-
-            item { PreferenceCategory(title = "UI & Appearance") }
-
-            item {
-                PreferenceSwitch(
-                    title = stringResource(R.string.charging_info_title),
-                    summary = stringResource(R.string.charging_info_summary),
-                    icon = Icons.Default.Info,
-                    checked = prefs.getBoolean("charging_info_notif", false),
-                    enabled = masterSwitch,
-                    onCheckedChange = { 
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.edit().putBoolean("charging_info_notif", it).apply() 
                     }
                 )
             }
