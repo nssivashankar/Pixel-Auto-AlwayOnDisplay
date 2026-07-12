@@ -55,14 +55,22 @@ class SettingsActivity : AppCompatActivity() {
         // --- Bridge Compose Screen ---
         composeView.setContent {
             val density = resources.displayMetrics.density
-            val systemBarsTop = ViewCompat.getRootWindowInsets(window.decorView)
-                ?.getInsets(WindowInsetsCompat.Type.systemBars())?.top ?: 0
+            val insets = ViewCompat.getRootWindowInsets(window.decorView)
+            val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            val systemBarsTop = systemBars?.top ?: 0
+            val systemBarsBottom = systemBars?.bottom ?: 0
+            
             val headerHeightDp = (56 + (systemBarsTop / density)).dp
+            val bottomPaddingDp = (systemBarsBottom / density).dp
             
             PixelAodTheme {
                 SettingsScreen(
                     onPermissionRequest = { handleMissingPermission() },
-                    contentPadding = PaddingValues(top = headerHeightDp),
+                    contentPadding = PaddingValues(
+                        top = headerHeightDp,
+                        bottom = bottomPaddingDp + 16.dp // Add small extra buffer for cleaner look
+                    ),
                     onMasterSwitchChange = { isChecked ->
                         masterSwitch.isChecked = isChecked
                     }

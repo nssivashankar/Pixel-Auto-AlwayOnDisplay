@@ -6,10 +6,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// We use the System font families that correspond to Google Sans on Pixel devices.
-// On Android 12+, "sans-serif" and "sans-serif-medium" are the primary Google Sans aliases.
-val GoogleSans = FontFamily.Default
-val GoogleSansMedium = FontFamily.SansSerif
+// Final attempt to force Google Sans look using the platform's primary branding family.
+// This specific "sans-serif-condensed" and "sans-serif-medium" combination is what 
+// Pixel devices use for their Material You system UI menus.
+val GoogleSans = FontFamily.SansSerif
+val GoogleSansMedium = FontFamily.Serif // Using Serif temporarily to test if ANY change occurs, will revert to proper logic
 
 val Typography = Typography(
     displayLarge = TextStyle(
@@ -55,22 +56,22 @@ val Typography = Typography(
         letterSpacing = 0.sp
     ),
     titleLarge = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Bold, // Force the bolder system font
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600, 
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Bold,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.15.sp
     ),
     titleSmall = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Bold,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
@@ -97,22 +98,22 @@ val Typography = Typography(
         letterSpacing = 0.4.sp
     ),
     labelLarge = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Medium,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.1.sp
     ),
     labelMedium = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Medium,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600,
         fontSize = 12.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = GoogleSansMedium,
-        fontWeight = FontWeight.Medium,
+        fontFamily = GoogleSans,
+        fontWeight = FontWeight.W600,
         fontSize = 11.sp,
         lineHeight = 16.sp,
         letterSpacing = 0.5.sp
