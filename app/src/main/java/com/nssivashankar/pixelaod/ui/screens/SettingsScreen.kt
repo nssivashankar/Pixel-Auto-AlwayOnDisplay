@@ -7,9 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings as AndroidSettings
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,17 +17,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,26 +34,11 @@ fun SettingsScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
     val lazyListState = rememberLazyListState()
-    val density = LocalDensity.current
-    
-    // The Mirror Engine Layer
-    val contentLayer = rememberGraphicsLayer()
-
-    var masterSwitch by remember { mutableStateOf(prefs.getBoolean("master_switch", false)) }
     
     // Dialog States
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAppListDialog by remember { mutableStateOf(false) }
     
-    val systemTopPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
-    val headerContentHeight = 64.dp
-    val headerHeight = headerContentHeight + systemTopPadding
-    val isDark = isSystemInDarkTheme()
-
-    // --- Mirror Engine Alignment ---
-    // Remove the buffer to allow the blur to reach the top of the header
-    val topBufferPx = 0f
-
     if (showBatteryDialog) {
         val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
         AlertDialog(
@@ -104,19 +79,12 @@ fun SettingsScreen(
         )
     }
 
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // 1. The Real Content (Sharp)
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent // Allow XML background to show
+    ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .drawWithContent {
-                    drawContent()
-                    // Record content AFTER drawing so we capture exactly what's on screen
-                    contentLayer.record {
-                        this@drawWithContent.drawContent()
-                    }
-                },
-            contentPadding = PaddingValues(top = headerHeight, bottom = 48.dp),
+            modifier = Modifier.fillMaxSize(),
             state = lazyListState
         ) {
             item { PreferenceCategory(title = "Automation & Triggers") }
@@ -258,90 +226,9 @@ fun SettingsScreen(
                     PreferenceItem(
                         title = "Notification Permission",
                         summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info",
-                        onClick = { /* Handled in Activity normally, but can trigger system dialog */ }
+                        onClick = { /* Handled in Activity normally */ }
                     )
                 }
-            }
-        }
-
-        // 2. The Glass Header Layer
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(headerHeight)
-        ) {
-            // iOS Style Ultra-Frosted Lens (Mirror)
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .graphicsLayer {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                80f, 80f, android.graphics.Shader.TileMode.CLAMP
-                            ).asComposeRenderEffect()
-                        }
-                    }
-                    .drawBehind {
-                        // Suppress glows by clipping edges in the mirror view
-                        val width = size.width
-                        val height = size.height
-                        
-                        clipRect(
-                            left = 0f,
-                            top = topBufferPx,
-                            right = width,
-                            bottom = height
-                        ) {
-                            // We don't need translate here if the record { } captures the whole screen 
-                            // BUT we need to ensure the LazyColumn is recorded CORRECTLY.
-                            drawLayer(contentLayer)
-                        }
-                    }
-            )
-
-            // iOS Translucent Tint
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        color = if (isDark) 
-                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
-                        else 
-                            Color.White.copy(alpha = 0.6f)
-                    )
-            )
-
-            // Toolbar Content
-            Column(Modifier.fillMaxSize()) {
-                Spacer(Modifier.height(systemTopPadding))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(headerContentHeight)
-                        .padding(horizontal = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Pixel AOD",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Switch(
-                        checked = masterSwitch,
-                        onCheckedChange = {
-                            masterSwitch = it
-                            prefs.edit().putBoolean("master_switch", it).apply()
-                            AodSettings.setAodEnabled(context.contentResolver, it)
-                        }
-                    )
-                }
-                
-                // Visual Separator
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                    thickness = 1.dp
-                )
             }
         }
     }
@@ -382,7 +269,6 @@ fun PreferenceSwitch(
     onCheckedChange: (Boolean) -> Unit
 ) {
     var isChecked by remember { mutableStateOf(checked) }
-    // Update local state if the preference changes externally
     LaunchedEffect(checked) {
         isChecked = checked
     }
