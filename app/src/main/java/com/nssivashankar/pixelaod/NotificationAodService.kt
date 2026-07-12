@@ -41,11 +41,11 @@ class NotificationAodService : NotificationListenerService() {
     private fun createNotificationChannel() {
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         
-        // Channel for Ongoing Live Updates (Silent)
+        // Channel for Ongoing Live Updates - MUST be HIGH for lockscreen visibility
         val liveChannel = NotificationChannel(
             CHARGING_CHANNEL_ID,
             "Live Charging Updates",
-            NotificationManager.IMPORTANCE_LOW
+            NotificationManager.IMPORTANCE_HIGH
         ).apply {
             setShowBadge(false)
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
