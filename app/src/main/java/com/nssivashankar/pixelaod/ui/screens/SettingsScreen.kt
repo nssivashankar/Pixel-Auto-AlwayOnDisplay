@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings as AndroidSettings
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -17,8 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -67,8 +71,8 @@ fun SettingsScreen(
     var customLimit by remember { mutableStateOf(prefs.getInt("custom_charging_limit", 80)) }
     
     if (showChargingModeDialog) {
-        val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
-        val isCustomEnabled = prefs.getBoolean("custom_limit_enabled", false)
+        // We use a local state for the dialog selection to ensure the slider shows up instantly
+        var selectedMode by remember { mutableStateOf(if (prefs.getBoolean("custom_limit_enabled", false)) 3 else AodSettings.getChargeOptimizationMode(context.contentResolver)) }
         
         AlertDialog(
             onDismissRequest = { showChargingModeDialog = false },
@@ -79,21 +83,21 @@ fun SettingsScreen(
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                if (mode == 3) {
-                                    prefs.edit().putBoolean("custom_limit_enabled", true).apply()
-                                    // Custom limit actually uses mode 0 (Off) until target is reached
-                                    AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
-                                } else {
+                                selectedMode = mode
+                                if (mode != 3) {
                                     prefs.edit().putBoolean("custom_limit_enabled", false).apply()
                                     AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
                                     if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
-                                    showChargingModeDialog = false // Close immediately for non-custom
+                                    showChargingModeDialog = false 
+                                } else {
+                                    prefs.edit().putBoolean("custom_limit_enabled", true).apply()
+                                    AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
                                 }
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = if (mode == 3) isCustomEnabled else (!isCustomEnabled && currentMode == mode),
+                                selected = selectedMode == mode,
                                 onClick = null
                             )
                             Spacer(Modifier.width(16.dp))
@@ -101,7 +105,7 @@ fun SettingsScreen(
                         }
                     }
 
-                    if (isCustomEnabled) {
+                    if (selectedMode == 3) {
                         Spacer(Modifier.height(16.dp))
                         Text(
                             text = "Limit: ${customLimit}%",
@@ -127,7 +131,7 @@ fun SettingsScreen(
             },
             confirmButton = { 
                 TextButton(onClick = { showChargingModeDialog = false }) { 
-                    Text(if (isCustomEnabled) "Done" else "Cancel") 
+                    Text(if (selectedMode == 3) "Done" else "Cancel") 
                 } 
             }
         )
@@ -188,7 +192,7 @@ fun SettingsScreen(
                 val isCustomLimit = prefs.getBoolean("custom_limit_enabled", false)
                 val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
                 val modeSummary = when {
-                    isCustomLimit -> "Custom Limit: ${prefs.getInt("custom_charging_limit", 80)}%"
+                    isCustomLimit -> "Custom Limit: ${customLimit}%"
                     currentMode == 1 -> "Limit to 80%"
                     currentMode == 2 -> "Adaptive Charging"
                     else -> "Off"
@@ -204,33 +208,6 @@ fun SettingsScreen(
                         showChargingModeDialog = true 
                     }
                 )
-            }
-
-            if (prefs.getBoolean("custom_limit_enabled", false)) {
-                // Keep the slider on main screen as well for quick access, but with 5% steps
-                item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                        Text(
-                            text = "Custom Limit Percentage: ${customLimit}%",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = if (masterSwitch) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                        Slider(
-                            value = customLimit.toFloat(),
-                            onValueChange = { 
-                                val rounded = (it.toInt() / 5) * 5
-                                if (rounded != customLimit) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    customLimit = rounded
-                                    prefs.edit().putInt("custom_charging_limit", rounded).apply()
-                                }
-                            },
-                            valueRange = 80f..100f,
-                            steps = 3,
-                            enabled = masterSwitch
-                        )
-                    }
-                }
             }
 
             item {
@@ -384,6 +361,66 @@ fun SettingsScreen(
                     )
                 }
             }
+
+            item {
+                Spacer(Modifier.height(48.dp))
+                MadeWithLoveFooter(haptic)
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun MadeWithLoveFooter(haptic: HapticFeedback) {
+    var isBeating by remember { mutableStateOf(false) }
+    val scale by animateFloatAsState(
+        targetValue = if (isBeating) 1.4f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "heartScale"
+    )
+
+    LaunchedEffect(isBeating) {
+        if (isBeating) {
+            kotlinx.coroutines.delay(300)
+            isBeating = false
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    isBeating = true
+                }
+                .padding(16.dp)
+        ) {
+            Text(
+                "Made with ",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Love",
+                tint = Color.Red,
+                modifier = Modifier
+                    .size(24.dp)
+                    .scale(scale)
+            )
+            Text(
+                " for the Pixel",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
