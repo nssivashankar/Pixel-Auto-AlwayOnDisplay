@@ -1,7 +1,12 @@
 package com.nssivashankar.pixelaod.ui.screens
 
+import android.Manifest
+import android.app.TimePickerDialog
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
+import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -23,11 +28,13 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import java.util.Locale
 
 @Composable
 fun SettingsScreen(
@@ -36,6 +43,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
     val lazyListState = rememberLazyListState()
+    val density = LocalDensity.current
     
     // The Mirror Engine Layer
     val contentLayer = rememberGraphicsLayer()
@@ -46,8 +54,14 @@ fun SettingsScreen(
     var showBatteryDialog by remember { mutableStateOf(false) }
     var showAppListDialog by remember { mutableStateOf(false) }
     
-    val headerHeight = 64.dp + WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val systemTopPadding = WindowInsets.systemBars.asPaddingValues().calculateTopPadding()
+    val headerContentHeight = 64.dp
+    val headerHeight = headerContentHeight + systemTopPadding
     val isDark = isSystemInDarkTheme()
+
+    // --- Mirror Engine Background Clip Calculation ---
+    // We need to clip the underlying drawing so it doesn't "glow" or smear at the edges
+    val topBufferPx = with(density) { 32.dp.toPx() }
 
     if (showBatteryDialog) {
         val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
@@ -73,6 +87,19 @@ fun SettingsScreen(
                 }
             },
             confirmButton = { TextButton(onClick = { showBatteryDialog = false }) { Text("Cancel") } }
+        )
+    }
+
+    if (showAppListDialog) {
+        val watchedPackages = remember { prefs.getStringSet("watched_apps", emptySet()) ?: emptySet() }
+        AppListDialog(
+            title = "Per-App Notifications",
+            selectedPackages = watchedPackages,
+            onDismiss = { showAppListDialog = false },
+            onConfirm = { packages ->
+                prefs.edit().putStringSet("watched_apps", packages).apply()
+                showAppListDialog = false
+            }
         )
     }
 
@@ -160,15 +187,79 @@ fun SettingsScreen(
                     onCheckedChange = { prefs.edit().putBoolean("dnd_mode", it).apply() }
                 )
             }
+            
+            item {
+                PreferenceSwitch(
+                    title = stringResource(R.string.scheduled_dnd_title),
+                    summary = stringResource(R.string.scheduled_dnd_summary),
+                    checked = prefs.getBoolean("scheduled_dnd", false),
+                    onCheckedChange = { prefs.edit().putBoolean("scheduled_dnd", it).apply() }
+                )
+            }
+
+            if (prefs.getBoolean("scheduled_dnd", false)) {
+                item {
+                    var startTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00") }
+                    PreferenceItem(
+                        title = "Start Time",
+                        summary = startTime,
+                        onClick = {
+                            val parts = startTime.split(":")
+                            TimePickerDialog(context, { _, h, m ->
+                                val time = String.format(Locale.US, "%02d:%02d", h, m)
+                                prefs.edit().putString("scheduled_dnd_start", time).apply()
+                                startTime = time
+                            }, parts[0].toInt(), parts[1].toInt(), true).show()
+                        }
+                    )
+                }
+                item {
+                    var endTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00") }
+                    PreferenceItem(
+                        title = "End Time",
+                        summary = endTime,
+                        onClick = {
+                            val parts = endTime.split(":")
+                            TimePickerDialog(context, { _, h, m ->
+                                val time = String.format(Locale.US, "%02d:%02d", h, m)
+                                prefs.edit().putString("scheduled_dnd_end", time).apply()
+                                endTime = time
+                            }, parts[0].toInt(), parts[1].toInt(), true).show()
+                        }
+                    )
+                }
+            }
 
             item { PreferenceCategory(title = "Service Status") }
 
             item {
+                val hasWriteSecure = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
                 PreferenceItem(
                     title = "Write Secure Settings",
-                    summary = "Tap to grant via Shizuku",
+                    summary = if (hasWriteSecure) "Granted" else "Missing - Tap to grant via Shizuku",
                     onClick = onPermissionRequest
                 )
+            }
+            
+            item {
+                val enabledListeners = AndroidSettings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                val hasNotifyAccess = enabledListeners?.contains(context.packageName) == true
+                PreferenceItem(
+                    title = "Notification Access",
+                    summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection",
+                    onClick = { context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) }
+                )
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                item {
+                    val hasPostNotif = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                    PreferenceItem(
+                        title = "Notification Permission",
+                        summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info",
+                        onClick = { /* Handled in Activity normally, but can trigger system dialog */ }
+                    )
+                }
             }
         }
 
@@ -190,7 +281,20 @@ fun SettingsScreen(
                         }
                     }
                     .drawBehind {
-                        drawLayer(contentLayer)
+                        // Suppress glows by clipping edges in the mirror view
+                        val width = size.width
+                        val height = size.height
+                        
+                        // We translate the underlying list based on its scroll
+                        // but we clip it to avoid the 'edge glow' artifact
+                        clipRect(
+                            left = 0f,
+                            top = topBufferPx,
+                            right = width,
+                            bottom = height
+                        ) {
+                            drawLayer(contentLayer)
+                        }
                     }
             )
 
@@ -208,11 +312,11 @@ fun SettingsScreen(
 
             // Toolbar Content
             Column(Modifier.fillMaxSize()) {
-                Spacer(Modifier.height(WindowInsets.systemBars.asPaddingValues().calculateTopPadding()))
+                Spacer(Modifier.height(systemTopPadding))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(64.dp)
+                        .height(headerContentHeight)
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -277,6 +381,11 @@ fun PreferenceSwitch(
     onCheckedChange: (Boolean) -> Unit
 ) {
     var isChecked by remember { mutableStateOf(checked) }
+    // Update local state if the preference changes externally
+    LaunchedEffect(checked) {
+        isChecked = checked
+    }
+
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
