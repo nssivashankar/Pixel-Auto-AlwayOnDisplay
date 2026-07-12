@@ -257,6 +257,7 @@ class NotificationAodService : NotificationListenerService() {
             addAction(ACTION_OPT_OFF)
             addAction(ACTION_OPT_80)
             addAction(ACTION_OPT_ADAPTIVE)
+            addAction(ACTION_FULL_CHARGE)
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
