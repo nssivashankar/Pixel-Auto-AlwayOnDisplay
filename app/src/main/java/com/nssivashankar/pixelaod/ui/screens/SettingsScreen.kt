@@ -29,7 +29,8 @@ import java.util.Locale
 
 @Composable
 fun SettingsScreen(
-    onPermissionRequest: () -> Unit
+    onPermissionRequest: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
@@ -85,7 +86,8 @@ fun SettingsScreen(
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            state = lazyListState
+            state = lazyListState,
+            contentPadding = contentPadding
         ) {
             item { PreferenceCategory(title = "Automation & Triggers") }
             

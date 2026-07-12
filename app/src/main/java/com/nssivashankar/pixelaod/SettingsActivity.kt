@@ -7,7 +7,9 @@ import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -45,9 +47,15 @@ class SettingsActivity : AppCompatActivity() {
 
         // --- Bridge Compose Screen ---
         composeView.setContent {
+            val density = resources.displayMetrics.density
+            val systemBarsTop = ViewCompat.getRootWindowInsets(window.decorView)
+                ?.getInsets(WindowInsetsCompat.Type.systemBars())?.top ?: 0
+            val headerHeightDp = (56 + (systemBarsTop / density)).dp
+            
             PixelAodTheme {
                 SettingsScreen(
-                    onPermissionRequest = { handleMissingPermission() }
+                    onPermissionRequest = { handleMissingPermission() },
+                    contentPadding = PaddingValues(top = headerHeightDp)
                 )
             }
         }
@@ -76,9 +84,6 @@ class SettingsActivity : AppCompatActivity() {
                     // Clip only bottom to suppress glow, top is 0 to cover title
                     canvas.clipRect(0, 0, mirror.width, mirror.height - (32 * resources.displayMetrics.density).toInt())
                     
-                    // Note: In Compose, we don't have a simple scrollY on the View.
-                    // However, because we use a transparent Surface in SettingsScreen,
-                    // we can draw the entire ComposeView and it will match the current frame perfectly.
                     composeView.draw(canvas)
                     canvas.restore()
                     
@@ -89,7 +94,6 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // In Compose, we invalidate based on the view drawing itself
             mirror.viewTreeObserver.addOnPreDrawListener { mirror.invalidate(); true }
         }
 
@@ -112,8 +116,6 @@ class SettingsActivity : AppCompatActivity() {
                 tint.alpha = 0.6f
             }
 
-            // Tell the Compose list to add padding so it doesn't start under the header
-            // This is handled in the Compose Screen via WindowInsets now
             insets
         }
     }
