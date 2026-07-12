@@ -447,12 +447,13 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         // Manual fallback: If system fails to calculate (heat/low power), we do the math
-        if (timeToFull <= 0 && currentNow > 0 && batteryPct != -1) {
+        if (timeToFull <= 0 && currentNow > 0 && batteryPct != -1 && batteryPct < 100) {
             val currentMa = Math.abs(currentNow) / 1000.0
             if (currentMa > 50) { // Need at least some current to estimate
                 val pctRemaining = (100 - batteryPct)
-                // Assuming average Pixel battery (approx 48mAh per 1%)
-                val mAhRemaining = pctRemaining * 48.0
+                // More conservative estimate: Pixel batteries are ~5000mAh. 
+                // 1% is approx 50mAh. We use 55mAh to account for heat/screen efficiency loss.
+                val mAhRemaining = pctRemaining * 55.0
                 timeToFull = ((mAhRemaining / currentMa) * 3600.0 * 1000.0).toLong()
             }
         }
@@ -460,8 +461,17 @@ class NotificationAodService : NotificationListenerService() {
         val targetTimeMillis = if (timeToFull > 0) {
             val now = System.currentTimeMillis()
             if (batteryPct != -1 && batteryPct < 80) {
-                val timeTo80 = (timeToFull * (80 - batteryPct) / (100 - batteryPct).coerceAtLeast(1))
-                now + timeTo80
+                // Improved 80% calculation:
+                // Charging is faster below 80%, so we take a proportional slice of the total ETA
+                // but add a small buffer (5 mins) for the final "step down" near 80%
+                val pctTo80 = (80 - batteryPct).toDouble()
+                val totalPctToFull = (100 - batteryPct).toDouble()
+                val ratio = pctTo80 / totalPctToFull
+                val estimatedTimeTo80 = (timeToFull * ratio).toLong()
+                
+                // Ensure at least 3 mins per 1% if near 80% to avoid "1 min" jumps
+                val minimumBuffer = (pctTo80 * 2.5 * 60 * 1000).toLong() 
+                now + Math.max(estimatedTimeTo80, minimumBuffer)
             } else {
                 now + timeToFull
             }
