@@ -6,12 +6,31 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
+## 🚀 Version 1.1.0 Highlights
+
+### 🎨 Material 3 Expressive UI
+- **Expressive Design System**: Fully migrated to the latest Material 3 Expressive guidelines with organic shapes, larger corner radii, and modern spacing.
+- **Google Sans Typography**: Implemented a "Pixel-perfect" typography scale using the signature Google Sans font family for a premium system feel.
+- **Glassmorphism Header**: A hardware-accelerated "Frosted Glass" mirror engine that blurs and diffuses the underlying settings list in real-time.
+
+### 🔋 Custom Battery Limit
+- **User-Defined Thresholds**: Go beyond Google's standard 80% limit. Set custom charging targets (80%, 85%, 90%, 95%) with a precise 5% step slider.
+- **Intelligent System Trick**: Uses a clever automation logic that "tricks" the system into stopping hardware charging the moment your custom percentage is reached.
+- **Dynamic Notifications**: The charging notification automatically adapts to show your custom target and precise ETA for that threshold.
+
+### 📳 Premium Haptics & Feel
+- **Differentiated Feedback**: Crisp, high-frequency haptics for turning features ON and solid, deep feedback for turning them OFF.
+- **Tactile Sliders**: Every 5% snap on the battery slider provides a satisfying tactile click.
+- **Animated Footer**: A beautiful, heart-beat animated "Made with Love" signature with synchronized haptic pulses.
+
+---
+
 ## 🚀 Key Features
 
 ### 🔋 Integrated Battery Health (Pixel Only)
 | Feature Details | Preview |
 | :--- | :---: |
-| - **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.<br><br>- **⭐ Control charging modes in lockscreen itself**: A specialized live notification that lets you switch battery modes instantly from your lockscreen.<br><br>- **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions. | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="200" alt="Integrated Health" /> |
+| - **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.<br><br>- **⭐ Custom Limits**: Set your own charging thresholds (80%–95%) with a smooth Material 3 slider.<br><br>- **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions. | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="200" alt="Integrated Health" /> |
 
 ### ⚡ Smart Charging Intelligence
 | Feature Details | Preview |
@@ -21,7 +40,7 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 ### 🔔 Smart Notification Management
 | Feature Details | Preview |
 | :--- | :---: |
-| - **Settings - Per-App Customization**: Choose specific apps (Messaging, Mail, etc.) to trigger the AOD.<br><br>- **Live notifications for apps that support live notifications**: Intelligent detection for ongoing events like **Google Maps navigation**, **Uber/Ride-sharing**, and **Food Delivery tracking**.<br><br>- **Automatic Cleanup**: AOD is automatically disabled once the relevant notifications are cleared. | <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="200" alt="Live Tracking" /> |
+| - **Settings - Per-App Customization**: Choose specific apps (Messaging, Mail, etc.) to trigger the AOD.<br><br>- **Live notifications for apps that support live notifications**: Intelligent detection for ongoing events like **Google Maps navigation**, **Uber/Ride-sharing**, and **Food Delivery tracking**.<br><br>- **Block List**: Easily exclude specific apps from triggering Live Notification mode. | <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="200" alt="Live Tracking" /> |
 
 ---
 
@@ -39,21 +58,14 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 
 ---
 
-## 🔋 Battery Impact
-- **Event-Driven Architecture**: Runs only when the system triggers an update.
-- **No WakeLocks**: Never forces the CPU to stay awake.
-- **Low Footprint**: Minimal memory usage (~15MB).
-
----
-
 ## ⚠️ Compatibility
 -   **Exclusively for Google Pixel**: Optimized for Pixel series.
--   **Android 15/16/17 Support**: Includes specialized fixes for AOD refresh states.
+-   **Android 15/16/17 Support**: Includes specialized fixes for AOD refresh states and Live Update standards.
 
 ---
 ## 📜 Credits & License
 - **Original Author**: [Alberto Pedron](https://github.com/albertopedron)
-- **Maintenance & Features**: Shankar (Android 15+ support, Battery Health integration, Live Tracking)
+- **Maintenance & Features**: Shankar (Android 15+ support, Material 3 UI, Custom Battery Limits, Live Tracking)
 - **License**: MIT License.
 
 ---
