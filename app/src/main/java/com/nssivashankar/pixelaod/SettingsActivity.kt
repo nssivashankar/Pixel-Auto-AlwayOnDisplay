@@ -2,30 +2,145 @@ package com.nssivashankar.pixelaod
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
+import android.view.View
 import androidx.activity.enableEdgeToEdge
+import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.materialswitch.MaterialSwitch
 import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import com.nssivashankar.pixelaod.ui.screens.SettingsScreen
 import com.nssivashankar.pixelaod.ui.theme.PixelAodTheme
 import rikka.shizuku.Shizuku
+import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
-class SettingsActivity : ComponentActivity() {
+class SettingsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_settings)
+
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
+        setSupportActionBar(toolbar)
+
+        val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        masterSwitch.isChecked = prefs.getBoolean("master_switch", false)
         
-        setContent {
+        masterSwitch.setOnCheckedChangeListener { view, isChecked ->
+            if (isChecked) {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+            } else {
+                view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+            }
+            prefs.edit { putBoolean("master_switch", isChecked) }
+            AodSettings.setAodEnabled(contentResolver, isChecked)
+        }
+
+        val mirror = findViewById<View>(R.id.header_blur_mirror)
+        val composeView = findViewById<ComposeView>(R.id.settings_compose_view)
+        val tint = findViewById<View>(R.id.header_glass_tint)
+
+        // --- Bridge Compose Screen (Sharp Content Only) ---
+        composeView.setContent {
+            val density = resources.displayMetrics.density
+            val insets = ViewCompat.getRootWindowInsets(window.decorView)
+            val systemBars = insets?.getInsets(WindowInsetsCompat.Type.systemBars())
+            
+            val systemBarsTop = systemBars?.top ?: 0
+            val systemBarsBottom = systemBars?.bottom ?: 0
+            
+            val headerHeightDp = (56 + (systemBarsTop / density)).dp
+            val bottomPaddingDp = (systemBarsBottom / density).dp
+            
             PixelAodTheme {
                 SettingsScreen(
-                    onPermissionRequest = { handleMissingPermission() }
+                    onPermissionRequest = { handleMissingPermission() },
+                    contentPadding = PaddingValues(
+                        top = headerHeightDp,
+                        bottom = bottomPaddingDp + 16.dp
+                    ),
+                    onMasterSwitchChange = { isChecked ->
+                        masterSwitch.isChecked = isChecked
+                    }
                 )
             }
+        }
+
+        // --- THE STABLE HYBRID MIRROR ENGINE ---
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            
+            val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
+                this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
+            )
+
+            // Radius set to 30f for maximum 120Hz fluidity
+            mirror.setRenderEffect(
+                android.graphics.RenderEffect.createBlurEffect(30f, 30f, android.graphics.Shader.TileMode.CLAMP)
+            )
+
+            mirror.background = object : android.graphics.drawable.Drawable() {
+                private var isDrawing = false
+
+                override fun draw(canvas: android.graphics.Canvas) {
+                    if (isDrawing || composeView.width <= 0) return
+                    isDrawing = true
+                    
+                    // 1. Draw solid background
+                    canvas.drawColor(surfaceColor)
+                    
+                    // 2. Mirror the Compose content into the blur lens
+                    canvas.save()
+                    // NO Translation - We draw the whole screen capture
+                    composeView.draw(canvas)
+                    canvas.restore()
+                    
+                    isDrawing = false
+                }
+                override fun setAlpha(alpha: Int) {}
+                override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+                @Suppress("DEPRECATION")
+                override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
+            }
+
+            // Only invalidate on scroll to save CPU cycles
+            composeView.viewTreeObserver.addOnScrollChangedListener {
+                mirror.invalidate()
+            }
+        }
+
+        // Precise Header Positioning (Fixes the Blur Shift/Gap)
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            val density = resources.displayMetrics.density
+            
+            // Align toolbar exactly with status bar
+            toolbar.setPadding(0, systemBars.top, 0, 0)
+            val params = toolbar.layoutParams
+            params.height = (56 * density).toInt() + systemBars.top
+            toolbar.layoutParams = params
+
+            val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            if (isDark) {
+                tint.setBackgroundColor(android.graphics.Color.BLACK)
+                tint.alpha = 0.4f 
+            } else {
+                tint.setBackgroundColor(android.graphics.Color.WHITE)
+                tint.alpha = 0.6f
+            }
+
+            insets
         }
     }
 
