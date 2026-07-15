@@ -5,7 +5,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,16 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.Fill
-import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import androidx.core.graphics.drawable.toBitmap
+import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -81,7 +76,7 @@ fun AppListDialog(
                 }
             }
             
-            // Show the official sequencing animation for at least 1 full cycle (3.2s)
+            // Show the animation for a consistent duration
             delay(3200)
 
             withContext(Dispatchers.Main) {
@@ -124,15 +119,16 @@ fun AppListDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Box(modifier = Modifier.weight(1f)) {
+                    // ISOLATED LOADING CONTAINER
                     if (isLoading) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // NEW: Official M3 Expressive Sequencing Loader
+                            // CLEAN ISOLATED LOADER
                             M3OfficialExpressiveLoader(
-                                modifier = Modifier.size(48.dp),
+                                modifier = Modifier.size(56.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
                             
