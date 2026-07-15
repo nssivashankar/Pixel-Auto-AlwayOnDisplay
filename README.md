@@ -6,6 +6,17 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
+## 🚀 Version 1.1.2 Highlights
+
+### 🏁 Seamless Onboarding
+- **Guided Setup Flow**: Introduced a professional, multi-step start page that explains "why" each permission is needed, making the initial configuration foolproof.
+- **Permission Reliability**: Fixed critical issues with Battery Optimization and Notification Access requests to ensure the app works out-of-the-box.
+
+### 🛠️ Stability & Synchronization
+- **Unified State Engine**: Bridged the gap between the Android View-based Master Switch and the Compose settings list. Toggles now react instantly and accurately.
+- **Double-Toggle Fix**: Resolved a UX bug where clicking settings could trigger redundant state changes, resulting in unreliable activation.
+- **Haptic Precision**: Integrated fine-tuned tactile feedback directly into components for a more tactile, premium feel.
+
 ## 🚀 Version 1.1.1 Highlights
 
 ### 🎨 Material 3 Expressive UI

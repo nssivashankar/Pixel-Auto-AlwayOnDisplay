@@ -6,8 +6,10 @@ import android.os.Build
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.*
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
@@ -19,6 +21,7 @@ import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import com.nssivashankar.pixelaod.ui.screens.SettingsScreen
+import com.nssivashankar.pixelaod.ui.screens.SetupScreen
 import com.nssivashankar.pixelaod.ui.theme.PixelAodTheme
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import rikka.shizuku.Shizuku
@@ -27,6 +30,12 @@ import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
+
+    private val requestNotificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        // SetupScreen will auto-detect the change via produceState loop
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -49,7 +58,10 @@ class SettingsActivity : AppCompatActivity() {
 
         val masterSwitch = findViewById<MaterialSwitch>(R.id.master_switch)
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
-        masterSwitch.isChecked = prefs.getBoolean("master_switch", false)
+        
+        val initialMasterSwitch = prefs.getBoolean("master_switch", false)
+        var masterSwitchEnabled by mutableStateOf(initialMasterSwitch)
+        masterSwitch.isChecked = initialMasterSwitch
         
         masterSwitch.setOnCheckedChangeListener { view, isChecked ->
             if (isChecked) {
@@ -59,11 +71,15 @@ class SettingsActivity : AppCompatActivity() {
             }
             prefs.edit { putBoolean("master_switch", isChecked) }
             AodSettings.setAodEnabled(contentResolver, isChecked)
+            masterSwitchEnabled = isChecked
         }
 
         val mirror = findViewById<View>(R.id.header_blur_mirror)
         val composeView = findViewById<ComposeView>(R.id.settings_compose_view)
         val tint = findViewById<View>(R.id.header_glass_tint)
+        
+        val initialSetupComplete = prefs.getBoolean("is_setup_complete", false)
+        var isSetupComplete by mutableStateOf(initialSetupComplete)
 
         // --- Bridge Compose Screen ---
         composeView.setContent {
@@ -78,16 +94,54 @@ class SettingsActivity : AppCompatActivity() {
             val bottomPaddingDp = (systemBarsBottom / density).dp
             
             PixelAodTheme {
-                SettingsScreen(
-                    onPermissionRequest = { handleMissingPermission() },
-                    contentPadding = PaddingValues(
-                        top = headerHeightDp,
-                        bottom = bottomPaddingDp + 16.dp
-                    ),
-                    onMasterSwitchChange = { isChecked ->
-                        masterSwitch.isChecked = isChecked
+                if (!isSetupComplete) {
+                    SetupScreen(
+                        onComplete = {
+                            prefs.edit { putBoolean("is_setup_complete", true) }
+                            isSetupComplete = true
+                        },
+                        onGrantSecureSettings = { handleMissingPermission() },
+                        onCopyAdbCommand = { copyAdbCommand() },
+                        onRequestNotifications = {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }
+                        }
+                    )
+                } else {
+                    SettingsScreen(
+                        masterSwitchEnabled = masterSwitchEnabled,
+                        onPermissionRequest = { handleMissingPermission() },
+                        contentPadding = PaddingValues(
+                            top = headerHeightDp,
+                            bottom = bottomPaddingDp + 16.dp
+                        ),
+                        onMasterSwitchChange = { isChecked ->
+                            masterSwitch.isChecked = isChecked
+                            masterSwitchEnabled = isChecked
+                        }
+                    )
+                }
+            }
+        }
+
+        // Hide master UI elements during setup
+        masterSwitch.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
+        toolbar.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
+        mirror.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
+        tint.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
+
+        // React to setup completion
+        snapshotFlow { isSetupComplete }.let {
+            MainScope().launch {
+                it.collect { complete ->
+                    if (complete) {
+                        masterSwitch.visibility = View.VISIBLE
+                        toolbar.visibility = View.VISIBLE
+                        mirror.visibility = View.VISIBLE
+                        tint.visibility = View.VISIBLE
                     }
-                )
+                }
             }
         }
 
@@ -173,7 +227,9 @@ class SettingsActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        if (!hasPermission()) {
+        val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
+        val setupComplete = prefs.getBoolean("is_setup_complete", false)
+        if (setupComplete && !hasPermission()) {
             handleMissingPermission()
         }
     }
@@ -214,22 +270,26 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showWriteSecureSettingsPermissionDialog() {
-        val command = "adb shell pm grant ${this.packageName} ${Manifest.permission.WRITE_SECURE_SETTINGS}"
         val msg = getString(R.string.grant_write_secure_settings, this.packageName, Manifest.permission.WRITE_SECURE_SETTINGS)
         
         MaterialAlertDialogBuilder(this)
             .setTitle("Permission Required")
             .setMessage(msg)
             .setNeutralButton("Copy ADB Command") { _, _ ->
-                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText("ADB Command", command)
-                clipboard.setPrimaryClip(clip)
-                android.widget.Toast.makeText(this, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                copyAdbCommand()
                 // Re-show the dialog so they can still see the instructions after copying
                 showWriteSecureSettingsPermissionDialog()
             }
             .setPositiveButton(android.R.string.ok, null)
             .show()
+    }
+
+    private fun copyAdbCommand() {
+        val command = "adb shell pm grant ${this.packageName} ${Manifest.permission.WRITE_SECURE_SETTINGS}"
+        val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val clip = android.content.ClipData.newPlainText("ADB Command", command)
+        clipboard.setPrimaryClip(clip)
+        android.widget.Toast.makeText(this, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun showMissingShizukuPermissionDialog() {

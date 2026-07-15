@@ -1,29 +1,32 @@
-# Implementation Plan - Release v1.1.1
+# Implementation Plan - Release v1.1.2
 
-We will prepare and tag the project for the `v1.1.1` release, including all recent performance and UI improvements.
+We will finalize the current state of the app and release version **v1.1.2**, featuring the new onboarding flow and critical synchronization fixes.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> This will commit all currently modified files and tag the repository.
-> The version code will automatically increment if `GITHUB_RUN_NUMBER` is set, otherwise, I will manually increment it to `11` for this release.
+> **Release Signing**: I will use the same signing credentials provided previously (`nssivashankar` / `shankarc`) to build the signed stable APK.
+> **GitHub Release**: This will create a new release entry `v1.1.2` and move the `latest` tag to this version.
 
 ## Proposed Changes
 
 ### Versioning
 
 #### [MODIFY] [build.gradle](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/build.gradle)
-- Update `versionName` fallback to `"1.1.1"`.
-- Manually increment `versionCode` default to `11` (or next logical step).
+- Update `versionName` to `"1.1.2"`.
+- Increment `versionCode` to `12`.
+
+### Documentation
+
+#### [MODIFY] [README.md](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/README.md)
+- Update release highlights with the new Onboarding Flow and reliability fixes.
 
 ### Release Operations
-
-- **Commit**: Commit all current changes (M3 Loader, Performance Fixes, UI Polish).
-- **Tag**: Create a git tag `v1.1.1` on the release commit.
-- **Build**: Run `./gradlew assembleRelease` to generate the production package.
+- **Commit**: Stash all current improvements (Setup Screen, State Sync, Permission Fixes).
+- **Tag**: Create git tag `v1.1.2`.
+- **Build**: Generate signed stable APK.
+- **Publish**: Push to GitHub and create a formal release via `gh cli`.
 
 ## Verification Plan
-
-### Release Package
-- Verify that the `outputs/apk/release` directory contains the signed APK (if signing is configured) or the unsigned release APK.
-- Verify that `git tag` shows `v1.1.1`.
+- Verify `app-release.apk` is generated successfully.
+- Verify GitHub release `v1.1.2` is accessible with the correct notes and asset.

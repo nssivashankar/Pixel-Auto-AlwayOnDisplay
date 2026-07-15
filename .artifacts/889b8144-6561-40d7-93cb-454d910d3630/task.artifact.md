@@ -4,8 +4,10 @@
 - [x] Fine-tune `SettingsScreen.kt` for 120Hz performance
 - [x] Verify scrolling smoothness on device
 - [x] Refine UI Alignment & OCD Polish
-- [ ] Release v1.1.1
+- [x] Release v1.1.1
+- [ ] Release v1.1.2
     - [ ] Update version in `app/build.gradle`
-    - [ ] Commit all changes to Git
-    - [ ] Tag the release as `v1.1.1`
-    - [ ] Build release APK
+    - [ ] Update `README.md` release notes
+    - [ ] Commit and tag as `v1.1.2`
+    - [ ] Build signed stable APK
+    - [ ] Push to GitHub and create release

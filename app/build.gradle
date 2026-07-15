@@ -19,9 +19,9 @@ android {
     signingConfigs {
         release {
             storeFile file("pixelautoaod.jks")
-            storePassword System.getenv("KEYSTORE_PASSWORD")
-            keyAlias System.getenv("KEY_ALIAS")
-            keyPassword System.getenv("KEY_PASSWORD")
+            storePassword project.hasProperty('RELEASE_STORE_PASSWORD') ? project.property('RELEASE_STORE_PASSWORD') : System.getenv("KEYSTORE_PASSWORD")
+            keyAlias project.hasProperty('RELEASE_KEY_ALIAS') ? project.property('RELEASE_KEY_ALIAS') : System.getenv("KEY_ALIAS")
+            keyPassword project.hasProperty('RELEASE_KEY_PASSWORD') ? project.property('RELEASE_KEY_PASSWORD') : System.getenv("KEY_PASSWORD")
         }
     }
 
@@ -30,8 +30,8 @@ android {
         minSdkVersion 26
         //noinspection OldTargetApi
         targetSdkVersion 35
-        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 11
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.1"
+        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 12
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.2"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

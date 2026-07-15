@@ -1,32 +1,27 @@
-# Walkthrough - UI Polish & Alignment
+# Walkthrough - Final Project Update & v1.1.1 Documentation
 
-I have refined the app's UI to ensure perfect alignment, consistent spacing, and a high-quality visual finish that matches the Pixel aesthetic.
+I have successfully updated the project documentation and synchronized all changes with GitHub.
 
-## Changes Made
+## Documentation Highlights
 
-### 1. Perfect Horizontal Baseline
-- Refactored `PreferenceItem` and `PreferenceSwitch` to use a fixed **40dp leading container**.
-- This ensures that all text labels start at the exact same horizontal position, even if an item doesn't have an icon.
+### 1. README.md Refinement
+Updated the [README.md](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/README.md) to showcase the **v1.1.1** release. Key additions include:
+- **Official Morphing Loader**: Highlighting the integration of the standard Material 3 Expressive animation.
+- **120Hz Fluidity**: Documenting the throttled blur engine and high-performance scrolling fixes.
+- **OCD-Level UI Polish**: Mentioning the perfected alignment and balanced iconography.
+- **Instant Response**: Highlighting the zero-wait app list caching.
 
-### 2. Icon Balance & Completeness
-Added missing icons to several items for a more professional and uniform look:
-- **DND Mode**: `Icons.Default.DoNotDisturbOn`
-- **Quiet Hours**: `Icons.Default.Schedule`
-- **Time Selectors**: `Icons.Default.VerticalAlignTop` and `VerticalAlignBottom`
-- **Permissions**: `Icons.Default.VpnKey` and `Icons.Default.SettingsSuggest`
+## Project Synchronization
+- **Git Push**: The `master` branch is now fully up-to-date on GitHub.
+- **Release Entry**: The `v1.1.1` release on GitHub is now finalized with the signed stable APK.
 
-### 3. Category & Spacing Polish
-- **Headers**: Updated `PreferenceCategory` to use `FontWeight.Black` and `letterSpacing` for a more modern, native-Android look.
-- **Vertical Spacing**: Increased top padding for categories (`40.dp`) to create clearer visual groups.
-- **Bottom Clearance**: Increased `LazyColumn` bottom padding to `160.dp` to ensure the floating navigation pill never overlaps text or interactive elements.
+## Summary of Completed Work
+- ✅ **New Feature**: Official Material 3 Expressive Loading Indicator.
+- ✅ **Optimization**: Frame-synchronized blur rendering for 120Hz displays.
+- ✅ **Optimization**: App list caching via `AppRepository`.
+- ✅ **Visual Polish**: Precision horizontal baseline and complete icon set for settings.
+- ✅ **VCS**: Staged, committed, tagged (`v1.1.1`), and pushed to remote.
+- ✅ **Production**: Built and published a **Signed Stable APK**.
 
-### 4. About Screen Refinement
-- Balanced the app logo size and text spacing.
-- Improved the **Credits Card** with a cleaner background opacity and better internal padding.
-
-## Verification Results
-
-### Visual Polish
-- All items in the Settings and About screens now share a consistent vertical baseline.
-- The scrolling list comfortably clears the bottom navigation bar.
-- The typography and spacing provide a much more balanced and "eye-catching" experience.
+> [!SUCCESS]
+> Version 1.1.1 is now fully documented, released, and live on GitHub.

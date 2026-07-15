@@ -113,6 +113,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
 
 @Composable
 fun SettingsScreen(
+    masterSwitchEnabled: Boolean,
     onPermissionRequest: () -> Unit,
     contentPadding: PaddingValues = PaddingValues(0.dp),
     onMasterSwitchChange: (Boolean) -> Unit = {}
@@ -123,6 +124,11 @@ fun SettingsScreen(
     
     val state = remember { SettingsState(context, scope) }
     var currentTab by remember { mutableIntStateOf(0) }
+
+    // Sync external master switch state to state holder
+    LaunchedEffect(masterSwitchEnabled) {
+        state.masterSwitch = masterSwitchEnabled
+    }
 
     // Sync state changes back to Activity (for XML Master Switch sync)
     LaunchedEffect(state.masterSwitch) {
@@ -495,6 +501,20 @@ fun MainSettingsList(
             )
         }
 
+        item(key = "pref_reset_setup") {
+            PreferenceItem(
+                title = "Reset Onboarding",
+                summary = "Re-run the first-time setup flow",
+                icon = Icons.Default.RestartAlt,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.prefs.edit().putBoolean("is_setup_complete", false).apply()
+                    // Restart activity to trigger SetupScreen
+                    (context as? android.app.Activity)?.recreate()
+                }
+            )
+        }
+
         item(key = "footer") {
             Spacer(Modifier.height(48.dp))
             MadeWithLoveFooter(haptic)
@@ -581,9 +601,25 @@ fun PreferenceItem(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
+    val contentAlpha = if (enabled) 1f else 0.38f
+    
     ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
-        supportingContent = summary?.let { { Text(it) } },
+        headlineContent = { 
+            Text(
+                text = title, 
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+            ) 
+        },
+        supportingContent = summary?.let { 
+            { 
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                ) 
+            } 
+        },
         leadingContent = { 
             Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
                 icon?.let {
@@ -596,7 +632,12 @@ fun PreferenceItem(
                 }
             }
         },
-        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onClick() }
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { 
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick() 
+            }
     )
 }
 
@@ -611,9 +652,25 @@ fun PreferenceSwitch(
     showSecondaryAction: Boolean = false,
     onSecondaryActionClick: () -> Unit = {}
 ) {
+    val haptic = LocalHapticFeedback.current
+    val contentAlpha = if (enabled) 1f else 0.38f
+
     ListItem(
-        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
-        supportingContent = summary?.let { { Text(it) } },
+        headlineContent = { 
+            Text(
+                text = title, 
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+            ) 
+        },
+        supportingContent = summary?.let { 
+            { 
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                ) 
+            } 
+        },
         leadingContent = { 
             Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
                 icon?.let {
@@ -641,10 +698,20 @@ fun PreferenceSwitch(
                 Switch(
                     checked = checked,
                     enabled = enabled,
-                    onCheckedChange = onCheckedChange
+                    onCheckedChange = null // Let row handle the click to avoid double-toggle
                 )
             }
         },
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { 
+                val newState = !checked
+                if (newState) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                } else {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                }
+                onCheckedChange(newState) 
+            }
     )
 }
