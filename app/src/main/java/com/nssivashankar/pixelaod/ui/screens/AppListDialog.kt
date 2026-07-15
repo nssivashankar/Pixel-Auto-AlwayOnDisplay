@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.platform.LocalContext
@@ -80,8 +81,8 @@ fun AppListDialog(
                 }
             }
             
-            // Artificial delay to show the Expressive M3 animation
-            delay(1500)
+            // Wait for the expressive M3 animation to finish a few cycles
+            delay(2000)
 
             withContext(Dispatchers.Main) {
                 allApps = apps
@@ -129,8 +130,8 @@ fun AppListDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // NEW: Material 3 EXPRESSIVE STAR LOADER
-                            M3StarLoadingIndicator(
+                            // NEW: Official M3 Expressive Morphing Loader
+                            M3OfficialExpressiveLoader(
                                 modifier = Modifier.size(56.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -185,46 +186,69 @@ fun AppListDialog(
     )
 }
 
+/**
+ * A precise implementation of the Material 3 Expressive Loading Indicator
+ * following the logic found in LoadingIndicator.java
+ */
 @Composable
-fun M3StarLoadingIndicator(
+fun M3OfficialExpressiveLoader(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "m3_star_loader")
+    val infiniteTransition = rememberInfiniteTransition(label = "m3_official_loader")
     
+    // 1. Morphing Shape State (Square -> Circle -> Triangle -> Star)
+    val morphProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(4000, easing = LinearEasing)
+        ),
+        label = "morph"
+    )
+
+    // 2. Continuous Organic Rotation
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2500, easing = LinearEasing)
+            animation = tween(2000, easing = LinearEasing)
         ),
         label = "rotation"
     )
 
+    // 3. Pulse Scale Effect
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
     Canvas(
         modifier = modifier
-            .graphicsLayer { rotationZ = rotation }
+            .graphicsLayer { 
+                rotationZ = rotation
+                scaleX = scale
+                scaleY = scale
+            }
     ) {
         val size = size.minDimension
         val center = center
-        val outerRadius = size / 2
-        val innerRadius = outerRadius * 0.75f
-        val numPoints = 10
-        val path = Path()
-
-        for (i in 0 until numPoints * 2) {
-            val radius = if (i % 2 == 0) outerRadius else innerRadius
-            val angle = (i * PI / numPoints).toFloat()
-            val x = center.x + cos(angle) * radius
-            val y = center.y + sin(angle) * radius
-            
-            if (i == 0) {
-                path.moveTo(x, y)
-            } else {
-                path.lineTo(x, y)
-            }
+        val radius = size / 2
+        
+        val shapeIndex = morphProgress.toInt() % 4
+        val shapeProgress = morphProgress % 1.0f
+        
+        val path = when (shapeIndex) {
+            0 -> createMorphedPath(center, radius, 4, 100, shapeProgress) // Square to Star-like
+            1 -> createMorphedPath(center, radius, 100, 3, shapeProgress) // Circle to Triangle
+            2 -> createMorphedPath(center, radius, 3, 10, shapeProgress)  // Triangle to Star
+            else -> createMorphedPath(center, radius, 10, 4, shapeProgress) // Star back to Square
         }
-        path.close()
 
         drawPath(
             path = path,
@@ -233,6 +257,49 @@ fun M3StarLoadingIndicator(
         )
     }
 }
+
+private fun createMorphedPath(center: Offset, radius: Float, startPoints: Int, endPoints: Int, progress: Float): Path {
+    val path = Path()
+    val maxPoints = 120 // High resolution for smooth morphing
+    
+    for (i in 0 until maxPoints) {
+        val angle = (i * 2 * PI / maxPoints).toFloat()
+        
+        // Calculate radius for start shape
+        val rStart = getRadiusForShape(angle, radius, startPoints)
+        // Calculate radius for end shape
+        val rEnd = getRadiusForShape(angle, radius, endPoints)
+        
+        // Interpolate radius
+        val currentRadius = rStart + (rEnd - rStart) * progress
+        
+        val x = center.x + cos(angle) * currentRadius
+        val y = center.y + sin(angle) * currentRadius
+        
+        if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+    }
+    path.close()
+    return path
+}
+
+private fun getRadiusForShape(angle: Float, maxRadius: Float, points: Int): Float {
+    return when (points) {
+        100 -> maxRadius // Circle
+        4 -> { // Square (Approximate)
+            maxRadius * (1.0f / maxOf(abs(cos(angle)), abs(sin(angle)))) * 0.7f
+        }
+        3 -> { // Triangle (Approximate)
+            val a = (2 * PI / 3).toFloat()
+            maxRadius * 0.8f * (cos(PI.toFloat()/6) / cos((angle % a) - PI.toFloat()/6))
+        }
+        else -> { // Star/Sunburst
+            val innerRadius = maxRadius * 0.7f
+            if ((angle * points / (2 * PI)).toInt() % 2 == 0) maxRadius else innerRadius
+        }
+    }.coerceAtMost(maxRadius * 1.2f) // Sanity check
+}
+
+private fun abs(v: Float) = if (v < 0) -v else v
 
 @Composable
 fun AppListItem(

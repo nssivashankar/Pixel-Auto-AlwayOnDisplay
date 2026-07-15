@@ -2,7 +2,6 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -108,7 +107,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 isCheckingUpdates = true
-                                delay(1500)
+                                delay(2000)
                                 UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
                                     UpdateChecker.showUpdateDialog(context, latest, url)
                                 }
@@ -118,10 +117,10 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     }
                 )
                 
-                // NEW: M3 Expressive Star Loader for Updates
+                // NEW: Official M3 Expressive Morphing Loader for Updates
                 if (isCheckingUpdates) {
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
-                        M3StarLoadingIndicator(
+                        M3OfficialExpressiveLoader(
                             modifier = Modifier.size(40.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
