@@ -1,9 +1,11 @@
 package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.pm.PackageManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,12 +18,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
@@ -45,7 +49,7 @@ fun AppListDialog(
         mutableStateListOf<String>().apply { addAll(selectedPackages) } 
     }
 
-    // --- High-Performance Chained Loader ---
+    // --- Forced Pre-Warm Loader (Zero-Stutter Engineering) ---
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             // 1. Fast metadata scan
@@ -63,22 +67,33 @@ fun AppListDialog(
                     .thenBy { it.label.lowercase() })
                 .toList()
             
-            // 2. Immediate UI refresh with sharp labels
-            withContext(Dispatchers.Main) {
-                allApps = apps
-                isLoading = false
-            }
-
-            // 3. Background icon warming (One by one, low priority)
-            apps.forEach { app ->
+            // 2. Heavy Pre-Warm: Load top 30 icons BEFORE revealing the list
+            apps.take(30).forEach { app ->
                 if (!iconCache.containsKey(app.packageName)) {
                     try {
                         val drawable = pm.getApplicationIcon(app.appInfo)
                         val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
                         iconCache[app.packageName] = bitmap
-                    } catch (e: Exception) {
-                        // Suppress icon failures
-                    }
+                    } catch (e: Exception) {}
+                }
+            }
+            
+            // Add a small artificial delay to show the professional M3 indicator and ensure priming
+            delay(1000)
+
+            withContext(Dispatchers.Main) {
+                allApps = apps
+                isLoading = false
+            }
+
+            // 3. Background warming for the rest
+            apps.drop(30).forEach { app ->
+                if (!iconCache.containsKey(app.packageName)) {
+                    try {
+                        val drawable = pm.getApplicationIcon(app.appInfo)
+                        val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
+                        iconCache[app.packageName] = bitmap
+                    } catch (e: Exception) {}
                 }
             }
         }
@@ -104,28 +119,54 @@ fun AppListDialog(
                     shape = MaterialTheme.shapes.medium
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                if (isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f),
-                        contentPadding = PaddingValues(bottom = 16.dp)
-                    ) {
-                        items(filteredApps, key = { it.packageName }) { app ->
-                            AppListItem(
-                                app = app,
-                                isSelected = currentSelected.contains(app.packageName),
-                                pm = pm,
-                                onToggle = {
-                                    if (currentSelected.contains(app.packageName)) {
-                                        currentSelected.remove(app.packageName)
-                                    } else {
-                                        currentSelected.add(app.packageName)
-                                    }
-                                }
+                
+                Box(modifier = Modifier.weight(1f)) {
+                    // NEW: Professional Material 3 Circular Loading State
+                    if (isLoading) {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(48.dp),
+                                strokeWidth = 4.dp,
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                                strokeCap = StrokeCap.Round
                             )
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Optimizing list...",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    // Content with Animation
+                    androidx.compose.animation.AnimatedVisibility(
+                        visible = !isLoading,
+                        enter = fadeIn(),
+                        exit = fadeOut()
+                    ) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(bottom = 16.dp)
+                        ) {
+                            items(filteredApps, key = { it.packageName }) { app ->
+                                AppListItem(
+                                    app = app,
+                                    isSelected = currentSelected.contains(app.packageName),
+                                    pm = pm,
+                                    onToggle = {
+                                        if (currentSelected.contains(app.packageName)) {
+                                            currentSelected.remove(app.packageName)
+                                        } else {
+                                            currentSelected.add(app.packageName)
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
                 }
@@ -151,10 +192,8 @@ fun AppListItem(
     pm: PackageManager,
     onToggle: () -> Unit
 ) {
-    // Zero-Friction Icon Loading: Check cache SYNCHRONOUSLY
     var iconBitmap by remember(app.packageName) { mutableStateOf(iconCache[app.packageName]) }
     
-    // Only launch effect if not in cache (Lazy warming)
     if (iconBitmap == null) {
         LaunchedEffect(app.packageName) {
             withContext(Dispatchers.IO) {

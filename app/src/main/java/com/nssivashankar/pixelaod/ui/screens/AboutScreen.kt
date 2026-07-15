@@ -12,19 +12,19 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.utils.UpdateChecker
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -33,6 +33,8 @@ fun AboutScreen(contentPadding: PaddingValues) {
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val lazyListState = rememberLazyListState()
+
+    var isCheckingUpdates by remember { mutableStateOf(false) }
 
     val currentVersion = remember {
         try {
@@ -72,7 +74,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     text = "Pixel Auto AOD",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface // Ensure text is visible
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "Version $currentVersion",
@@ -99,17 +101,36 @@ fun AboutScreen(contentPadding: PaddingValues) {
             item {
                 PreferenceItem(
                     title = "Check for Updates",
-                    summary = "Manually verify latest version",
+                    summary = if (isCheckingUpdates) "Checking backend..." else "Manually verify latest version",
                     icon = Icons.Default.Update,
                     onClick = {
-                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                        scope.launch {
-                            UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
-                                UpdateChecker.showUpdateDialog(context, latest, url)
+                        if (!isCheckingUpdates) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            scope.launch {
+                                isCheckingUpdates = true
+                                // NEW: Professional Fake Progress Duration
+                                delay(1200)
+                                UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
+                                    UpdateChecker.showUpdateDialog(context, latest, url)
+                                }
+                                isCheckingUpdates = false
                             }
                         }
                     }
                 )
+                
+                // M3 Indeterminate Progress Bar for Updates
+                if (isCheckingUpdates) {
+                    LinearProgressIndicator(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(2.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                        strokeCap = StrokeCap.Round
+                    )
+                }
             }
 
             item {
@@ -120,7 +141,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        contentColor = MaterialTheme.colorScheme.onSurface // Fix text color
+                        contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
                     Column(Modifier.padding(16.dp)) {
