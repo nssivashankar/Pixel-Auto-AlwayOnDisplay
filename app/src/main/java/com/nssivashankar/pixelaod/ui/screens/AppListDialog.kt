@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,8 +83,8 @@ fun AppListDialog(
                 }
             }
             
-            // Wait for the expressive M3 animation to finish a few cycles
-            delay(2000)
+            // Show the official sequencing animation for at least 1 full cycle (3.2s)
+            delay(3200)
 
             withContext(Dispatchers.Main) {
                 allApps = apps
@@ -130,9 +132,9 @@ fun AppListDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // NEW: Official M3 Expressive Morphing Loader
-                            M3OfficialExpressiveLoader(
-                                modifier = Modifier.size(56.dp),
+                            // NEW: Official M3 Expressive Sequencing Loader
+                            M3SequencingExpressiveLoader(
+                                modifier = Modifier.size(48.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
                             
@@ -187,94 +189,73 @@ fun AppListDialog(
 }
 
 /**
- * A precise implementation of the Material 3 Expressive Loading Indicator
- * following the logic found in LoadingIndicator.java
+ * Implements the official Material 3 Expressive Loading Indicator "Sequencing" logic.
+ * Cycles through shapes (Circle, Square, Triangle, Star) with organic transitions.
  */
 @Composable
-fun M3OfficialExpressiveLoader(
+fun M3SequencingExpressiveLoader(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "m3_official_loader")
+    val infiniteTransition = rememberInfiniteTransition(label = "m3_sequencing")
     
-    // 1. Morphing Shape State (Square -> Circle -> Triangle -> Star)
-    val morphProgress by infiniteTransition.animateFloat(
+    // Cycle duration is 800ms per shape transition (4 shapes * 800ms = 3.2s total)
+    val totalProgress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 4f,
         animationSpec = infiniteRepeatable(
-            animation = tween(4000, easing = LinearEasing)
+            animation = tween(3200, easing = LinearEasing)
         ),
-        label = "morph"
+        label = "total_progress"
     )
 
-    // 2. Continuous Organic Rotation
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
+    // Scaling/pulsing follows a specific staggered timing
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 0.85f,
+        targetValue = 1.0f,
         animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = LinearEasing)
-        ),
-        label = "rotation"
-    )
-
-    // 3. Pulse Scale Effect
-    val scale by infiniteTransition.animateFloat(
-        initialValue = 0.8f,
-        targetValue = 1.1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
+            animation = tween(400, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "pulse"
+        label = "pulse_scale"
     )
 
-    Canvas(
-        modifier = modifier
-            .graphicsLayer { 
-                rotationZ = rotation
-                scaleX = scale
-                scaleY = scale
-            }
-    ) {
-        val size = size.minDimension
+    Canvas(modifier = modifier) {
+        val radius = size.minDimension / 2
         val center = center
-        val radius = size / 2
         
-        val shapeIndex = morphProgress.toInt() % 4
-        val shapeProgress = morphProgress % 1.0f
+        val shapeIndex = totalProgress.toInt() % 4
+        val transitionProgress = totalProgress % 1.0f
         
-        val path = when (shapeIndex) {
-            0 -> createMorphedPath(center, radius, 4, 100, shapeProgress) // Square to Star-like
-            1 -> createMorphedPath(center, radius, 100, 3, shapeProgress) // Circle to Triangle
-            2 -> createMorphedPath(center, radius, 3, 10, shapeProgress)  // Triangle to Star
-            else -> createMorphedPath(center, radius, 10, 4, shapeProgress) // Star back to Square
+        val currentPath = when (shapeIndex) {
+            0 -> morph(center, radius, 100, 4, transitionProgress)
+            1 -> morph(center, radius, 4, 3, transitionProgress)
+            2 -> morph(center, radius, 3, 10, transitionProgress)
+            else -> morph(center, radius, 10, 100, transitionProgress)
         }
-
-        drawPath(
-            path = path,
-            color = color,
-            style = Fill
-        )
+        
+        val rotationAngle = (totalProgress * 90f)
+        
+        rotate(rotationAngle) {
+            scale(scale = pulseScale) {
+                drawPath(path = currentPath, color = color, style = Fill)
+            }
+        }
     }
 }
 
-private fun createMorphedPath(center: Offset, radius: Float, startPoints: Int, endPoints: Int, progress: Float): Path {
+private fun morph(center: Offset, radius: Float, startPoints: Int, endPoints: Int, progress: Float): Path {
     val path = Path()
-    val maxPoints = 120 // High resolution for smooth morphing
+    val resolution = 120
     
-    for (i in 0 until maxPoints) {
-        val angle = (i * 2 * PI / maxPoints).toFloat()
-        
-        // Calculate radius for start shape
+    for (i in 0 until resolution) {
+        val angle = (i * 2 * PI / resolution).toFloat()
         val rStart = getRadiusForShape(angle, radius, startPoints)
-        // Calculate radius for end shape
         val rEnd = getRadiusForShape(angle, radius, endPoints)
         
-        // Interpolate radius
-        val currentRadius = rStart + (rEnd - rStart) * progress
-        
-        val x = center.x + cos(angle) * currentRadius
-        val y = center.y + sin(angle) * currentRadius
+        val currentR = rStart + (rEnd - rStart) * progress
+        val x = center.x + cos(angle) * currentR
+        val y = center.y + sin(angle) * currentR
         
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
     }
@@ -285,21 +266,21 @@ private fun createMorphedPath(center: Offset, radius: Float, startPoints: Int, e
 private fun getRadiusForShape(angle: Float, maxRadius: Float, points: Int): Float {
     return when (points) {
         100 -> maxRadius // Circle
-        4 -> { // Square (Approximate)
-            maxRadius * (1.0f / maxOf(abs(cos(angle)), abs(sin(angle)))) * 0.7f
+        4 -> { // Square
+            val a = (angle + PI / 4) % (PI / 2) - (PI / 4)
+            (maxRadius * 0.95f) / cos(a).toFloat()
         }
-        3 -> { // Triangle (Approximate)
-            val a = (2 * PI / 3).toFloat()
-            maxRadius * 0.8f * (cos(PI.toFloat()/6) / cos((angle % a) - PI.toFloat()/6))
+        3 -> { // Triangle
+            val a = (angle + PI / 6) % (2 * PI / 3) - (PI / 3)
+            (maxRadius * 0.85f) / cos(a).toFloat()
         }
-        else -> { // Star/Sunburst
-            val innerRadius = maxRadius * 0.7f
-            if ((angle * points / (2 * PI)).toInt() % 2 == 0) maxRadius else innerRadius
+        10 -> { // 10-pointed Star
+            val isPeak = (angle * 10 / (2 * PI)).toInt() % 2 == 0
+            if (isPeak) maxRadius else maxRadius * 0.75f
         }
-    }.coerceAtMost(maxRadius * 1.2f) // Sanity check
+        else -> maxRadius
+    }.coerceAtMost(maxRadius * 1.1f)
 }
-
-private fun abs(v: Float) = if (v < 0) -v else v
 
 @Composable
 fun AppListItem(
