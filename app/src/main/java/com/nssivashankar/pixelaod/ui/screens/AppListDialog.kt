@@ -56,6 +56,19 @@ fun AppListDialog(
                 .sortedWith(compareByDescending<AppInfo> { selectedPackages.contains(it.packageName) }
                     .thenBy { it.label.lowercase() })
                 .toList()
+            
+            // Critical Optimization: Pre-load the first 20 icons in the background 
+            // BEFORE the list is shown to eliminate "first scroll" lag.
+            apps.take(20).forEach { app ->
+                if (!iconCache.containsKey(app.packageName)) {
+                    try {
+                        val drawable = pm.getApplicationIcon(app.appInfo)
+                        val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
+                        iconCache[app.packageName] = bitmap
+                    } catch (e: Exception) {}
+                }
+            }
+
             allApps = apps
             isLoading = false
         }

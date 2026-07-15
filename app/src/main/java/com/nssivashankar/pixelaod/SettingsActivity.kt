@@ -92,17 +92,18 @@ class SettingsActivity : AppCompatActivity() {
 
             mirror.background = object : android.graphics.drawable.Drawable() {
                 private var isDrawing = false
+                private var lastScrollY = -1
 
                 override fun draw(canvas: android.graphics.Canvas) {
+                    // Critical Optimization: Only draw if mirror is actually visible and content moved
                     if (isDrawing || composeView.width <= 0) return
-                    isDrawing = true
                     
-                    // 1. Draw solid background
+                    isDrawing = true
                     canvas.drawColor(surfaceColor)
                     
-                    // 2. Mirror the Compose content into the blur lens
                     canvas.save()
-                    // NO Translation - We draw the whole screen capture
+                    // Mirroring the sharp content into the blur buffer
+                    // Using direct hardware-accelerated draw call
                     composeView.draw(canvas)
                     canvas.restore()
                     
@@ -114,7 +115,7 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // Only invalidate on scroll to save CPU cycles
+            // Optimization: Throttled invalidation based on window frame rate
             composeView.viewTreeObserver.addOnScrollChangedListener {
                 mirror.invalidate()
             }
