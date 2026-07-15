@@ -26,6 +26,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
@@ -50,7 +51,6 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     private val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
     private val resolver = context.contentResolver
 
-    // Reactive states to ensure ZERO disk reads during scrolling
     var masterSwitch by mutableStateOf(prefs.getBoolean("master_switch", false))
     var chargingMode by mutableStateOf(prefs.getBoolean("charging_mode", false))
     var chargingInfoNotif by mutableStateOf(prefs.getBoolean("charging_info_notif", false))
@@ -122,19 +122,17 @@ fun SettingsScreen(onPermissionRequest: () -> Unit) {
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     
-    // Initialize state holder once
     val state = remember { SettingsState(context, scope) }
     
-    // Mirror Engine Layer
     val contentLayer = rememberGraphicsLayer()
     val lazyListState = rememberLazyListState()
 
-    // Dialog States
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
 
-    val headerHeight = 64.dp + WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
+    val statusBarPadding = WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
+    val headerHeight = 64.dp + statusBarPadding
     val isDark = isSystemInDarkTheme()
 
     if (showChargingModeDialog) {
@@ -210,16 +208,14 @@ fun SettingsScreen(onPermissionRequest: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-        // 1. The Real Content (Sharp)
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    // Optimized recording: Capture only the visible area
+                    drawContent()
                     contentLayer.record {
                         this@drawWithContent.drawContent()
                     }
-                    drawContent()
                 },
             contentPadding = PaddingValues(top = headerHeight, bottom = 48.dp),
             state = lazyListState
@@ -406,33 +402,28 @@ fun SettingsScreen(onPermissionRequest: () -> Unit) {
             }
         }
 
-        // 2. The Glass Header Layer (High-Efficiency GPU Drawing)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(headerHeight)
         ) {
-            // iOS Style Frosted Lens
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            // Radius tuned to 30f for 120Hz stability
                             renderEffect = android.graphics.RenderEffect.createBlurEffect(
                                 30f, 30f, android.graphics.Shader.TileMode.CLAMP
                             ).asComposeRenderEffect()
                         }
                     }
                     .drawBehind {
-                        // FIX: Zero-offset drawing. Since record {} captures the full screen state,
-                        // we simply draw the layer. The content naturally aligns because the 
-                        // LazyColumn content starts at the same top-of-screen origin.
-                        drawLayer(contentLayer)
+                        clipRect(0f, 0f, size.width, size.height) {
+                            drawLayer(contentLayer)
+                        }
                     }
             )
 
-            // iOS Translucent Tint
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -444,7 +435,6 @@ fun SettingsScreen(onPermissionRequest: () -> Unit) {
                     )
             )
 
-            // Toolbar Content
             Column(Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()))
                 Row(
