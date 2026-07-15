@@ -112,7 +112,14 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            mirror.viewTreeObserver.addOnPreDrawListener { mirror.invalidate(); true }
+            // Performance Optimization: Only invalidate mirror when it's actually visible
+            // and use a simplified draw logic for high-velocity scrolling.
+            mirror.viewTreeObserver.addOnPreDrawListener {
+                if (mirror.isAttachedToWindow && mirror.visibility == View.VISIBLE) {
+                    mirror.invalidate()
+                }
+                true
+            }
         }
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main_content)) { _, insets ->

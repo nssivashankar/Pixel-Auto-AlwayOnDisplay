@@ -217,28 +217,32 @@ fun SettingsScreen(
             item { PreferenceCategory(title = "Automation & Triggers") }
             
             item {
+                var checked by remember { mutableStateOf(prefs.getBoolean("charging_mode", false)) }
                 PreferenceSwitch(
                     title = "Charging Mode",
                     summary = "Turn on AOD automatically when charger is connected",
                     icon = Icons.Default.BatteryChargingFull,
-                    checked = prefs.getBoolean("charging_mode", false),
+                    checked = checked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        checked = it
                         prefs.edit().putBoolean("charging_mode", it).apply() 
                     }
                 )
             }
 
             item {
+                var checked by remember { mutableStateOf(prefs.getBoolean("charging_info_notif", false)) }
                 PreferenceSwitch(
                     title = stringResource(R.string.charging_info_title),
                     summary = stringResource(R.string.charging_info_summary),
                     icon = Icons.Default.Info,
-                    checked = prefs.getBoolean("charging_info_notif", false),
+                    checked = checked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        checked = it
                         prefs.edit().putBoolean("charging_info_notif", it).apply()
                     }
                 )
@@ -278,14 +282,16 @@ fun SettingsScreen(
             }
 
             item {
+                var checked by remember { mutableStateOf(prefs.getBoolean("live_notif_mode", false)) }
                 PreferenceSwitch(
                     title = "Live Notification Mode",
                     summary = "AOD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
-                    checked = prefs.getBoolean("live_notif_mode", false),
+                    checked = checked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        checked = it
                         prefs.edit().putBoolean("live_notif_mode", it).apply() 
                     },
                     showSecondaryAction = true,
@@ -299,13 +305,15 @@ fun SettingsScreen(
             item { PreferenceCategory(title = "Restrictions") }
 
             item {
+                var checked by remember { mutableStateOf(prefs.getBoolean("dnd_mode", false)) }
                 PreferenceSwitch(
                     title = stringResource(R.string.dnd_mode_title),
                     summary = stringResource(R.string.dnd_mode_summary),
-                    checked = prefs.getBoolean("dnd_mode", false),
+                    checked = checked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        checked = it
                         prefs.edit().putBoolean("dnd_mode", it).apply() 
                     }
                 )
@@ -441,6 +449,7 @@ fun MadeWithLoveFooter(haptic: HapticFeedback) {
                 }
                 .padding(16.dp)
         ) {
+            @Suppress("DEPRECATION")
             Text(
                 "Made with ",
                 style = MaterialTheme.typography.labelLarge,
@@ -454,6 +463,7 @@ fun MadeWithLoveFooter(haptic: HapticFeedback) {
                     .size(24.dp)
                     .scale(scale)
             )
+            @Suppress("DEPRECATION")
             Text(
                 " for the Pixel",
                 style = MaterialTheme.typography.labelLarge,
