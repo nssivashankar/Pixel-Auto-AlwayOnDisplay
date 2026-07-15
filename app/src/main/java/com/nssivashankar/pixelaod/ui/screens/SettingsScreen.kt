@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -34,6 +35,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import kotlinx.coroutines.Dispatchers
@@ -131,7 +133,7 @@ fun SettingsScreen(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent, 
         bottomBar = {
-            // --- Material 3 COMPACT Floating Navigation Pill ---
+            // --- Material 3 ULTRA-COMPACT Floating Navigation Pill ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -147,53 +149,56 @@ fun SettingsScreen(
                 ) {
                     Row(
                         modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 4.dp)
-                            .widthIn(max = 240.dp), // Snappy compact width
+                            .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Home Button
-                        NavigationBarItem(
-                            selected = currentTab == 0,
-                            onClick = { 
-                                if (currentTab != 0) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    currentTab = 0 
-                                }
-                            },
-                            icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                            label = { Text("Home") },
-                            alwaysShowLabel = false,
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        // Home Pill Button
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp, 40.dp)
+                                .clip(CircleShape)
+                                .background(if (currentTab == 0) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .clickable {
+                                    if (currentTab != 0) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        currentTab = 0
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Home, 
+                                contentDescription = "Home",
+                                tint = if (currentTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        )
-                        // About Button
-                        NavigationBarItem(
-                            selected = currentTab == 1,
-                            onClick = { 
-                                if (currentTab != 1) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    currentTab = 1 
-                                }
-                            },
-                            icon = { Icon(Icons.Default.Info, contentDescription = "About") },
-                            label = { Text("About") },
-                            alwaysShowLabel = false,
-                            colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                selectedIconColor = MaterialTheme.colorScheme.primary,
-                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+
+                        // About Pill Button
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp, 40.dp)
+                                .clip(CircleShape)
+                                .background(if (currentTab == 1) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                                .clickable {
+                                    if (currentTab != 1) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        currentTab = 1
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Info, 
+                                contentDescription = "About",
+                                tint = if (currentTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
-                        )
+                        }
                     }
                 }
             }
         }
     ) { innerPadding ->
-        // No redundant header here! We use the XML header from SettingsActivity.
         AnimatedContent(
             targetState = currentTab,
             transitionSpec = {
@@ -568,7 +573,13 @@ fun PreferenceItem(
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+        leadingContent = icon?.let { 
+            {
+                Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
+            } 
+        },
         modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onClick() }
     )
 }
@@ -587,7 +598,13 @@ fun PreferenceSwitch(
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { { Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)) } },
+        leadingContent = icon?.let { 
+            {
+                Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
+                    Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
+            } 
+        },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (showSecondaryAction) {

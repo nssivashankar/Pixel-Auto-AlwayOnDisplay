@@ -71,7 +71,8 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 Text(
                     text = "Pixel Auto AOD",
                     style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Black
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onSurface // Ensure text is visible
                 )
                 Text(
                     text = "Version $currentVersion",
@@ -118,7 +119,8 @@ fun AboutScreen(contentPadding: PaddingValues) {
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        contentColor = MaterialTheme.colorScheme.onSurface // Fix text color
                     )
                 ) {
                     Column(Modifier.padding(16.dp)) {
