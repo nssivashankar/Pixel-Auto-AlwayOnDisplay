@@ -122,13 +122,23 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
 }
 
 @Composable
-fun SettingsScreen(onPermissionRequest: () -> Unit) {
+fun SettingsScreen(
+    onPermissionRequest: () -> Unit,
+    contentPadding: PaddingValues = PaddingValues(0.dp),
+    onMasterSwitchChange: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     
     val state = remember { SettingsState(context, scope) }
+
+    // Sync state changes back to Activity if needed
+    LaunchedEffect(state.masterSwitch) {
+        onMasterSwitchChange(state.masterSwitch)
+    }
+
     val contentLayer = rememberGraphicsLayer()
     
     var currentTab by remember { mutableIntStateOf(0) }
