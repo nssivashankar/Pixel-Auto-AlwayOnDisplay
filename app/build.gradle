@@ -30,8 +30,8 @@ android {
         minSdkVersion 26
         //noinspection OldTargetApi
         targetSdkVersion 35
-        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 10
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.0"
+        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 11
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -75,9 +75,11 @@ dependencies {
     implementation 'androidx.compose.ui:ui'
     implementation 'androidx.compose.ui:ui-graphics'
     implementation 'androidx.compose.ui:ui-tooling-preview'
-    implementation 'androidx.compose.material3:material3'
+    implementation 'androidx.compose.material3:material3:1.5.0-alpha24'
     implementation 'androidx.compose.material:material-icons-extended'
     implementation 'androidx.activity:activity-compose:1.13.0'
+
+    implementation "androidx.graphics:graphics-shapes:1.1.0"
 
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'

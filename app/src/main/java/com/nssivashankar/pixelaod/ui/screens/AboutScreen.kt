@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import kotlinx.coroutines.delay
@@ -53,35 +54,37 @@ fun AboutScreen(contentPadding: PaddingValues) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             item {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(32.dp))
                 // App Logo
                 Box(
                     modifier = Modifier
-                        .size(100.dp)
+                        .size(110.dp) // Slightly larger for better presence
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Favorite,
                         contentDescription = null,
-                        modifier = Modifier.size(56.dp),
+                        modifier = Modifier.size(60.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(20.dp))
                 Text(
                     text = "Pixel Auto AOD",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Black,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = 0.5.sp
                 )
                 Text(
                     text = "Version $currentVersion",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Medium
                 )
-                Spacer(Modifier.height(32.dp))
+                Spacer(Modifier.height(40.dp))
             }
 
             item {
@@ -120,9 +123,9 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 
                 // NEW: Official M3 Expressive Morphing Loader for Updates
                 if (isCheckingUpdates) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
                         M3OfficialExpressiveLoader(
-                            modifier = Modifier.size(40.dp),
+                            modifier = Modifier.size(48.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -135,21 +138,24 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
                         contentColor = MaterialTheme.colorScheme.onSurface
                     )
                 ) {
-                    Column(Modifier.padding(16.dp)) {
+                    Column(Modifier.padding(20.dp)) {
                         Text(
                             "Maintaining & Modernizing AOD automation for the Pixel community.",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyLarge,
+                            lineHeight = 24.sp
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(12.dp))
                         Text(
                             "Developed with love for Pixel users.",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

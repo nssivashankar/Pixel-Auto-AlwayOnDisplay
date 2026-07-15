@@ -2,7 +2,7 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -17,19 +17,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.core.graphics.drawable.toBitmap
+import com.nssivashankar.pixelaod.data.AppRepository
+import com.nssivashankar.pixelaod.data.CachedAppInfo
 import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.concurrent.ConcurrentHashMap
-
-// Global cache for icons with thread-safe access
-private val iconCache = ConcurrentHashMap<String, ImageBitmap>()
 
 @Composable
 fun AppListDialog(
@@ -39,67 +37,32 @@ fun AppListDialog(
     onConfirm: (Set<String>) -> Unit
 ) {
     val context = LocalContext.current
-    val pm = context.packageManager
     var searchQuery by remember { mutableStateOf("") }
-    var allApps by remember { mutableStateOf<List<AppInfo>>(emptyList()) }
+    var allApps by remember { mutableStateOf<List<CachedAppInfo>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     
     val currentSelected = remember { 
         mutableStateListOf<String>().apply { addAll(selectedPackages) } 
     }
 
-    // --- Forced Pre-Warm Loader (Zero-Stutter Engineering) ---
+    // --- High-Efficiency Initial Load ---
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) {
-            val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                .asSequence()
-                .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-                .map { appInfo ->
-                    AppInfo(
-                        packageName = appInfo.packageName,
-                        label = pm.getApplicationLabel(appInfo).toString(),
-                        appInfo = appInfo
-                    )
-                }
-                .sortedWith(compareByDescending<AppInfo> { selectedPackages.contains(it.packageName) }
-                    .thenBy { it.label.lowercase() })
-                .toList()
-            
-            // Pre-warm top 30 icons for instant smoothness
-            apps.take(30).forEach { app ->
-                if (!iconCache.containsKey(app.packageName)) {
-                    try {
-                        val drawable = pm.getApplicationIcon(app.appInfo)
-                        val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
-                        iconCache[app.packageName] = bitmap
-                    } catch (e: Exception) {}
-                }
-            }
-            
-            // Show the animation for a consistent duration
-            delay(3200)
-
-            withContext(Dispatchers.Main) {
-                allApps = apps
-                isLoading = false
-            }
-
-            // Background warming for the rest
-            apps.drop(30).forEach { app ->
-                if (!iconCache.containsKey(app.packageName)) {
-                    try {
-                        val drawable = pm.getApplicationIcon(app.appInfo)
-                        val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
-                        iconCache[app.packageName] = bitmap
-                    } catch (e: Exception) {}
-                }
-            }
-        }
+        val apps = AppRepository.getInstalledApps(context)
+        // Sort with selected apps first
+        val sortedApps = apps.sortedWith(
+            compareByDescending<CachedAppInfo> { selectedPackages.contains(it.packageName) }
+                .thenBy { it.label.lowercase() }
+        )
+        allApps = sortedApps
+        isLoading = false
     }
 
-    val filteredApps = remember(searchQuery, allApps) {
-        if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+    // --- Performance: Use derivedStateOf for heavy list filtering ---
+    val filteredApps by remember {
+        derivedStateOf {
+            if (searchQuery.isEmpty()) allApps
+            else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
+        }
     }
 
     AlertDialog(
@@ -119,22 +82,19 @@ fun AppListDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Box(modifier = Modifier.weight(1f)) {
-                    // ISOLATED LOADING CONTAINER
                     if (isLoading) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // CLEAN ISOLATED LOADER
                             M3OfficialExpressiveLoader(
                                 modifier = Modifier.size(56.dp),
                                 color = MaterialTheme.colorScheme.primary
                             )
-                            
                             Spacer(Modifier.height(24.dp))
                             Text(
-                                "Building smooth list...",
+                                "Loading apps...",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -143,18 +103,21 @@ fun AppListDialog(
 
                     androidx.compose.animation.AnimatedVisibility(
                         visible = !isLoading,
-                        enter = fadeIn(animationSpec = tween(500)),
+                        enter = fadeIn(animationSpec = tween(300)),
                         exit = fadeOut()
                     ) {
                         LazyColumn(
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(bottom = 16.dp)
                         ) {
-                            items(filteredApps, key = { it.packageName }) { app ->
+                            items(
+                                items = filteredApps,
+                                key = { it.packageName },
+                                contentType = { "app_item" } // Optimization for list recycling
+                            ) { app ->
                                 AppListItem(
                                     app = app,
                                     isSelected = currentSelected.contains(app.packageName),
-                                    pm = pm,
                                     onToggle = {
                                         if (currentSelected.contains(app.packageName)) {
                                             currentSelected.remove(app.packageName)
@@ -184,25 +147,20 @@ fun AppListDialog(
 
 @Composable
 fun AppListItem(
-    app: AppInfo,
+    app: CachedAppInfo,
     isSelected: Boolean,
-    pm: PackageManager,
     onToggle: () -> Unit
 ) {
-    var iconBitmap by remember(app.packageName) { mutableStateOf(iconCache[app.packageName]) }
+    val context = LocalContext.current
+    var iconBitmap by remember(app.packageName) { 
+        mutableStateOf(AppRepository.getCachedIcon(app.packageName)) 
+    }
     
+    // --- Performance: Lazy-load icons in background ---
     if (iconBitmap == null) {
         LaunchedEffect(app.packageName) {
-            withContext(Dispatchers.IO) {
-                try {
-                    val drawable = pm.getApplicationIcon(app.appInfo)
-                    val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
-                    iconCache[app.packageName] = bitmap
-                    withContext(Dispatchers.Main) {
-                        iconBitmap = bitmap
-                    }
-                } catch (e: Exception) {}
-            }
+            val bitmap = AppRepository.getIcon(context, app.appInfo)
+            iconBitmap = bitmap
         }
     }
 
@@ -244,9 +202,3 @@ fun AppListItem(
         }
     }
 }
-
-data class AppInfo(
-    val packageName: String,
-    val label: String,
-    val appInfo: android.content.pm.ApplicationInfo
-)

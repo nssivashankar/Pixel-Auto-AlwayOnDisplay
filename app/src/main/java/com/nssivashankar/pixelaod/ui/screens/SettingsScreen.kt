@@ -211,7 +211,7 @@ fun SettingsScreen(
                     state = state, 
                     contentPadding = PaddingValues(
                         top = contentPadding.calculateTopPadding(),
-                        bottom = 120.dp
+                        bottom = 160.dp // Increased to clear floating pill with shadow
                     ), 
                     onPermissionRequest = onPermissionRequest
                 )
@@ -219,7 +219,7 @@ fun SettingsScreen(
                 AboutScreen(
                     contentPadding = PaddingValues(
                         top = contentPadding.calculateTopPadding(),
-                        bottom = 120.dp
+                        bottom = 160.dp
                     )
                 )
             }
@@ -316,7 +316,7 @@ fun MainSettingsList(
         contentPadding = contentPadding,
         state = lazyListState
     ) {
-        item(key = "cat_auto") { PreferenceCategory(title = "Automation & Triggers") }
+        item(key = "cat_auto") { PreferenceCategory(title = "Automation & Triggers", isFirst = true) }
         
         item(key = "pref_charging") {
             PreferenceSwitch(
@@ -403,6 +403,7 @@ fun MainSettingsList(
             PreferenceSwitch(
                 title = stringResource(R.string.dnd_mode_title),
                 summary = stringResource(R.string.dnd_mode_summary),
+                icon = Icons.Default.DoNotDisturbOn,
                 checked = state.dndMode,
                 enabled = state.masterSwitch,
                 onCheckedChange = { 
@@ -416,6 +417,7 @@ fun MainSettingsList(
             PreferenceSwitch(
                 title = stringResource(R.string.scheduled_dnd_title),
                 summary = stringResource(R.string.scheduled_dnd_summary),
+                icon = Icons.Default.Schedule,
                 checked = state.scheduledDnd,
                 enabled = state.masterSwitch,
                 onCheckedChange = { 
@@ -432,6 +434,7 @@ fun MainSettingsList(
                 PreferenceItem(
                     title = "Start Time",
                     summary = currentStart,
+                    icon = Icons.Default.VerticalAlignTop,
                     enabled = state.masterSwitch,
                     onClick = {
                         TimePickerDialog(context, { _, h, m ->
@@ -449,6 +452,7 @@ fun MainSettingsList(
                 PreferenceItem(
                     title = "End Time",
                     summary = currentEnd,
+                    icon = Icons.Default.VerticalAlignBottom,
                     enabled = state.masterSwitch,
                     onClick = {
                         TimePickerDialog(context, { _, h, m ->
@@ -469,6 +473,7 @@ fun MainSettingsList(
             PreferenceItem(
                 title = "Write Secure Settings",
                 summary = if (hasWriteSecure) "Granted" else "Missing - Tap to grant via Shizuku",
+                icon = Icons.Default.VpnKey,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onPermissionRequest()
@@ -482,6 +487,7 @@ fun MainSettingsList(
             PreferenceItem(
                 title = "Notification Access",
                 summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection",
+                icon = Icons.Default.SettingsSuggest,
                 onClick = { 
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) 
@@ -552,13 +558,18 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
 }
 
 @Composable
-fun PreferenceCategory(title: String) {
+fun PreferenceCategory(title: String, isFirst: Boolean = false) {
     Text(
         text = title.uppercase(),
-        modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 8.dp),
-        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(
+            start = 16.dp, 
+            top = if (isFirst) 24.dp else 40.dp, 
+            bottom = 12.dp
+        ),
+        style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Black,
+        letterSpacing = 1.2.sp
     )
 }
 
@@ -571,14 +582,19 @@ fun PreferenceItem(
     onClick: () -> Unit
 ) {
     ListItem(
-        headlineContent = { Text(title) },
+        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { 
-            {
-                Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+        leadingContent = { 
+            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                icon?.let {
+                    Icon(
+                        imageVector = it, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(24.dp),
+                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
                 }
-            } 
+            }
         },
         modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onClick() }
     )
@@ -596,14 +612,19 @@ fun PreferenceSwitch(
     onSecondaryActionClick: () -> Unit = {}
 ) {
     ListItem(
-        headlineContent = { Text(title) },
+        headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
         supportingContent = summary?.let { { Text(it) } },
-        leadingContent = icon?.let { 
-            {
-                Box(modifier = Modifier.fillMaxHeight(), contentAlignment = Alignment.Center) {
-                    Icon(it, contentDescription = null, tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+        leadingContent = { 
+            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                icon?.let {
+                    Icon(
+                        imageVector = it, 
+                        contentDescription = null, 
+                        modifier = Modifier.size(24.dp),
+                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
                 }
-            } 
+            }
         },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -615,6 +636,7 @@ fun PreferenceSwitch(
                             tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                         )
                     }
+                    Spacer(Modifier.width(8.dp))
                 }
                 Switch(
                     checked = checked,

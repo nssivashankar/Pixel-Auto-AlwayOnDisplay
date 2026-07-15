@@ -129,10 +129,23 @@ class SettingsActivity : AppCompatActivity() {
 
             // CRITICAL Performance Fix: 
             // 1. We remove the Global PreDrawListener which was causing circular redraws.
-            // 2. We use a throttled ScrollChangedListener to only redraw the mirror when the user moves.
+            // 2. We use a throttled FrameCallback to redraw the mirror at most once per frame.
             // 3. This eliminates the "starting lag" as the CPU is 100% free when the app first appears.
+            var isInvalidationPending = false
+            val frameCallback = object : android.view.Choreographer.FrameCallback {
+                override fun doFrame(frameTimeNanos: Long) {
+                    if (isInvalidationPending) {
+                        mirror.invalidate()
+                        isInvalidationPending = false
+                    }
+                }
+            }
+
             composeView.viewTreeObserver.addOnScrollChangedListener {
-                mirror.invalidate()
+                if (!isInvalidationPending) {
+                    isInvalidationPending = true
+                    android.view.Choreographer.getInstance().postFrameCallback(frameCallback)
+                }
             }
         }
 

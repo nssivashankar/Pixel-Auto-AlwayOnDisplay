@@ -1,0 +1,11 @@
+- [x] Create `AppRepository.kt` for high-performance caching
+- [x] Refactor `AppListDialog.kt` for instant loading and smooth scrolling
+- [x] Optimize `SettingsActivity.kt` mirror invalidation (throttle/debounce)
+- [x] Fine-tune `SettingsScreen.kt` for 120Hz performance
+- [x] Verify scrolling smoothness on device
+- [x] Refine UI Alignment & OCD Polish
+- [ ] Release v1.1.1
+    - [ ] Update version in `app/build.gradle`
+    - [ ] Commit all changes to Git
+    - [ ] Tag the release as `v1.1.1`
+    - [ ] Build release APK
