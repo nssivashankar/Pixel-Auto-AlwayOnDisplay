@@ -82,7 +82,21 @@ fun SettingsScreen(
 
     // Toggle States (For Reactive UI Refresh)
     var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
-    var customLimit by remember { mutableStateOf(prefs.getInt("custom_charging_limit", 80)) }
+    var customLimit by remember { mutableIntStateOf(prefs.getInt("custom_charging_limit", 80)) }
+    
+    // Performance Optimization: Cache preference reads to prevent recomposition during scroll
+    val chargingModeChecked by remember { 
+        derivedStateOf { prefs.getBoolean("charging_mode", false) } 
+    }
+    val chargingInfoChecked by remember {
+        derivedStateOf { prefs.getBoolean("charging_info_notif", false) }
+    }
+    val liveNotifChecked by remember {
+        derivedStateOf { prefs.getBoolean("live_notif_mode", false) }
+    }
+    val dndModeChecked by remember {
+        derivedStateOf { prefs.getBoolean("dnd_mode", false) }
+    }
     
     if (showChargingModeDialog) {
         // We use a local state for the dialog selection to ensure the UI is snappy
@@ -217,32 +231,28 @@ fun SettingsScreen(
             item { PreferenceCategory(title = "Automation & Triggers") }
             
             item {
-                var checked by remember { mutableStateOf(prefs.getBoolean("charging_mode", false)) }
                 PreferenceSwitch(
                     title = "Charging Mode",
                     summary = "Turn on AOD automatically when charger is connected",
                     icon = Icons.Default.BatteryChargingFull,
-                    checked = checked,
+                    checked = chargingModeChecked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        checked = it
                         prefs.edit().putBoolean("charging_mode", it).apply() 
                     }
                 )
             }
 
             item {
-                var checked by remember { mutableStateOf(prefs.getBoolean("charging_info_notif", false)) }
                 PreferenceSwitch(
                     title = stringResource(R.string.charging_info_title),
                     summary = stringResource(R.string.charging_info_summary),
                     icon = Icons.Default.Info,
-                    checked = checked,
+                    checked = chargingInfoChecked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        checked = it
                         prefs.edit().putBoolean("charging_info_notif", it).apply()
                     }
                 )
@@ -282,16 +292,14 @@ fun SettingsScreen(
             }
 
             item {
-                var checked by remember { mutableStateOf(prefs.getBoolean("live_notif_mode", false)) }
                 PreferenceSwitch(
                     title = "Live Notification Mode",
                     summary = "AOD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
-                    checked = checked,
+                    checked = liveNotifChecked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        checked = it
                         prefs.edit().putBoolean("live_notif_mode", it).apply() 
                     },
                     showSecondaryAction = true,
@@ -305,15 +313,13 @@ fun SettingsScreen(
             item { PreferenceCategory(title = "Restrictions") }
 
             item {
-                var checked by remember { mutableStateOf(prefs.getBoolean("dnd_mode", false)) }
                 PreferenceSwitch(
                     title = stringResource(R.string.dnd_mode_title),
                     summary = stringResource(R.string.dnd_mode_summary),
-                    checked = checked,
+                    checked = dndModeChecked,
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        checked = it
                         prefs.edit().putBoolean("dnd_mode", it).apply() 
                     }
                 )

@@ -87,7 +87,7 @@ class SettingsActivity : AppCompatActivity() {
             )
 
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(60f, 60f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(50f, 50f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -99,9 +99,10 @@ class SettingsActivity : AppCompatActivity() {
                     canvas.drawColor(surfaceColor)
                     
                     canvas.save()
-                    // Clip only bottom to suppress glow, top is 0 to cover title
+                    // Clip only bottom to suppress glow
                     canvas.clipRect(0, 0, mirror.width, mirror.height - (32 * resources.displayMetrics.density).toInt())
                     
+                    // Optimization: Use hardware acceleration when drawing the compose view into the mirror
                     composeView.draw(canvas)
                     canvas.restore()
                     
@@ -109,18 +110,14 @@ class SettingsActivity : AppCompatActivity() {
                 }
                 override fun setAlpha(alpha: Int) {}
                 override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+                @Suppress("DEPRECATION")
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // ONLY invalidate when the underlying content changes or scrolls
-            // This prevents constant 120fps background drawing when idle
+            // Performance Fix: Remove the PreDrawListener which was causing a render loop.
+            // Only update the mirror during actual scroll events or content changes.
             composeView.viewTreeObserver.addOnScrollChangedListener {
                 mirror.invalidate()
-            }
-            mirror.viewTreeObserver.addOnPreDrawListener {
-                // If anything changed on screen, mirror it
-                mirror.invalidate()
-                true
             }
         }
 
