@@ -51,14 +51,24 @@ fun SettingsScreen(
     // Global Master Switch State (Read from Prefs, but we need to track it for disabling items)
     var masterSwitch by remember { mutableStateOf(prefs.getBoolean("master_switch", false)) }
     
-    // We need to listen to preference changes for the master switch specifically
-    // to ensure the UI items disable/enable correctly when the title toggle changes.
+    // Reactive states for Charging Optimization
+    var customLimitEnabled by remember { mutableStateOf(prefs.getBoolean("custom_limit_enabled", false)) }
+    var currentOptimizationMode by remember { 
+        mutableIntStateOf(AodSettings.getChargeOptimizationMode(context.contentResolver)) 
+    }
+    
+    // We need to listen to preference changes to ensure the UI remains in sync
     DisposableEffect(Unit) {
         val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
-            if (key == "master_switch") {
-                val newState = p.getBoolean(key, false)
-                masterSwitch = newState
-                onMasterSwitchChange(newState)
+            when (key) {
+                "master_switch" -> {
+                    val newState = p.getBoolean(key, false)
+                    masterSwitch = newState
+                    onMasterSwitchChange(newState)
+                }
+                "custom_limit_enabled" -> {
+                    customLimitEnabled = p.getBoolean(key, false)
+                }
             }
         }
         prefs.registerOnSharedPreferenceChangeListener(listener)
@@ -77,7 +87,7 @@ fun SettingsScreen(
     if (showChargingModeDialog) {
         // We use a local state for the dialog selection to ensure the UI is snappy
         var selectedMode by remember { 
-            mutableStateOf(if (prefs.getBoolean("custom_limit_enabled", false)) 3 else AodSettings.getChargeOptimizationMode(context.contentResolver)) 
+            mutableStateOf(if (customLimitEnabled) 3 else currentOptimizationMode) 
         }
         
         AlertDialog(
@@ -98,14 +108,24 @@ fun SettingsScreen(
                                         if (mode != 3) {
                                             prefs.edit().putBoolean("custom_limit_enabled", false).apply()
                                             AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
-                                            if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
+                                            
+                                            // Handle Adaptive Charging flags for better compatibility
+                                            if (mode == 2) {
+                                                AodSettings.setAdaptiveChargingEnabled(context.contentResolver, true)
+                                            } else if (mode == 0) {
+                                                AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
+                                            }
                                             
                                             withContext(Dispatchers.Main) {
+                                                currentOptimizationMode = mode
                                                 showChargingModeDialog = false
                                             }
                                         } else {
                                             prefs.edit().putBoolean("custom_limit_enabled", true).apply()
                                             AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
+                                            withContext(Dispatchers.Main) {
+                                                currentOptimizationMode = 0
+                                            }
                                         }
                                     } catch (e: Exception) {
                                         withContext(Dispatchers.Main) {
@@ -225,12 +245,10 @@ fun SettingsScreen(
             }
 
             item {
-                val isCustomLimit = prefs.getBoolean("custom_limit_enabled", false)
-                val currentMode = AodSettings.getChargeOptimizationMode(context.contentResolver)
                 val modeSummary = when {
-                    isCustomLimit -> "Custom Limit: ${customLimit}%"
-                    currentMode == 1 -> "Limit to 80%"
-                    currentMode == 2 -> "Adaptive Charging"
+                    customLimitEnabled -> "Custom Limit: ${customLimit}%"
+                    currentOptimizationMode == 1 -> "Limit to 80%"
+                    currentOptimizationMode == 2 -> "Adaptive Charging"
                     else -> "Off"
                 }
                 
