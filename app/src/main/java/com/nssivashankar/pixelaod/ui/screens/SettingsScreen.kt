@@ -8,8 +8,10 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,15 +22,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import kotlinx.coroutines.Dispatchers
@@ -38,17 +47,21 @@ import java.util.Locale
 
 @Composable
 fun SettingsScreen(
-    onPermissionRequest: () -> Unit,
-    contentPadding: PaddingValues = PaddingValues(0.dp),
-    onMasterSwitchChange: (Boolean) -> Unit = {}
+    onPermissionRequest: () -> Unit
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
     val lazyListState = rememberLazyListState()
     
-    // Global Master Switch State (Read from Prefs, but we need to track it for disabling items)
+    // --- The Ultra-High-Performance Mirror Engine (Pure Compose) ---
+    // This captures the list content in hardware memory and draws it blurred
+    // WITHOUT double-rendering the whole view hierarchy.
+    val contentLayer = rememberGraphicsLayer()
+
+    // Global Master Switch State
     var masterSwitch by remember { mutableStateOf(prefs.getBoolean("master_switch", false)) }
     
     // Reactive states for Charging Optimization
@@ -57,49 +70,19 @@ fun SettingsScreen(
         mutableIntStateOf(AodSettings.getChargeOptimizationMode(context.contentResolver)) 
     }
     
-    // We need to listen to preference changes to ensure the UI remains in sync
-    DisposableEffect(Unit) {
-        val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
-            when (key) {
-                "master_switch" -> {
-                    val newState = p.getBoolean(key, false)
-                    masterSwitch = newState
-                    onMasterSwitchChange(newState)
-                }
-                "custom_limit_enabled" -> {
-                    customLimitEnabled = p.getBoolean(key, false)
-                }
-            }
-        }
-        prefs.registerOnSharedPreferenceChangeListener(listener)
-        onDispose { prefs.unregisterOnSharedPreferenceChangeListener(listener) }
-    }
-
     // Dialog States
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
 
-    // Toggle States (For Reactive UI Refresh)
+    // Toggle States
     var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
     var customLimit by remember { mutableIntStateOf(prefs.getInt("custom_charging_limit", 80)) }
     
-    // Performance Optimization: Cache preference reads to prevent recomposition during scroll
-    val chargingModeChecked by remember { 
-        derivedStateOf { prefs.getBoolean("charging_mode", false) } 
-    }
-    val chargingInfoChecked by remember {
-        derivedStateOf { prefs.getBoolean("charging_info_notif", false) }
-    }
-    val liveNotifChecked by remember {
-        derivedStateOf { prefs.getBoolean("live_notif_mode", false) }
-    }
-    val dndModeChecked by remember {
-        derivedStateOf { prefs.getBoolean("dnd_mode", false) }
-    }
-    
+    val headerHeight = 64.dp + WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
+    val isDark = isSystemInDarkTheme()
+
     if (showChargingModeDialog) {
-        // We use a local state for the dialog selection to ensure the UI is snappy
         var selectedMode by remember { 
             mutableStateOf(if (customLimitEnabled) 3 else currentOptimizationMode) 
         }
@@ -113,47 +96,31 @@ fun SettingsScreen(
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                val previousMode = selectedMode
                                 selectedMode = mode
-                                
-                                // Offload blocking IPC calls to IO thread to prevent UI lag
                                 scope.launch(Dispatchers.IO) {
-                                    try {
-                                        if (mode != 3) {
-                                            prefs.edit().putBoolean("custom_limit_enabled", false).apply()
-                                            AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
-                                            
-                                            // Handle Adaptive Charging flags for better compatibility
-                                            if (mode == 2) {
-                                                AodSettings.setAdaptiveChargingEnabled(context.contentResolver, true)
-                                            } else if (mode == 0) {
-                                                AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
-                                            }
-                                            
-                                            withContext(Dispatchers.Main) {
-                                                currentOptimizationMode = mode
-                                                showChargingModeDialog = false
-                                            }
-                                        } else {
-                                            prefs.edit().putBoolean("custom_limit_enabled", true).apply()
-                                            AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
-                                            withContext(Dispatchers.Main) {
-                                                currentOptimizationMode = 0
-                                            }
-                                        }
-                                    } catch (e: Exception) {
+                                    if (mode != 3) {
+                                        prefs.edit().putBoolean("custom_limit_enabled", false).apply()
+                                        AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
+                                        if (mode == 2) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, true)
+                                        else if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
                                         withContext(Dispatchers.Main) {
-                                            selectedMode = previousMode
+                                            currentOptimizationMode = mode
+                                            customLimitEnabled = false
+                                            showChargingModeDialog = false
+                                        }
+                                    } else {
+                                        prefs.edit().putBoolean("custom_limit_enabled", true).apply()
+                                        AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
+                                        withContext(Dispatchers.Main) {
+                                            currentOptimizationMode = 0
+                                            customLimitEnabled = true
                                         }
                                     }
                                 }
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(
-                                selected = selectedMode == mode,
-                                onClick = null
-                            )
+                            RadioButton(selected = selectedMode == mode, onClick = null)
                             Spacer(Modifier.width(16.dp))
                             Text(label)
                         }
@@ -161,11 +128,7 @@ fun SettingsScreen(
 
                     if (selectedMode == 3) {
                         Spacer(Modifier.height(16.dp))
-                        Text(
-                            text = "Limit: ${customLimit}%",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text(text = "Limit: ${customLimit}%", fontWeight = FontWeight.Bold)
                         Slider(
                             value = customLimit.toFloat(),
                             onValueChange = { 
@@ -179,17 +142,12 @@ fun SettingsScreen(
                                 }
                             },
                             valueRange = 80f..100f,
-                            steps = 3, // 80, 85, 90, 95, 100
-                            modifier = Modifier.padding(top = 8.dp)
+                            steps = 3
                         )
                     }
                 }
             },
-            confirmButton = { 
-                TextButton(onClick = { showChargingModeDialog = false }) { 
-                    Text(if (selectedMode == 3) "Done" else "Cancel") 
-                } 
-            }
+            confirmButton = { TextButton(onClick = { showChargingModeDialog = false }) { Text("Done") } }
         )
     }
 
@@ -219,14 +177,20 @@ fun SettingsScreen(
         )
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = Color.Transparent
-    ) {
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // 1. The Real Content (Sharp)
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            state = lazyListState,
-            contentPadding = contentPadding
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithContent {
+                    // Record only once per change for maximum 120Hz efficiency
+                    contentLayer.record {
+                        this@drawWithContent.drawContent()
+                    }
+                    drawContent()
+                },
+            contentPadding = PaddingValues(top = headerHeight, bottom = 48.dp),
+            state = lazyListState
         ) {
             item { PreferenceCategory(title = "Automation & Triggers") }
             
@@ -235,7 +199,7 @@ fun SettingsScreen(
                     title = "Charging Mode",
                     summary = "Turn on AOD automatically when charger is connected",
                     icon = Icons.Default.BatteryChargingFull,
-                    checked = chargingModeChecked,
+                    checked = prefs.getBoolean("charging_mode", false),
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -249,7 +213,7 @@ fun SettingsScreen(
                     title = stringResource(R.string.charging_info_title),
                     summary = stringResource(R.string.charging_info_summary),
                     icon = Icons.Default.Info,
-                    checked = chargingInfoChecked,
+                    checked = prefs.getBoolean("charging_info_notif", false),
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -296,7 +260,7 @@ fun SettingsScreen(
                     title = "Live Notification Mode",
                     summary = "AOD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
-                    checked = liveNotifChecked,
+                    checked = prefs.getBoolean("live_notif_mode", false),
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -316,7 +280,7 @@ fun SettingsScreen(
                 PreferenceSwitch(
                     title = stringResource(R.string.dnd_mode_title),
                     summary = stringResource(R.string.dnd_mode_summary),
-                    checked = dndModeChecked,
+                    checked = prefs.getBoolean("dnd_mode", false),
                     enabled = masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -420,11 +384,83 @@ fun SettingsScreen(
                 Spacer(Modifier.height(24.dp))
             }
         }
+
+        // 2. The Glass Header Layer (Pure Compose - Zero-Friction)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(headerHeight)
+        ) {
+            // iOS Style Ultra-Frosted Lens (Direct GPU Draw)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            renderEffect = android.graphics.RenderEffect.createBlurEffect(
+                                30f, 30f, android.graphics.Shader.TileMode.CLAMP
+                            ).asComposeRenderEffect()
+                        }
+                    }
+                    .drawBehind {
+                        // NO View.draw() calls. NO main-thread blockage.
+                        // We simply draw the hardware-cached layer.
+                        drawLayer(contentLayer)
+                    }
+            )
+
+            // iOS Translucent Tint
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        color = if (isDark) 
+                            MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
+                        else 
+                            Color.White.copy(alpha = 0.6f)
+                    )
+            )
+
+            // Toolbar Content
+            Column(Modifier.fillMaxSize()) {
+                Spacer(Modifier.height(WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp)
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Pixel AOD",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 30.sp, 
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Switch(
+                        checked = masterSwitch,
+                        onCheckedChange = {
+                            masterSwitch = it
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            prefs.edit().putBoolean("master_switch", it).apply()
+                            AodSettings.setAodEnabled(context.contentResolver, it)
+                        }
+                    )
+                }
+                
+                // Visual Separator
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
+                    thickness = 1.dp
+                )
+            }
+        }
     }
 }
 
 @Composable
-fun MadeWithLoveFooter(haptic: HapticFeedback) {
+fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback) {
     var isBeating by remember { mutableStateOf(false) }
     val scale by animateFloatAsState(
         targetValue = if (isBeating) 1.4f else 1.0f,
