@@ -20,8 +20,11 @@ import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import com.nssivashankar.pixelaod.ui.screens.SettingsScreen
 import com.nssivashankar.pixelaod.ui.theme.PixelAodTheme
+import com.nssivashankar.pixelaod.utils.UpdateChecker
 import rikka.shizuku.Shizuku
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -29,6 +32,17 @@ class SettingsActivity : AppCompatActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_settings)
+        
+        // --- In-App Update Checker ---
+        val currentVersion = try {
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
+        } catch (e: Exception) { "1.0.0" }
+        
+        MainScope().launch {
+            UpdateChecker.checkForUpdates(this@SettingsActivity, currentVersion) { latest, url ->
+                UpdateChecker.showUpdateDialog(this@SettingsActivity, latest, url)
+            }
+        }
 
         val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
