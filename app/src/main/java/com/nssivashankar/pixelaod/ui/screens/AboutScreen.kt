@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -109,7 +108,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 isCheckingUpdates = true
-                                delay(1500) // Professional delay to show the expressive animation
+                                delay(1500)
                                 UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
                                     UpdateChecker.showUpdateDialog(context, latest, url)
                                 }
@@ -119,28 +118,14 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     }
                 )
                 
-                // M3 Expressive Linear Indicator for Updates
+                // NEW: M3 Expressive Star Loader for Updates
                 if (isCheckingUpdates) {
-                    val infiniteTransition = rememberInfiniteTransition(label = "update_loader")
-                    val progress by infiniteTransition.animateFloat(
-                        initialValue = 0f,
-                        targetValue = 1f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(1000, easing = FastOutSlowInEasing),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "progress"
-                    )
-
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(3.dp),
-                        color = MaterialTheme.colorScheme.primary,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                        strokeCap = StrokeCap.Round
-                    )
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                        M3StarLoadingIndicator(
+                            modifier = Modifier.size(40.dp),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             }
 

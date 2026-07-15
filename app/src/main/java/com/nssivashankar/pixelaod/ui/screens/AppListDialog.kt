@@ -18,12 +18,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +28,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 // Global cache for icons with thread-safe access
 private val iconCache = ConcurrentHashMap<String, ImageBitmap>()
@@ -130,8 +129,11 @@ fun AppListDialog(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // NEW: Material 3 Expressive Rotating Shapes Animation
-                            M3ExpressiveRotatingLoader()
+                            // NEW: Material 3 EXPRESSIVE STAR LOADER
+                            M3StarLoadingIndicator(
+                                modifier = Modifier.size(56.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
                             
                             Spacer(Modifier.height(24.dp))
                             Text(
@@ -184,42 +186,50 @@ fun AppListDialog(
 }
 
 @Composable
-fun M3ExpressiveRotatingLoader(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "m3_loader")
+fun M3StarLoadingIndicator(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "m3_star_loader")
     
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1500, easing = LinearEasing)
+            animation = tween(2500, easing = LinearEasing)
         ),
         label = "rotation"
     )
 
-    val sweepAngle by infiniteTransition.animateFloat(
-        initialValue = 20f,
-        targetValue = 280f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "sweep"
-    )
-
-    val color = MaterialTheme.colorScheme.primary
-
     Canvas(
         modifier = modifier
-            .size(48.dp)
             .graphicsLayer { rotationZ = rotation }
     ) {
-        val strokeWidth = 5.dp.toPx()
-        drawArc(
+        val size = size.minDimension
+        val center = center
+        val outerRadius = size / 2
+        val innerRadius = outerRadius * 0.75f
+        val numPoints = 10
+        val path = Path()
+
+        for (i in 0 until numPoints * 2) {
+            val radius = if (i % 2 == 0) outerRadius else innerRadius
+            val angle = (i * PI / numPoints).toFloat()
+            val x = center.x + cos(angle) * radius
+            val y = center.y + sin(angle) * radius
+            
+            if (i == 0) {
+                path.moveTo(x, y)
+            } else {
+                path.lineTo(x, y)
+            }
+        }
+        path.close()
+
+        drawPath(
+            path = path,
             color = color,
-            startAngle = 0f,
-            sweepAngle = sweepAngle,
-            useCenter = false,
-            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            style = Fill
         )
     }
 }
