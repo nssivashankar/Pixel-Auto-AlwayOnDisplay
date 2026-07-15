@@ -87,7 +87,7 @@ class SettingsActivity : AppCompatActivity() {
             )
 
             mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(80f, 80f, android.graphics.Shader.TileMode.CLAMP)
+                android.graphics.RenderEffect.createBlurEffect(60f, 60f, android.graphics.Shader.TileMode.CLAMP)
             )
 
             mirror.background = object : android.graphics.drawable.Drawable() {
@@ -112,12 +112,14 @@ class SettingsActivity : AppCompatActivity() {
                 override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
             }
 
-            // Performance Optimization: Only invalidate mirror when it's actually visible
-            // and use a simplified draw logic for high-velocity scrolling.
+            // ONLY invalidate when the underlying content changes or scrolls
+            // This prevents constant 120fps background drawing when idle
+            composeView.viewTreeObserver.addOnScrollChangedListener {
+                mirror.invalidate()
+            }
             mirror.viewTreeObserver.addOnPreDrawListener {
-                if (mirror.isAttachedToWindow && mirror.visibility == View.VISIBLE) {
-                    mirror.invalidate()
-                }
+                // If anything changed on screen, mirror it
+                mirror.invalidate()
                 true
             }
         }

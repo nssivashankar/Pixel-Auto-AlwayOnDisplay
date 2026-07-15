@@ -128,18 +128,22 @@ fun AppListItem(
     pm: PackageManager,
     onToggle: () -> Unit
 ) {
-    // Check global cache first for instant rendering
-    var iconBitmap by remember { mutableStateOf(iconCache[app.packageName]) }
+    // Optimization: Read from cache synchronously to prevent frame flicker and redundant effects
+    val initialIcon = remember(app.packageName) { iconCache[app.packageName] }
+    var iconBitmap by remember(app.packageName) { mutableStateOf(initialIcon) }
     
-    // Load icon in background only if not cached
     if (iconBitmap == null) {
         LaunchedEffect(app.packageName) {
             withContext(Dispatchers.IO) {
-                val drawable = pm.getApplicationIcon(app.appInfo)
-                // Downscale bitmap for better scrolling performance and less RAM usage
-                val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
-                iconCache[app.packageName] = bitmap
-                iconBitmap = bitmap
+                try {
+                    val drawable = pm.getApplicationIcon(app.appInfo)
+                    // Downscale significantly to save memory and improve scroll performance
+                    val bitmap = drawable.toBitmap(width = 96, height = 96).asImageBitmap()
+                    iconCache[app.packageName] = bitmap
+                    iconBitmap = bitmap
+                } catch (e: Exception) {
+                    // Fallback handled by placeholder
+                }
             }
         }
     }
