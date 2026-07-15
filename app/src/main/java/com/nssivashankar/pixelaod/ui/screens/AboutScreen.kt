@@ -2,6 +2,7 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -54,7 +55,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
         ) {
             item {
                 Spacer(Modifier.height(24.dp))
-                // App Logo Placeholder or Icon
+                // App Logo
                 Box(
                     modifier = Modifier
                         .size(100.dp)
@@ -108,8 +109,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 isCheckingUpdates = true
-                                // NEW: Professional Fake Progress Duration
-                                delay(1200)
+                                delay(1500) // Professional delay to show the expressive animation
                                 UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
                                     UpdateChecker.showUpdateDialog(context, latest, url)
                                 }
@@ -119,13 +119,24 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     }
                 )
                 
-                // M3 Indeterminate Progress Bar for Updates
+                // M3 Expressive Linear Indicator for Updates
                 if (isCheckingUpdates) {
+                    val infiniteTransition = rememberInfiniteTransition(label = "update_loader")
+                    val progress by infiniteTransition.animateFloat(
+                        initialValue = 0f,
+                        targetValue = 1f,
+                        animationSpec = infiniteRepeatable(
+                            animation = tween(1000, easing = FastOutSlowInEasing),
+                            repeatMode = RepeatMode.Reverse
+                        ),
+                        label = "progress"
+                    )
+
                     LinearProgressIndicator(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 16.dp)
-                            .height(2.dp),
+                            .height(3.dp),
                         color = MaterialTheme.colorScheme.primary,
                         trackColor = MaterialTheme.colorScheme.surfaceVariant,
                         strokeCap = StrokeCap.Round
@@ -160,7 +171,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
             }
 
             item {
-                Spacer(Modifier.height(80.dp)) // Extra space for Floating Toolbar
+                Spacer(Modifier.height(80.dp))
             }
         }
     }

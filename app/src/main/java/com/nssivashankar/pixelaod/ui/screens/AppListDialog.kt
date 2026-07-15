@@ -2,8 +2,10 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -52,7 +56,6 @@ fun AppListDialog(
     // --- Forced Pre-Warm Loader (Zero-Stutter Engineering) ---
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
-            // 1. Fast metadata scan
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .asSequence()
                 .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
@@ -67,7 +70,7 @@ fun AppListDialog(
                     .thenBy { it.label.lowercase() })
                 .toList()
             
-            // 2. Heavy Pre-Warm: Load top 30 icons BEFORE revealing the list
+            // Pre-warm top 30 icons for instant smoothness
             apps.take(30).forEach { app ->
                 if (!iconCache.containsKey(app.packageName)) {
                     try {
@@ -78,15 +81,15 @@ fun AppListDialog(
                 }
             }
             
-            // Add a small artificial delay to show the professional M3 indicator and ensure priming
-            delay(1000)
+            // Artificial delay to show the Expressive M3 animation
+            delay(1500)
 
             withContext(Dispatchers.Main) {
                 allApps = apps
                 isLoading = false
             }
 
-            // 3. Background warming for the rest
+            // Background warming for the rest
             apps.drop(30).forEach { app ->
                 if (!iconCache.containsKey(app.packageName)) {
                     try {
@@ -121,32 +124,27 @@ fun AppListDialog(
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Box(modifier = Modifier.weight(1f)) {
-                    // NEW: Professional Material 3 Circular Loading State
                     if (isLoading) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.Center
                         ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(48.dp),
-                                strokeWidth = 4.dp,
-                                trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                                strokeCap = StrokeCap.Round
-                            )
-                            Spacer(Modifier.height(16.dp))
+                            // NEW: Material 3 Expressive Rotating Shapes Animation
+                            M3ExpressiveRotatingLoader()
+                            
+                            Spacer(Modifier.height(24.dp))
                             Text(
-                                "Optimizing list...",
+                                "Building smooth list...",
                                 style = MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                     }
 
-                    // Content with Animation
                     androidx.compose.animation.AnimatedVisibility(
                         visible = !isLoading,
-                        enter = fadeIn(),
+                        enter = fadeIn(animationSpec = tween(500)),
                         exit = fadeOut()
                     ) {
                         LazyColumn(
@@ -183,6 +181,47 @@ fun AppListDialog(
             }
         }
     )
+}
+
+@Composable
+fun M3ExpressiveRotatingLoader(modifier: Modifier = Modifier) {
+    val infiniteTransition = rememberInfiniteTransition(label = "m3_loader")
+    
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing)
+        ),
+        label = "rotation"
+    )
+
+    val sweepAngle by infiniteTransition.animateFloat(
+        initialValue = 20f,
+        targetValue = 280f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sweep"
+    )
+
+    val color = MaterialTheme.colorScheme.primary
+
+    Canvas(
+        modifier = modifier
+            .size(48.dp)
+            .graphicsLayer { rotationZ = rotation }
+    ) {
+        val strokeWidth = 5.dp.toPx()
+        drawArc(
+            color = color,
+            startAngle = 0f,
+            sweepAngle = sweepAngle,
+            useCenter = false,
+            style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+        )
+    }
 }
 
 @Composable
