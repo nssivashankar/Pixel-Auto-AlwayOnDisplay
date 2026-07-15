@@ -187,8 +187,22 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun showWriteSecureSettingsPermissionDialog() {
+        val command = "adb shell pm grant ${this.packageName} ${Manifest.permission.WRITE_SECURE_SETTINGS}"
         val msg = getString(R.string.grant_write_secure_settings, this.packageName, Manifest.permission.WRITE_SECURE_SETTINGS)
-        MaterialAlertDialogBuilder(this).setMessage(msg).setNeutralButton(android.R.string.ok, null).show()
+        
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Permission Required")
+            .setMessage(msg)
+            .setNeutralButton("Copy ADB Command") { _, _ ->
+                val clipboard = getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                val clip = android.content.ClipData.newPlainText("ADB Command", command)
+                clipboard.setPrimaryClip(clip)
+                android.widget.Toast.makeText(this, "Command copied to clipboard", android.widget.Toast.LENGTH_SHORT).show()
+                // Re-show the dialog so they can still see the instructions after copying
+                showWriteSecureSettingsPermissionDialog()
+            }
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun showMissingShizukuPermissionDialog() {
