@@ -361,6 +361,31 @@ fun SettingsScreen(
             }
 
             item {
+                val currentVersion = remember {
+                    try {
+                        context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
+                    } catch (e: Exception) { "1.0.0" }
+                }
+                PreferenceItem(
+                    title = "Check for Updates",
+                    summary = "Version $currentVersion",
+                    icon = Icons.Default.Update,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        scope.launch {
+                            com.nssivashankar.pixelaod.utils.UpdateChecker.checkForUpdates(
+                                context,
+                                currentVersion,
+                                isManual = true
+                            ) { latest, url ->
+                                com.nssivashankar.pixelaod.utils.UpdateChecker.showUpdateDialog(context, latest, url)
+                            }
+                        }
+                    }
+                )
+            }
+
+            item {
                 Spacer(Modifier.height(48.dp))
                 MadeWithLoveFooter(haptic)
                 Spacer(Modifier.height(24.dp))

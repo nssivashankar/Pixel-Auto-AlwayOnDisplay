@@ -15,13 +15,18 @@ object UpdateChecker {
     private const val PREFS_NAME = "update_prefs"
     private const val KEY_LAST_CHECK = "last_check_time"
 
-    suspend fun checkForUpdates(context: Context, currentVersion: String, onUpdateAvailable: (String, String) -> Unit) {
+    suspend fun checkForUpdates(
+        context: Context,
+        currentVersion: String,
+        isManual: Boolean = false,
+        onUpdateAvailable: (String, String) -> Unit
+    ) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val lastCheck = prefs.getLong(KEY_LAST_CHECK, 0)
         val currentTime = System.currentTimeMillis()
 
-        // Only check once every 24 hours to save data/battery
-        if (currentTime - lastCheck < 24 * 60 * 60 * 1000) return
+        // Only check once every 24 hours to save data/battery, unless manual check
+        if (!isManual && currentTime - lastCheck < 24 * 60 * 60 * 1000) return
 
         withContext(Dispatchers.IO) {
             try {
@@ -42,10 +47,23 @@ object UpdateChecker {
                         withContext(Dispatchers.Main) {
                             onUpdateAvailable(latestVersion, downloadUrl)
                         }
+                    } else if (isManual) {
+                        withContext(Dispatchers.Main) {
+                            android.widget.Toast.makeText(context, "App is up to date ($currentVersion)", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                } else if (isManual) {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Failed to check for updates", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                if (isManual) {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Error checking updates: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                }
             }
         }
     }
