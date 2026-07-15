@@ -15,7 +15,6 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -26,35 +25,24 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.layer.drawLayer
-import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.util.Locale
 
 // --- High-Performance Settings State Holder ---
 class SettingsState(context: Context, private val scope: kotlinx.coroutines.CoroutineScope) {
-    private val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+    val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
     private val resolver = context.contentResolver
 
     var masterSwitch by mutableStateOf(prefs.getBoolean("master_switch", false))
@@ -130,26 +118,20 @@ fun SettingsScreen(
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
     
     val state = remember { SettingsState(context, scope) }
+    var currentTab by remember { mutableIntStateOf(0) }
 
-    // Sync state changes back to Activity if needed
+    // Sync state changes back to Activity (for XML Master Switch sync)
     LaunchedEffect(state.masterSwitch) {
         onMasterSwitchChange(state.masterSwitch)
     }
 
-    val contentLayer = rememberGraphicsLayer()
-    
-    var currentTab by remember { mutableIntStateOf(0) }
-    val statusBarPadding = WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
-    val headerHeight = 64.dp + statusBarPadding
-    val isDark = isSystemInDarkTheme()
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
+        containerColor = Color.Transparent, 
         bottomBar = {
-            // Custom Material 3 Floating Bottom Bar
+            // --- Material 3 COMPACT Floating Navigation Pill ---
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -161,35 +143,49 @@ fun SettingsScreen(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     tonalElevation = 6.dp,
                     shadowElevation = 8.dp,
-                    modifier = Modifier.height(64.dp)
+                    modifier = Modifier.wrapContentSize()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                            .widthIn(max = 240.dp), // Snappy compact width
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         // Home Button
                         NavigationBarItem(
                             selected = currentTab == 0,
                             onClick = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentTab = 0 
+                                if (currentTab != 0) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentTab = 0 
+                                }
                             },
                             icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
+                            label = { Text("Home") },
+                            alwaysShowLabel = false,
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
-                        Spacer(Modifier.width(16.dp))
                         // About Button
                         NavigationBarItem(
                             selected = currentTab == 1,
                             onClick = { 
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                currentTab = 1 
+                                if (currentTab != 1) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    currentTab = 1 
+                                }
                             },
                             icon = { Icon(Icons.Default.Info, contentDescription = "About") },
+                            label = { Text("About") },
+                            alwaysShowLabel = false,
                             colors = NavigationBarItemDefaults.colors(
-                                indicatorColor = MaterialTheme.colorScheme.primaryContainer
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         )
                     }
@@ -197,85 +193,30 @@ fun SettingsScreen(
             }
         }
     ) { innerPadding ->
-        Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
-            // 1. Content Layer
-            AnimatedContent(
-                targetState = currentTab,
-                transitionSpec = {
-                    fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-                },
-                label = "navigation"
-            ) { targetTab ->
-                if (targetTab == 0) {
-                    MainSettingsList(state, headerHeight, contentLayer, onPermissionRequest)
-                } else {
-                    AboutScreen(contentPadding = PaddingValues(top = headerHeight, bottom = 120.dp))
-                }
-            }
-
-            // 2. Glass Header Layer (Persists across tabs)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(headerHeight)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer {
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                                renderEffect = android.graphics.RenderEffect.createBlurEffect(
-                                    30f, 30f, android.graphics.Shader.TileMode.CLAMP
-                                ).asComposeRenderEffect()
-                            }
-                        }
-                        .drawBehind {
-                            clipRect(0f, 0f, size.width, size.height) {
-                                drawLayer(contentLayer)
-                            }
-                        }
+        // No redundant header here! We use the XML header from SettingsActivity.
+        AnimatedContent(
+            targetState = currentTab,
+            transitionSpec = {
+                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
+            },
+            label = "navigation"
+        ) { targetTab ->
+            if (targetTab == 0) {
+                MainSettingsList(
+                    state = state, 
+                    contentPadding = PaddingValues(
+                        top = contentPadding.calculateTopPadding(),
+                        bottom = 120.dp
+                    ), 
+                    onPermissionRequest = onPermissionRequest
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            color = if (isDark) 
-                                MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.4f)
-                            else 
-                                Color.White.copy(alpha = 0.6f)
-                        )
-                )
-
-                Column(Modifier.fillMaxSize()) {
-                    Spacer(Modifier.height(statusBarPadding))
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(64.dp)
-                            .padding(horizontal = 16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            if (currentTab == 0) "Pixel AOD" else "About",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontSize = 30.sp, 
-                            fontWeight = FontWeight.Black,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (currentTab == 0) {
-                            Switch(
-                                checked = state.masterSwitch,
-                                onCheckedChange = { state.updateMasterSwitch(it) }
-                            )
-                        }
-                    }
-                    
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                        thickness = 1.dp
+            } else {
+                AboutScreen(
+                    contentPadding = PaddingValues(
+                        top = contentPadding.calculateTopPadding(),
+                        bottom = 120.dp
                     )
-                }
+                )
             }
         }
     }
@@ -284,8 +225,7 @@ fun SettingsScreen(
 @Composable
 fun MainSettingsList(
     state: SettingsState,
-    headerHeight: androidx.compose.ui.unit.Dp,
-    contentLayer: androidx.compose.ui.graphics.layer.GraphicsLayer,
+    contentPadding: PaddingValues,
     onPermissionRequest: () -> Unit
 ) {
     val context = LocalContext.current
@@ -343,41 +283,32 @@ fun MainSettingsList(
     }
 
     if (showAppListDialog) {
-        val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
         AppListDialog(
             title = "Per-App Notifications",
-            selectedPackages = prefs.getStringSet("watched_apps", emptySet()) ?: emptySet(),
+            selectedPackages = state.prefs.getStringSet("watched_apps", emptySet()) ?: emptySet(),
             onDismiss = { showAppListDialog = false },
             onConfirm = { packages ->
-                prefs.edit().putStringSet("watched_apps", packages).apply()
+                state.prefs.edit().putStringSet("watched_apps", packages).apply()
                 showAppListDialog = false
             }
         )
     }
 
     if (showBlockListDialog) {
-        val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
         AppListDialog(
             title = "Manage Block List",
-            selectedPackages = prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet(),
+            selectedPackages = state.prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet(),
             onDismiss = { showBlockListDialog = false },
             onConfirm = { packages ->
-                prefs.edit().putStringSet("live_notif_blocklist", packages).apply()
+                state.prefs.edit().putStringSet("live_notif_blocklist", packages).apply()
                 showBlockListDialog = false
             }
         )
     }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .drawWithContent {
-                drawContent()
-                contentLayer.record {
-                    this@drawWithContent.drawContent()
-                }
-            },
-        contentPadding = PaddingValues(top = headerHeight, bottom = 120.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = contentPadding,
         state = lazyListState
     ) {
         item(key = "cat_auto") { PreferenceCategory(title = "Automation & Triggers") }
@@ -491,37 +422,35 @@ fun MainSettingsList(
 
         if (state.scheduledDnd) {
             item(key = "pref_start") {
-                val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
-                var startTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00") }
+                val currentStart = state.prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00"
+                val parts = currentStart.split(":")
                 PreferenceItem(
                     title = "Start Time",
-                    summary = startTime,
+                    summary = currentStart,
                     enabled = state.masterSwitch,
                     onClick = {
-                        val parts = startTime.split(":")
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val time = String.format(Locale.US, "%02d:%02d", h, m)
-                            prefs.edit().putString("scheduled_dnd_start", time).apply()
-                            startTime = time
+                            state.prefs.edit().putString("scheduled_dnd_start", time).apply()
+                            state.updateScheduledDnd(state.scheduledDnd) // Trigger recompose
                         }, parts[0].toInt(), parts[1].toInt(), true).show()
                     }
                 )
             }
             item(key = "pref_end") {
-                val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
-                var endTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00") }
+                val currentEnd = state.prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00"
+                val parts = currentEnd.split(":")
                 PreferenceItem(
                     title = "End Time",
-                    summary = endTime,
+                    summary = currentEnd,
                     enabled = state.masterSwitch,
                     onClick = {
-                        val parts = endTime.split(":")
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val time = String.format(Locale.US, "%02d:%02d", h, m)
-                            prefs.edit().putString("scheduled_dnd_end", time).apply()
-                            endTime = time
+                            state.prefs.edit().putString("scheduled_dnd_end", time).apply()
+                            state.updateScheduledDnd(state.scheduledDnd) // Trigger recompose
                         }, parts[0].toInt(), parts[1].toInt(), true).show()
                     }
                 )
