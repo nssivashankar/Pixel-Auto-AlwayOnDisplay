@@ -6,42 +6,6 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
-## 🚀 Version 1.1.2 Highlights
-
-### 🏁 Seamless Onboarding
-- **Guided Setup Flow**: Introduced a professional, multi-step start page that explains "why" each permission is needed, making the initial configuration foolproof.
-- **Permission Reliability**: Fixed critical issues with Battery Optimization and Notification Access requests to ensure the app works out-of-the-box.
-
-### 🛠️ Stability & Synchronization
-- **Unified State Engine**: Bridged the gap between the Android View-based Master Switch and the Compose settings list. Toggles now react instantly and accurately.
-- **Double-Toggle Fix**: Resolved a UX bug where clicking settings could trigger redundant state changes, resulting in unreliable activation.
-- **Haptic Precision**: Integrated fine-tuned tactile feedback directly into components for a more tactile, premium feel.
-
-## 🚀 Version 1.1.1 Highlights
-
-### 🎨 Material 3 Expressive UI
-- **Official Morphing Loader**: Integrated the official Material 3 Expressive `LoadingIndicator` with its signature 7-shape organic morphing animation.
-- **OCD-Level Alignment**: Refined the entire settings list with a "perfect horizontal baseline." Every label and switch now aligns precisely to a consistent vertical axis for a premium, structured look.
-- **Enhanced Iconography**: Added missing icons for DND, Quiet Hours, and Service Status items to ensure visual balance and completeness across the UI.
-- **Glassmorphism Header**: A hardware-accelerated "Frosted Glass" mirror engine that diffuses the underlying settings list in real-time.
-
-### ⚡ 120Hz Performance & Fluidity
-- **Throttled Blur Engine**: Optimized the heavy blur effect to redraw using a frame-synchronized throttler, eliminating scrolling jank and preserving battery on high-refresh-rate Pixel displays.
-- **Zero-Wait App List**: Implemented `AppRepository` caching. The app list dialog now opens instantly with zero loading delay.
-- **Parallel Icon Loading**: App icons are now lazy-loaded in the background without blocking the UI, ensuring buttery-smooth scrolling even in massive lists of installed apps.
-
-### 🔋 Custom Battery Limit
-- **User-Defined Thresholds**: Go beyond Google's standard 80% limit. Set custom charging targets (80%, 85%, 90%, 95%) with a precise 5% step slider.
-- **Intelligent System Trick**: Uses a clever automation logic that "tricks" the system into stopping hardware charging the moment your custom percentage is reached.
-- **Dynamic Notifications**: The charging notification automatically adapts to show your custom target and precise ETA for that threshold.
-
-### 📳 Premium Haptics & Feel
-- **Differentiated Feedback**: Crisp, high-frequency haptics for turning features ON and solid, deep feedback for turning them OFF.
-- **Tactile Sliders**: Every 5% snap on the battery slider provides a satisfying tactile click.
-- **Animated Footer**: A beautiful, heart-beat animated "Made with Love" signature with synchronized haptic pulses.
-
----
-
 ## 🚀 Key Features
 
 ### 🔋 Integrated Battery Health (Pixel Only)
@@ -58,6 +22,14 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 | Feature Details | Preview |
 | :--- | :---: |
 | - **Settings - Per-App Customization**: Choose specific apps (Messaging, Mail, etc.) to trigger the AOD.<br><br>- **Live notifications for apps that support live notifications**: Intelligent detection for ongoing events like **Google Maps navigation**, **Uber/Ride-sharing**, and **Food Delivery tracking**.<br><br>- **Block List**: Easily exclude specific apps from triggering Live Notification mode. | <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="200" alt="Live Tracking" /> |
+
+---
+
+## 🎨 Premium Experience
+- **Material 3 Expressive UI**: Built using the latest organic design guidelines with fluid shape-morphing animations and modern spacing.
+- **120Hz Fluidity**: Optimized for high-refresh-rate displays with a throttled "Glassmorphism" rendering engine to ensure zero scrolling jank.
+- **Premium Haptics**: Differentiated tactile feedback for system actions and precise snaps for slider interactions.
+- **Seamless Setup**: A guided onboarding flow that explains the "why" behind every permission, ensuring a foolproof initial configuration.
 
 ---
 
