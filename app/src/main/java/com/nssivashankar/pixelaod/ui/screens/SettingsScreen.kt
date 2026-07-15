@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 @Composable
@@ -41,6 +44,7 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
+    val scope = rememberCoroutineScope()
     val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
     val lazyListState = rememberLazyListState()
     
@@ -71,8 +75,10 @@ fun SettingsScreen(
     var customLimit by remember { mutableStateOf(prefs.getInt("custom_charging_limit", 80)) }
     
     if (showChargingModeDialog) {
-        // We use a local state for the dialog selection to ensure the slider shows up instantly
-        var selectedMode by remember { mutableStateOf(if (prefs.getBoolean("custom_limit_enabled", false)) 3 else AodSettings.getChargeOptimizationMode(context.contentResolver)) }
+        // We use a local state for the dialog selection to ensure the UI is snappy
+        var selectedMode by remember { 
+            mutableStateOf(if (prefs.getBoolean("custom_limit_enabled", false)) 3 else AodSettings.getChargeOptimizationMode(context.contentResolver)) 
+        }
         
         AlertDialog(
             onDismissRequest = { showChargingModeDialog = false },
@@ -83,15 +89,29 @@ fun SettingsScreen(
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                val previousMode = selectedMode
                                 selectedMode = mode
-                                if (mode != 3) {
-                                    prefs.edit().putBoolean("custom_limit_enabled", false).apply()
-                                    AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
-                                    if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
-                                    showChargingModeDialog = false 
-                                } else {
-                                    prefs.edit().putBoolean("custom_limit_enabled", true).apply()
-                                    AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
+                                
+                                // Offload blocking IPC calls to IO thread to prevent UI lag
+                                scope.launch(Dispatchers.IO) {
+                                    try {
+                                        if (mode != 3) {
+                                            prefs.edit().putBoolean("custom_limit_enabled", false).apply()
+                                            AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
+                                            if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
+                                            
+                                            withContext(Dispatchers.Main) {
+                                                showChargingModeDialog = false
+                                            }
+                                        } else {
+                                            prefs.edit().putBoolean("custom_limit_enabled", true).apply()
+                                            AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
+                                        }
+                                    } catch (e: Exception) {
+                                        withContext(Dispatchers.Main) {
+                                            selectedMode = previousMode
+                                        }
+                                    }
                                 }
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -119,11 +139,13 @@ fun SettingsScreen(
                                 if (rounded != customLimit) {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     customLimit = rounded
-                                    prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                    scope.launch(Dispatchers.IO) {
+                                        prefs.edit().putInt("custom_charging_limit", rounded).apply()
+                                    }
                                 }
                             },
                             valueRange = 80f..100f,
-                            steps = 3, // 80, 85, 90, 95, 100 (4 intervals = 3 steps between)
+                            steps = 3, // 80, 85, 90, 95, 100
                             modifier = Modifier.padding(top = 8.dp)
                         )
                     }
