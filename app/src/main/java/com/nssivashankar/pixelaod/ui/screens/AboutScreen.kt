@@ -22,6 +22,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
