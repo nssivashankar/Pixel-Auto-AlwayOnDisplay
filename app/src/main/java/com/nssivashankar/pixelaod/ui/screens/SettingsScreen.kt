@@ -21,9 +21,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -45,48 +45,99 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
 
+// --- High-Performance Settings State Holder ---
+class SettingsState(context: Context, private val scope: kotlinx.coroutines.CoroutineScope) {
+    private val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+    private val resolver = context.contentResolver
+
+    // Reactive states to ensure ZERO disk reads during scrolling
+    var masterSwitch by mutableStateOf(prefs.getBoolean("master_switch", false))
+    var chargingMode by mutableStateOf(prefs.getBoolean("charging_mode", false))
+    var chargingInfoNotif by mutableStateOf(prefs.getBoolean("charging_info_notif", false))
+    var liveNotifMode by mutableStateOf(prefs.getBoolean("live_notif_mode", false))
+    var dndMode by mutableStateOf(prefs.getBoolean("dnd_mode", false))
+    var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
+    var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
+    var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
+    var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
+
+    fun updateMasterSwitch(enabled: Boolean) {
+        masterSwitch = enabled
+        prefs.edit().putBoolean("master_switch", enabled).apply()
+        AodSettings.setAodEnabled(resolver, enabled)
+    }
+
+    fun updateChargingMode(enabled: Boolean) {
+        chargingMode = enabled
+        prefs.edit().putBoolean("charging_mode", enabled).apply()
+    }
+
+    fun updateChargingInfoNotif(enabled: Boolean) {
+        chargingInfoNotif = enabled
+        prefs.edit().putBoolean("charging_info_notif", enabled).apply()
+    }
+
+    fun updateLiveNotifMode(enabled: Boolean) {
+        liveNotifMode = enabled
+        prefs.edit().putBoolean("live_notif_mode", enabled).apply()
+    }
+
+    fun updateDndMode(enabled: Boolean) {
+        dndMode = enabled
+        prefs.edit().putBoolean("dnd_mode", enabled).apply()
+    }
+
+    fun updateScheduledDnd(enabled: Boolean) {
+        scheduledDnd = enabled
+        prefs.edit().putBoolean("scheduled_dnd", enabled).apply()
+    }
+
+    fun updateCustomLimit(limit: Int) {
+        customLimit = limit
+        prefs.edit().putInt("custom_charging_limit", limit).apply()
+    }
+
+    fun setOptimization(mode: Int, custom: Boolean) {
+        scope.launch(Dispatchers.IO) {
+            customLimitEnabled = custom
+            prefs.edit().putBoolean("custom_limit_enabled", custom).apply()
+            
+            if (!custom) {
+                AodSettings.setChargeOptimizationMode(resolver, mode)
+                if (mode == 2) AodSettings.setAdaptiveChargingEnabled(resolver, true)
+                else if (mode == 0) AodSettings.setAdaptiveChargingEnabled(resolver, false)
+                currentOptimizationMode = mode
+            } else {
+                AodSettings.setChargeOptimizationMode(resolver, 0)
+                currentOptimizationMode = 0
+            }
+        }
+    }
+}
+
 @Composable
-fun SettingsScreen(
-    onPermissionRequest: () -> Unit
-) {
+fun SettingsScreen(onPermissionRequest: () -> Unit) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
-    val lazyListState = rememberLazyListState()
     
-    // --- The Ultra-High-Performance Mirror Engine (Pure Compose) ---
-    // This captures the list content in hardware memory and draws it blurred
-    // WITHOUT double-rendering the whole view hierarchy.
+    // Initialize state holder once
+    val state = remember { SettingsState(context, scope) }
+    
+    // Mirror Engine Layer
     val contentLayer = rememberGraphicsLayer()
+    val lazyListState = rememberLazyListState()
 
-    // Global Master Switch State
-    var masterSwitch by remember { mutableStateOf(prefs.getBoolean("master_switch", false)) }
-    
-    // Reactive states for Charging Optimization
-    var customLimitEnabled by remember { mutableStateOf(prefs.getBoolean("custom_limit_enabled", false)) }
-    var currentOptimizationMode by remember { 
-        mutableIntStateOf(AodSettings.getChargeOptimizationMode(context.contentResolver)) 
-    }
-    
     // Dialog States
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
 
-    // Toggle States
-    var isScheduledDnd by remember { mutableStateOf(prefs.getBoolean("scheduled_dnd", false)) }
-    var customLimit by remember { mutableIntStateOf(prefs.getInt("custom_charging_limit", 80)) }
-    
     val headerHeight = 64.dp + WindowInsets.statusBars.asPaddingValues(density).calculateTopPadding()
     val isDark = isSystemInDarkTheme()
 
     if (showChargingModeDialog) {
-        var selectedMode by remember { 
-            mutableStateOf(if (customLimitEnabled) 3 else currentOptimizationMode) 
-        }
-        
         AlertDialog(
             onDismissRequest = { showChargingModeDialog = false },
             title = { Text("Charging Optimization") },
@@ -96,49 +147,30 @@ fun SettingsScreen(
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                selectedMode = mode
-                                scope.launch(Dispatchers.IO) {
-                                    if (mode != 3) {
-                                        prefs.edit().putBoolean("custom_limit_enabled", false).apply()
-                                        AodSettings.setChargeOptimizationMode(context.contentResolver, mode)
-                                        if (mode == 2) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, true)
-                                        else if (mode == 0) AodSettings.setAdaptiveChargingEnabled(context.contentResolver, false)
-                                        withContext(Dispatchers.Main) {
-                                            currentOptimizationMode = mode
-                                            customLimitEnabled = false
-                                            showChargingModeDialog = false
-                                        }
-                                    } else {
-                                        prefs.edit().putBoolean("custom_limit_enabled", true).apply()
-                                        AodSettings.setChargeOptimizationMode(context.contentResolver, 0)
-                                        withContext(Dispatchers.Main) {
-                                            currentOptimizationMode = 0
-                                            customLimitEnabled = true
-                                        }
-                                    }
-                                }
+                                state.setOptimization(mode, mode == 3)
+                                if (mode != 3) showChargingModeDialog = false
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            RadioButton(selected = selectedMode == mode, onClick = null)
+                            RadioButton(
+                                selected = if (mode == 3) state.customLimitEnabled else (!state.customLimitEnabled && state.currentOptimizationMode == mode),
+                                onClick = null
+                            )
                             Spacer(Modifier.width(16.dp))
                             Text(label)
                         }
                     }
 
-                    if (selectedMode == 3) {
+                    if (state.customLimitEnabled) {
                         Spacer(Modifier.height(16.dp))
-                        Text(text = "Limit: ${customLimit}%", fontWeight = FontWeight.Bold)
+                        Text(text = "Limit: ${state.customLimit}%", fontWeight = FontWeight.Bold)
                         Slider(
-                            value = customLimit.toFloat(),
+                            value = state.customLimit.toFloat(),
                             onValueChange = { 
                                 val rounded = (it.toInt() / 5) * 5
-                                if (rounded != customLimit) {
+                                if (rounded != state.customLimit) {
                                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                    customLimit = rounded
-                                    scope.launch(Dispatchers.IO) {
-                                        prefs.edit().putInt("custom_charging_limit", rounded).apply()
-                                    }
+                                    state.updateCustomLimit(rounded)
                                 }
                             },
                             valueRange = 80f..100f,
@@ -152,10 +184,10 @@ fun SettingsScreen(
     }
 
     if (showAppListDialog) {
-        val watchedPackages = remember { prefs.getStringSet("watched_apps", emptySet()) ?: emptySet() }
+        val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
         AppListDialog(
             title = "Per-App Notifications",
-            selectedPackages = watchedPackages,
+            selectedPackages = prefs.getStringSet("watched_apps", emptySet()) ?: emptySet(),
             onDismiss = { showAppListDialog = false },
             onConfirm = { packages ->
                 prefs.edit().putStringSet("watched_apps", packages).apply()
@@ -165,10 +197,10 @@ fun SettingsScreen(
     }
 
     if (showBlockListDialog) {
-        val blockedPackages = remember { prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet() }
+        val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
         AppListDialog(
             title = "Manage Block List",
-            selectedPackages = blockedPackages,
+            selectedPackages = prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet(),
             onDismiss = { showBlockListDialog = false },
             onConfirm = { packages ->
                 prefs.edit().putStringSet("live_notif_blocklist", packages).apply()
@@ -183,7 +215,7 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .drawWithContent {
-                    // Record only once per change for maximum 120Hz efficiency
+                    // Optimized recording: Capture only the visible area
                     contentLayer.record {
                         this@drawWithContent.drawContent()
                     }
@@ -192,49 +224,48 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = headerHeight, bottom = 48.dp),
             state = lazyListState
         ) {
-            item { PreferenceCategory(title = "Automation & Triggers") }
+            item(key = "cat_auto") { PreferenceCategory(title = "Automation & Triggers") }
             
-            item {
+            item(key = "pref_charging") {
                 PreferenceSwitch(
                     title = "Charging Mode",
                     summary = "Turn on AOD automatically when charger is connected",
                     icon = Icons.Default.BatteryChargingFull,
-                    checked = prefs.getBoolean("charging_mode", false),
-                    enabled = masterSwitch,
+                    checked = state.chargingMode,
+                    enabled = state.masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.edit().putBoolean("charging_mode", it).apply() 
+                        state.updateChargingMode(it)
                     }
                 )
             }
 
-            item {
+            item(key = "pref_info") {
                 PreferenceSwitch(
                     title = stringResource(R.string.charging_info_title),
                     summary = stringResource(R.string.charging_info_summary),
                     icon = Icons.Default.Info,
-                    checked = prefs.getBoolean("charging_info_notif", false),
-                    enabled = masterSwitch,
+                    checked = state.chargingInfoNotif,
+                    enabled = state.masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.edit().putBoolean("charging_info_notif", it).apply()
+                        state.updateChargingInfoNotif(it)
                     }
                 )
             }
 
-            item {
+            item(key = "pref_opt") {
                 val modeSummary = when {
-                    customLimitEnabled -> "Custom Limit: ${customLimit}%"
-                    currentOptimizationMode == 1 -> "Limit to 80%"
-                    currentOptimizationMode == 2 -> "Adaptive Charging"
+                    state.customLimitEnabled -> "Custom Limit: ${state.customLimit}%"
+                    state.currentOptimizationMode == 1 -> "Limit to 80%"
+                    state.currentOptimizationMode == 2 -> "Adaptive Charging"
                     else -> "Off"
                 }
-                
                 PreferenceItem(
                     title = "Charging Optimization",
                     summary = modeSummary,
                     icon = Icons.Default.BatterySaver,
-                    enabled = masterSwitch,
+                    enabled = state.masterSwitch,
                     onClick = { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showChargingModeDialog = true 
@@ -242,12 +273,12 @@ fun SettingsScreen(
                 )
             }
 
-            item {
+            item(key = "pref_apps") {
                 PreferenceItem(
                     title = "Per-App Notifications",
                     summary = "Always trigger AOD for these apps",
                     icon = Icons.Default.Notifications,
-                    enabled = masterSwitch,
+                    enabled = state.masterSwitch,
                     onClick = { 
                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         showAppListDialog = true 
@@ -255,16 +286,16 @@ fun SettingsScreen(
                 )
             }
 
-            item {
+            item(key = "pref_live") {
                 PreferenceSwitch(
                     title = "Live Notification Mode",
                     summary = "AOD for Maps, Uber etc.",
                     icon = Icons.Default.Map,
-                    checked = prefs.getBoolean("live_notif_mode", false),
-                    enabled = masterSwitch,
+                    checked = state.liveNotifMode,
+                    enabled = state.masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.edit().putBoolean("live_notif_mode", it).apply() 
+                        state.updateLiveNotifMode(it)
                     },
                     showSecondaryAction = true,
                     onSecondaryActionClick = { 
@@ -274,42 +305,42 @@ fun SettingsScreen(
                 )
             }
 
-            item { PreferenceCategory(title = "Restrictions") }
+            item(key = "cat_restrict") { PreferenceCategory(title = "Restrictions") }
 
-            item {
+            item(key = "pref_dnd") {
                 PreferenceSwitch(
                     title = stringResource(R.string.dnd_mode_title),
                     summary = stringResource(R.string.dnd_mode_summary),
-                    checked = prefs.getBoolean("dnd_mode", false),
-                    enabled = masterSwitch,
+                    checked = state.dndMode,
+                    enabled = state.masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        prefs.edit().putBoolean("dnd_mode", it).apply() 
+                        state.updateDndMode(it)
                     }
                 )
             }
             
-            item {
+            item(key = "pref_scheduled") {
                 PreferenceSwitch(
                     title = stringResource(R.string.scheduled_dnd_title),
                     summary = stringResource(R.string.scheduled_dnd_summary),
-                    checked = isScheduledDnd,
-                    enabled = masterSwitch,
+                    checked = state.scheduledDnd,
+                    enabled = state.masterSwitch,
                     onCheckedChange = { 
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        isScheduledDnd = it
-                        prefs.edit().putBoolean("scheduled_dnd", it).apply() 
+                        state.updateScheduledDnd(it)
                     }
                 )
             }
 
-            if (isScheduledDnd) {
-                item {
+            if (state.scheduledDnd) {
+                item(key = "pref_start") {
+                    val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
                     var startTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00") }
                     PreferenceItem(
                         title = "Start Time",
                         summary = startTime,
-                        enabled = masterSwitch,
+                        enabled = state.masterSwitch,
                         onClick = {
                             val parts = startTime.split(":")
                             TimePickerDialog(context, { _, h, m ->
@@ -321,12 +352,13 @@ fun SettingsScreen(
                         }
                     )
                 }
-                item {
+                item(key = "pref_end") {
+                    val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
                     var endTime by remember { mutableStateOf(prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00") }
                     PreferenceItem(
                         title = "End Time",
                         summary = endTime,
-                        enabled = masterSwitch,
+                        enabled = state.masterSwitch,
                         onClick = {
                             val parts = endTime.split(":")
                             TimePickerDialog(context, { _, h, m ->
@@ -340,9 +372,9 @@ fun SettingsScreen(
                 }
             }
 
-            item { PreferenceCategory(title = "Service Status") }
+            item(key = "cat_service") { PreferenceCategory(title = "Service Status") }
 
-            item {
+            item(key = "pref_secure") {
                 val hasWriteSecure = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
                 PreferenceItem(
                     title = "Write Secure Settings",
@@ -354,7 +386,7 @@ fun SettingsScreen(
                 )
             }
             
-            item {
+            item(key = "pref_notif_access") {
                 val enabledListeners = AndroidSettings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
                 val hasNotifyAccess = enabledListeners?.contains(context.packageName) == true
                 PreferenceItem(
@@ -367,44 +399,35 @@ fun SettingsScreen(
                 )
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                item {
-                    val hasPostNotif = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-                    PreferenceItem(
-                        title = "Notification Permission",
-                        summary = if (hasPostNotif) "Granted" else "Missing - Required for charging info",
-                        onClick = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
-                    )
-                }
-            }
-
-            item {
+            item(key = "footer") {
                 Spacer(Modifier.height(48.dp))
                 MadeWithLoveFooter(haptic)
                 Spacer(Modifier.height(24.dp))
             }
         }
 
-        // 2. The Glass Header Layer (Pure Compose - Zero-Friction)
+        // 2. The Glass Header Layer (High-Efficiency GPU Drawing)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(headerHeight)
         ) {
-            // iOS Style Ultra-Frosted Lens (Direct GPU Draw)
+            // iOS Style Frosted Lens
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .graphicsLayer {
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            // Radius tuned to 30f for 120Hz stability
                             renderEffect = android.graphics.RenderEffect.createBlurEffect(
                                 30f, 30f, android.graphics.Shader.TileMode.CLAMP
                             ).asComposeRenderEffect()
                         }
                     }
                     .drawBehind {
-                        // NO View.draw() calls. NO main-thread blockage.
-                        // We simply draw the hardware-cached layer.
+                        // FIX: Zero-offset drawing. Since record {} captures the full screen state,
+                        // we simply draw the layer. The content naturally aligns because the 
+                        // LazyColumn content starts at the same top-of-screen origin.
                         drawLayer(contentLayer)
                     }
             )
@@ -439,17 +462,11 @@ fun SettingsScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Switch(
-                        checked = masterSwitch,
-                        onCheckedChange = {
-                            masterSwitch = it
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            prefs.edit().putBoolean("master_switch", it).apply()
-                            AodSettings.setAodEnabled(context.contentResolver, it)
-                        }
+                        checked = state.masterSwitch,
+                        onCheckedChange = { state.updateMasterSwitch(it) }
                     )
                 }
                 
-                // Visual Separator
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
                     thickness = 1.dp
@@ -491,7 +508,6 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
                 }
                 .padding(16.dp)
         ) {
-            @Suppress("DEPRECATION")
             Text(
                 "Made with ",
                 style = MaterialTheme.typography.labelLarge,
@@ -505,7 +521,6 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
                     .size(24.dp)
                     .scale(scale)
             )
-            @Suppress("DEPRECATION")
             Text(
                 " for the Pixel",
                 style = MaterialTheme.typography.labelLarge,
@@ -553,11 +568,6 @@ fun PreferenceSwitch(
     showSecondaryAction: Boolean = false,
     onSecondaryActionClick: () -> Unit = {}
 ) {
-    var isChecked by remember { mutableStateOf(checked) }
-    LaunchedEffect(checked) {
-        isChecked = checked
-    }
-
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = summary?.let { { Text(it) } },
@@ -574,12 +584,9 @@ fun PreferenceSwitch(
                     }
                 }
                 Switch(
-                    checked = isChecked,
+                    checked = checked,
                     enabled = enabled,
-                    onCheckedChange = {
-                        isChecked = it
-                        onCheckedChange(it)
-                    }
+                    onCheckedChange = onCheckedChange
                 )
             }
         },
