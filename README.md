@@ -6,12 +6,18 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
-## 🚀 Version 1.1.0 Highlights
+## 🚀 Version 1.1.1 Highlights
 
 ### 🎨 Material 3 Expressive UI
-- **Expressive Design System**: Fully migrated to the latest Material 3 Expressive guidelines with organic shapes, larger corner radii, and modern spacing.
-- **Google Sans Typography**: Implemented a "Pixel-perfect" typography scale using the signature Google Sans font family for a premium system feel.
-- **Glassmorphism Header**: A hardware-accelerated "Frosted Glass" mirror engine that blurs and diffuses the underlying settings list in real-time.
+- **Official Morphing Loader**: Integrated the official Material 3 Expressive `LoadingIndicator` with its signature 7-shape organic morphing animation.
+- **OCD-Level Alignment**: Refined the entire settings list with a "perfect horizontal baseline." Every label and switch now aligns precisely to a consistent vertical axis for a premium, structured look.
+- **Enhanced Iconography**: Added missing icons for DND, Quiet Hours, and Service Status items to ensure visual balance and completeness across the UI.
+- **Glassmorphism Header**: A hardware-accelerated "Frosted Glass" mirror engine that diffuses the underlying settings list in real-time.
+
+### ⚡ 120Hz Performance & Fluidity
+- **Throttled Blur Engine**: Optimized the heavy blur effect to redraw using a frame-synchronized throttler, eliminating scrolling jank and preserving battery on high-refresh-rate Pixel displays.
+- **Zero-Wait App List**: Implemented `AppRepository` caching. The app list dialog now opens instantly with zero loading delay.
+- **Parallel Icon Loading**: App icons are now lazy-loaded in the background without blocking the UI, ensuring buttery-smooth scrolling even in massive lists of installed apps.
 
 ### 🔋 Custom Battery Limit
 - **User-Defined Thresholds**: Go beyond Google's standard 80% limit. Set custom charging targets (80%, 85%, 90%, 95%) with a precise 5% step slider.
