@@ -3,9 +3,11 @@ package com.nssivashankar.pixelaod.ui.screens
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -13,16 +15,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.ConcurrentHashMap
 
-// Global cache for icons to ensure ultra-smooth scrolling across dialog opens
-private val iconCache = ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+// Global cache for icons with thread-safe access
+private val iconCache = ConcurrentHashMap<String, ImageBitmap>()
 
 @Composable
 fun AppListDialog(
@@ -41,8 +45,10 @@ fun AppListDialog(
         mutableStateListOf<String>().apply { addAll(selectedPackages) } 
     }
 
+    // --- High-Performance Chained Loader ---
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
+            // 1. Fast metadata scan
             val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
                 .asSequence()
                 .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
@@ -57,26 +63,30 @@ fun AppListDialog(
                     .thenBy { it.label.lowercase() })
                 .toList()
             
-            // Critical Optimization: Pre-load the first 20 icons in the background 
-            // BEFORE the list is shown to eliminate "first scroll" lag.
-            apps.take(20).forEach { app ->
+            // 2. Immediate UI refresh with sharp labels
+            withContext(Dispatchers.Main) {
+                allApps = apps
+                isLoading = false
+            }
+
+            // 3. Background icon warming (One by one, low priority)
+            apps.forEach { app ->
                 if (!iconCache.containsKey(app.packageName)) {
                     try {
                         val drawable = pm.getApplicationIcon(app.appInfo)
                         val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
                         iconCache[app.packageName] = bitmap
-                    } catch (e: Exception) {}
+                    } catch (e: Exception) {
+                        // Suppress icon failures
+                    }
                 }
             }
-
-            allApps = apps
-            isLoading = false
         }
     }
 
     val filteredApps = remember(searchQuery, allApps) {
         if (searchQuery.isEmpty()) allApps
-        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) || it.packageName.contains(searchQuery, ignoreCase = true) }
+        else allApps.filter { it.label.contains(searchQuery, ignoreCase = true) }
     }
 
     AlertDialog(
@@ -141,22 +151,21 @@ fun AppListItem(
     pm: PackageManager,
     onToggle: () -> Unit
 ) {
-    // Optimization: Read from cache synchronously to prevent frame flicker and redundant effects
-    val initialIcon = remember(app.packageName) { iconCache[app.packageName] }
-    var iconBitmap by remember(app.packageName) { mutableStateOf(initialIcon) }
+    // Zero-Friction Icon Loading: Check cache SYNCHRONOUSLY
+    var iconBitmap by remember(app.packageName) { mutableStateOf(iconCache[app.packageName]) }
     
+    // Only launch effect if not in cache (Lazy warming)
     if (iconBitmap == null) {
         LaunchedEffect(app.packageName) {
             withContext(Dispatchers.IO) {
                 try {
                     val drawable = pm.getApplicationIcon(app.appInfo)
-                    // Downscale significantly to save memory and improve scroll performance
-                    val bitmap = drawable.toBitmap(width = 96, height = 96).asImageBitmap()
+                    val bitmap = drawable.toBitmap(width = 100, height = 100).asImageBitmap()
                     iconCache[app.packageName] = bitmap
-                    iconBitmap = bitmap
-                } catch (e: Exception) {
-                    // Fallback handled by placeholder
-                }
+                    withContext(Dispatchers.Main) {
+                        iconBitmap = bitmap
+                    }
+                } catch (e: Exception) {}
             }
         }
     }
@@ -168,24 +177,30 @@ fun AppListItem(
         color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
     ) {
         Row(
-            modifier = Modifier
-                .padding(vertical = 8.dp, horizontal = 4.dp),
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(Modifier.size(40.dp)) {
+            Box(Modifier.size(42.dp)) {
                 iconBitmap?.let {
                     Image(
                         bitmap = it,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize()
                     )
-                } ?: Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.extraSmall))
+                } ?: Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                )
             }
             Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(app.label, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
-                // Removed Package Name (supportingContent) for cleaner look
-            }
+            Text(
+                text = app.label,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
             Checkbox(
                 checked = isSelected,
                 onCheckedChange = null
