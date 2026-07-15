@@ -2,10 +2,15 @@ package com.nssivashankar.pixelaod.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -17,13 +22,38 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.*
 
 /**
- * Official Material 3 Expressive Loading Indicator.
- * Strictly follows the "Idle -> Transition" rhythm for a premium feel.
+ * Official Material 3 Contained Expressive Loading Indicator.
+ * Wraps the expressive loader in a circular container as per 
+ * Widget.Material3.LoadingIndicator.Contained.
  */
 @Composable
 fun M3OfficialExpressiveLoader(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
+) {
+    // Wrapped in a Surface to match the "Contained" style from the documentation
+    Surface(
+        modifier = modifier.size(64.dp),
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
+        tonalElevation = 4.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            M3ExpressiveAnimation(
+                modifier = Modifier.size(32.dp),
+                color = color
+            )
+        }
+    }
+}
+
+/**
+ * The internal rhythmic morphing animation logic.
+ */
+@Composable
+private fun M3ExpressiveAnimation(
+    modifier: Modifier = Modifier,
+    color: Color
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "m3_expressive")
     
@@ -37,43 +67,28 @@ fun M3OfficialExpressiveLoader(
         label = "progress"
     )
 
-    Canvas(
-        modifier = modifier
-            .size(48.dp)
-    ) {
+    Canvas(modifier = modifier) {
         val size = size.minDimension
         val radius = size / 2
         val center = center
         
-        val currentStep = progress % 1.0f // 0.0 to 1.0 within one shape cycle
+        val currentStep = progress % 1.0f 
         val shapeIndex = progress.toInt() % 4
-        
-        // --- PHASE LOGIC ---
-        // 0.0 - 0.5: IDLE (Show static shape)
-        // 0.5 - 1.0: TRANSITION (Morph + Rotate + Pulse)
         
         val isTransitioning = currentStep > 0.5f
         val transitionProgress = if (isTransitioning) {
-            // Map 0.5-1.0 to 0.0-1.0 for the morph animation
             val raw = (currentStep - 0.5f) * 2f
-            // Use an organic easing for the "snap" feel
             FastOutSlowInEasing.transform(raw)
         } else 0f
 
-        // --- DYNAMIC PROPERTIES ---
-        // Rotation only happens during transition (90 degrees per step)
         val rotationZ = (shapeIndex * 90f) + (transitionProgress * 90f)
-        
-        // Scale pulse only during transition (subtle contraction)
         val pulseScale = 1.0f - (sin(transitionProgress * PI.toFloat()) * 0.12f)
 
-        // Determine Morphing Shapes
         val shapeStart = getShapeType(shapeIndex)
         val shapeEnd = getShapeType((shapeIndex + 1) % 4)
 
         val path = createMorphedPath(center, radius, shapeStart, shapeEnd, transitionProgress)
 
-        // Apply hardware-accelerated transformations using the correct drawscope API
         rotate(rotationZ, center) {
             scale(pulseScale, pulseScale, center) {
                 drawPath(path = path, color = color, style = Fill)
@@ -103,12 +118,10 @@ private fun createMorphedPath(
     
     for (i in 0 until resolution) {
         val angle = (i * 2 * PI / resolution).toFloat()
-        
         val rStart = getOrganicRadius(angle, radius, start)
         val rEnd = getOrganicRadius(angle, radius, end)
         
         val currentRadius = rStart + (rEnd - rStart) * progress
-        
         val x = center.x + cos(angle) * currentRadius
         val y = center.y + sin(angle) * currentRadius
         
@@ -125,21 +138,18 @@ private fun getOrganicRadius(angle: Float, maxRadius: Float, shape: M3Shape): Fl
         M3Shape.Square -> {
             val a = (angle + PI.toFloat() / 4) % (PI.toFloat() / 2) - (PI.toFloat() / 4)
             val squareRadius = (maxRadius * 0.9f) / cos(a)
-            // 75/25 blend for squircle feel
             squareRadius * 0.75f + maxRadius * 0.25f
         }
         
         M3Shape.Triangle -> {
             val a = (angle + PI.toFloat() / 6) % (2 * PI.toFloat() / 3) - (PI.toFloat() / 3)
             val triangleRadius = (maxRadius * 0.85f) / cos(a)
-            // 65/35 blend for organic corners
             triangleRadius * 0.65f + maxRadius * 0.35f
         }
         
         M3Shape.Star -> {
             val points = 8
             val innerRadius = maxRadius * 0.78f
-            // Wavy 8-point sunburst
             val wave = (sin(angle * points) + 1f) / 2f
             innerRadius + (maxRadius - innerRadius) * wave
         }
