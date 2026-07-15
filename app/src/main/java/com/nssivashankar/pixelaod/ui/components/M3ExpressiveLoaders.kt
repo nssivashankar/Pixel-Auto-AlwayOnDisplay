@@ -3,7 +3,6 @@ package com.nssivashankar.pixelaod.ui.components
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -23,33 +22,29 @@ import kotlin.math.*
 
 /**
  * Official Material 3 Contained Expressive Loading Indicator.
- * Wraps the expressive loader in a circular container as per 
- * Widget.Material3.LoadingIndicator.Contained.
+ * Strictly follows the documentation shapes: Circle, Rounded Square, 
+ * Rounded Triangle, and 10-Pointed Star.
  */
 @Composable
 fun M3OfficialExpressiveLoader(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary
 ) {
-    // Wrapped in a Surface to match the "Contained" style from the documentation
     Surface(
         modifier = modifier.size(64.dp),
         shape = CircleShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.8f),
-        tonalElevation = 4.dp
+        color = MaterialTheme.colorScheme.surfaceContainerHigh.copy(alpha = 0.9f),
+        tonalElevation = 6.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
             M3ExpressiveAnimation(
-                modifier = Modifier.size(32.dp),
+                modifier = Modifier.size(34.dp),
                 color = color
             )
         }
     }
 }
 
-/**
- * The internal rhythmic morphing animation logic.
- */
 @Composable
 private fun M3ExpressiveAnimation(
     modifier: Modifier = Modifier,
@@ -57,7 +52,7 @@ private fun M3ExpressiveAnimation(
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "m3_expressive")
     
-    // Total cycle: 4000ms (4 shapes, each 1000ms: 500ms idle + 500ms transition)
+    // Total cycle: 4000ms (1000ms per shape: 500ms idle + 500ms transition)
     val progress by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 4f,
@@ -82,7 +77,7 @@ private fun M3ExpressiveAnimation(
         } else 0f
 
         val rotationZ = (shapeIndex * 90f) + (transitionProgress * 90f)
-        val pulseScale = 1.0f - (sin(transitionProgress * PI.toFloat()) * 0.12f)
+        val pulseScale = 1.0f - (sin(transitionProgress * PI.toFloat()) * 0.15f)
 
         val shapeStart = getShapeType(shapeIndex)
         val shapeEnd = getShapeType((shapeIndex + 1) % 4)
@@ -114,7 +109,7 @@ private fun createMorphedPath(
     progress: Float
 ): Path {
     val path = Path()
-    val resolution = 120 
+    val resolution = 180 // Increased resolution for ultra-smooth organic curves
     
     for (i in 0 until resolution) {
         val angle = (i * 2 * PI / resolution).toFloat()
@@ -136,20 +131,26 @@ private fun getOrganicRadius(angle: Float, maxRadius: Float, shape: M3Shape): Fl
         M3Shape.Circle -> maxRadius
         
         M3Shape.Square -> {
+            // Rounded Square (Squircle)
             val a = (angle + PI.toFloat() / 4) % (PI.toFloat() / 2) - (PI.toFloat() / 4)
-            val squareRadius = (maxRadius * 0.9f) / cos(a)
-            squareRadius * 0.75f + maxRadius * 0.25f
+            val squareRadius = (maxRadius * 0.88f) / cos(a)
+            // Organic blend to ensure very soft corners
+            squareRadius * 0.7f + maxRadius * 0.3f
         }
         
         M3Shape.Triangle -> {
+            // Rounded Triangle
             val a = (angle + PI.toFloat() / 6) % (2 * PI.toFloat() / 3) - (PI.toFloat() / 3)
-            val triangleRadius = (maxRadius * 0.85f) / cos(a)
-            triangleRadius * 0.65f + maxRadius * 0.35f
+            val triangleRadius = (maxRadius * 0.82f) / cos(a)
+            // High blend for "liquid" corners
+            triangleRadius * 0.6f + maxRadius * 0.4f
         }
         
         M3Shape.Star -> {
-            val points = 8
-            val innerRadius = maxRadius * 0.78f
+            // Official 10-Pointed Star (Sunburst)
+            val points = 10 
+            val innerRadius = maxRadius * 0.72f
+            // Wavy sunburst logic for rounded peaks
             val wave = (sin(angle * points) + 1f) / 2f
             innerRadius + (maxRadius - innerRadius) * wave
         }
