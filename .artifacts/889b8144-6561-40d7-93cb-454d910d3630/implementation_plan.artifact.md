@@ -1,32 +1,32 @@
-# Implementation Plan - Release v1.1.2
+# Implementation Plan - Dynamic Battery Completion Notification
 
-We will finalize the current state of the app and release version **v1.1.2**, featuring the new onboarding flow and critical synchronization fixes.
+We will fix the bug where the battery completion notification hardcodes "80%" even when a custom limit (e.g., 85%) is set.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Release Signing**: I will use the same signing credentials provided previously (`nssivashankar` / `shankarc`) to build the signed stable APK.
-> **GitHub Release**: This will create a new release entry `v1.1.2` and move the `latest` tag to this version.
+> [!NOTE]
+> I will make the notification title and text dynamic based on the current custom limit.
+> I will also update the onboarding description to be more accurate regarding custom limits.
 
 ## Proposed Changes
 
-### Versioning
+### Notification Logic
 
-#### [MODIFY] [build.gradle](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/build.gradle)
-- Update `versionName` to `"1.1.2"`.
-- Increment `versionCode` to `12`.
+#### [MODIFY] [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
+- Update `checkBatteryCompletion` signature to accept `customLimitEnabled` and `customTarget`.
+- Replace hardcoded `"80%"` strings with dynamic values using the active target (80 or custom).
+- Update the trigger condition to correctly detect when the custom target is reached.
+- Pass the necessary parameters from `onReceive`'s `ACTION_BATTERY_CHANGED` block.
 
-### Documentation
+### Onboarding UI
 
-#### [MODIFY] [README.md](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/README.md)
-- Update release highlights with the new Onboarding Flow and reliability fixes.
-
-### Release Operations
-- **Commit**: Stash all current improvements (Setup Screen, State Sync, Permission Fixes).
-- **Tag**: Create git tag `v1.1.2`.
-- **Build**: Generate signed stable APK.
-- **Publish**: Push to GitHub and create a formal release via `gh cli`.
+#### [MODIFY] [SetupScreen.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/ui/screens/SetupScreen.kt)
+- Update the `PostNotificationsPage` description to say "custom limit (e.g., 80%)" instead of just "80%".
 
 ## Verification Plan
-- Verify `app-release.apk` is generated successfully.
-- Verify GitHub release `v1.1.2` is accessible with the correct notes and asset.
+
+### Manual Verification
+1. Set a custom limit of 85% in the app.
+2. Charge the device.
+3. Verify that when 85% is reached, the notification says "**85% Charging Complete**" and "**Battery has reached 85% limit**".
+4. Verify that clicking "Full Charge" correctly resumes charging to 100%.

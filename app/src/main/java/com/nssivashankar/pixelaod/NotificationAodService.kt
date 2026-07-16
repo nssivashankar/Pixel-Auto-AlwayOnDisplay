@@ -156,7 +156,7 @@ class NotificationAodService : NotificationListenerService() {
                     }
                     updateAodState()
                     updateChargingNotification(intent)
-                    checkBatteryCompletion(pct, status, optMode)
+                    checkBatteryCompletion(pct, status, optMode, customLimitEnabled, customTarget)
                 }
                 NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED -> {
                     updateDndStatus()
@@ -176,16 +176,17 @@ class NotificationAodService : NotificationListenerService() {
 
     private var lastAlertedPct = -1
 
-    private fun checkBatteryCompletion(pct: Int, status: Int, optMode: Int) {
+    private fun checkBatteryCompletion(pct: Int, status: Int, optMode: Int, customLimitEnabled: Boolean, customTarget: Int) {
         if (!isCharging || pct == -1) return
-        val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        
+        val activeTarget = if (customLimitEnabled) customTarget else 80
 
-        // Alert for 80% completion when mode is 80%
-        if (optMode == 1 && pct >= 80 && lastAlertedPct < 80) {
-            lastAlertedPct = 80
+        // Alert for completion when mode is 80% or custom limit is reached
+        if (((optMode == 1 && !customLimitEnabled && pct >= 80) || (customLimitEnabled && pct >= customTarget)) && lastAlertedPct < activeTarget) {
+            lastAlertedPct = activeTarget
             sendCompletionNotification(
-                "80% Charging Complete",
-                "Battery has reached 80% limit. Want to continue to 100%?",
+                "$activeTarget% Charging Complete",
+                "Battery has reached $activeTarget% limit. Want to continue to 100%?",
                 true
             )
         } 

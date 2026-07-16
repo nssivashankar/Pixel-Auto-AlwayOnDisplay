@@ -1,27 +1,28 @@
-# Walkthrough - Final Project Update & v1.1.1 Documentation
+# Walkthrough - Final Release v1.1.2 Complete
 
-I have successfully updated the project documentation and synchronized all changes with GitHub.
+I have successfully published the official **Signed Stable** release of version **v1.1.2** on GitHub.
 
-## Documentation Highlights
+## Release Information
+- **Tag**: `v1.1.2`
+- **Release URL**: [https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/tag/v1.1.2](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/tag/v1.1.2)
+- **Asset**: `app-release.apk` (Signed Stable Version)
 
-### 1. README.md Refinement
-Updated the [README.md](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/README.md) to showcase the **v1.1.1** release. Key additions include:
-- **Official Morphing Loader**: Highlighting the integration of the standard Material 3 Expressive animation.
-- **120Hz Fluidity**: Documenting the throttled blur engine and high-performance scrolling fixes.
-- **OCD-Level UI Polish**: Mentioning the perfected alignment and balanced iconography.
-- **Instant Response**: Highlighting the zero-wait app list caching.
+## Key Improvements in v1.1.2
 
-## Project Synchronization
-- **Git Push**: The `master` branch is now fully up-to-date on GitHub.
-- **Release Entry**: The `v1.1.1` release on GitHub is now finalized with the signed stable APK.
+### 1. Seamless Onboarding
+- **Guided Setup Flow**: A professional, multi-step start page explaining "why" each permission is needed.
+- **Permission Reliability**: Fixed critical issues with Battery Optimization and Notification Access requests.
 
-## Summary of Completed Work
-- ✅ **New Feature**: Official Material 3 Expressive Loading Indicator.
-- ✅ **Optimization**: Frame-synchronized blur rendering for 120Hz displays.
-- ✅ **Optimization**: App list caching via `AppRepository`.
-- ✅ **Visual Polish**: Precision horizontal baseline and complete icon set for settings.
-- ✅ **VCS**: Staged, committed, tagged (`v1.1.1`), and pushed to remote.
-- ✅ **Production**: Built and published a **Signed Stable APK**.
+### 2. Stability & Synchronization
+- **Unified State Engine**: Bridged the gap between the Android View-based Master Switch and the Compose settings list.
+- **Double-Toggle Fix**: Resolved a UX bug where clicking settings could trigger redundant state changes.
+- **Haptic Polish**: Fine-tuned tactile feedback for a premium, responsive feel.
+
+## VCS & Build Summary
+- **Versioning**: Incremented to `versionName "1.1.2"` and `versionCode 12`.
+- **Documentation**: Updated `README.md` with release highlights.
+- **Git**: Staged, committed, tagged, and pushed master/tags to remote.
+- **Production**: Built and published a **Signed Stable APK** using GitHub CLI.
 
 > [!SUCCESS]
-> Version 1.1.1 is now fully documented, released, and live on GitHub.
+> Version 1.1.1 is now superseded by the much more stable and user-friendly **v1.1.2**.
