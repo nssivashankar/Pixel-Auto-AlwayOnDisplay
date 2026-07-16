@@ -76,15 +76,27 @@ class NotificationAodService : NotificationListenerService() {
                 ACTION_OPT_OFF -> {
                     AodSettings.setChargeOptimizationMode(contentResolver, 0)
                     AodSettings.setAdaptiveChargingEnabled(contentResolver, false)
+                    getPrefs().edit { 
+                        putString("charge_optimization", "0")
+                        putBoolean("custom_limit_enabled", false)
+                    }
                     updateChargingNotification(null)
                 }
                 ACTION_OPT_80 -> {
                     AodSettings.setChargeOptimizationMode(contentResolver, 1)
+                    getPrefs().edit { 
+                        putString("charge_optimization", "1")
+                        putBoolean("custom_limit_enabled", false)
+                    }
                     updateChargingNotification(null)
                 }
                 ACTION_OPT_ADAPTIVE -> {
                     AodSettings.setChargeOptimizationMode(contentResolver, 2)
                     AodSettings.setAdaptiveChargingEnabled(contentResolver, true)
+                    getPrefs().edit { 
+                        putString("charge_optimization", "2")
+                        putBoolean("custom_limit_enabled", false)
+                    }
                     updateChargingNotification(null)
                 }
                 ACTION_FULL_CHARGE -> {
@@ -289,7 +301,7 @@ class NotificationAodService : NotificationListenerService() {
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(receiver, filter, RECEIVER_NOT_EXPORTED)
+            registerReceiver(receiver, filter, RECEIVER_EXPORTED)
         } else {
             registerReceiver(receiver, filter)
         }
@@ -557,61 +569,83 @@ class NotificationAodService : NotificationListenerService() {
         
         val wattageStr = String.format(java.util.Locale.US, "%.1fW", currentWattage)
 
-        var timeToFull = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        val systemTimeToFull = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
             bm.computeChargeTimeRemaining()
         } else {
             -1L
         }
 
-        // Manual fallback: If system fails to calculate (heat/low power), we do the math
-        if (timeToFull <= 0 && currentNow > 0 && batteryPct != -1 && batteryPct < 100) {
-            val currentMa = Math.abs(currentNow) / 1000.0
-            if (currentMa > 50) { // Need at least some current to estimate
-                val pctRemaining = (100 - batteryPct)
-                // More conservative estimate: Pixel batteries are ~5000mAh. 
-                // 1% is approx 50mAh. We use 55mAh to account for heat/screen efficiency loss.
-                val mAhRemaining = pctRemaining * 55.0
-                timeToFull = ((mAhRemaining / currentMa) * 3600.0 * 1000.0).toLong()
-            }
-        }
-
-        val targetTimeMillis = if (timeToFull > 0) {
-            val now = System.currentTimeMillis()
-            val limit = if (customLimitEnabled) customTarget else 80
+        val currentMa = Math.abs(currentNow) / 1000.0
+        // Natural estimate: 50mAh per 1% (approx for Pixel series)
+        val msPerPct = if (currentMa > 100) (50.0 / currentMa * 3600.0 * 1000.0).toLong() else 0L
+        
+        val now = System.currentTimeMillis()
+        val limit = if (customLimitEnabled) customTarget else 80
+        
+        val targetTimestampMillis = when {
+            batteryPct >= 100 -> 0L
             
-            if (batteryPct != -1 && batteryPct < limit) {
-                // Proportional ETA to target limit (80% or Custom)
-                val pctToLimit = (limit - batteryPct).toDouble()
-                val totalPctToFull = (100 - batteryPct).toDouble()
-                val ratio = pctToLimit / totalPctToFull
-                val estimatedTimeToLimit = (timeToFull * ratio).toLong()
-                
-                // Ensure at least 3 mins per 1%
-                val minimumBuffer = (pctToLimit * 2.5 * 60 * 1000).toLong() 
-                now + Math.max(estimatedTimeToLimit, minimumBuffer)
-            } else {
-                now + timeToFull
+            batteryPct < limit -> {
+                if (optMode == 1 && systemTimeToFull > 0) {
+                    // When "Limit to 80%" is active, system ETA targets 80%
+                    now + systemTimeToFull
+                } else {
+                    val pctsToLimit = limit - batteryPct
+                    val naturalTimeToLimit = pctsToLimit * msPerPct
+                    
+                    if (systemTimeToFull > 0) {
+                        // Detect Adaptive Charging (which inflates ETA to morning)
+                        val pctsToFull = 100 - batteryPct
+                        val naturalTimeToFull = (pctsToFull * msPerPct * 1.3).toLong() // +30% for trickle
+                        
+                        if (systemTimeToFull > naturalTimeToFull * 1.5) {
+                            // High discrepancy -> Adaptive Charging. Use natural speed to reach limit.
+                            if (naturalTimeToLimit > 0) now + naturalTimeToLimit else 0L
+                        } else {
+                            // Use system ETA with a non-linear weight to account for the slow 80-100% phase
+                            val weightToLimit = pctsToLimit.toDouble()
+                            val weightRemaining = (100 - limit) * 2.5 // Trickle phase is ~2.5x slower
+                            val ratio = weightToLimit / (weightToLimit + weightRemaining)
+                            now + (systemTimeToFull * ratio).toLong()
+                        }
+                    } else {
+                        if (naturalTimeToLimit > 0) now + naturalTimeToLimit else 0L
+                    }
+                }
             }
-        } else {
-            0L
+            
+            else -> { // batteryPct >= limit, targeting 100%
+                if (systemTimeToFull > 0) {
+                    now + systemTimeToFull
+                } else {
+                    val naturalTime = (100 - batteryPct) * msPerPct * 2 // Trickle phase fallback
+                    if (naturalTime > 0) now + naturalTime else 0L
+                }
+            }
         }
 
-        val timeStr = if (targetTimeMillis > 0) {
-            val limit = if (customLimitEnabled) customTarget else 80
+        val timeStr = if (targetTimestampMillis > now) {
+            val clockTimeStr = formatToClockTime(targetTimestampMillis)
             if (batteryPct != -1 && batteryPct < limit) {
                 if (customLimitEnabled) {
-                    getString(R.string.charging_info_time_remaining_custom, limit.toString(), formatToClockTime(targetTimeMillis))
+                    getString(R.string.charging_info_time_remaining_custom, limit.toString(), clockTimeStr)
                 } else {
-                    getString(R.string.charging_info_time_remaining_80, formatToClockTime(targetTimeMillis))
+                    getString(R.string.charging_info_time_remaining_80, clockTimeStr)
                 }
             } else {
-                getString(R.string.charging_info_time_remaining_100, formatToClockTime(targetTimeMillis))
+                getString(R.string.charging_info_time_remaining_100, clockTimeStr)
             }
         } else {
             "Calculating..."
         }
 
-        val tempStr = String.format(java.util.Locale.US, "%.1f°C", temperature)
+        val tempUnit = prefs.getString("temp_unit", "C") ?: "C"
+        val tempStr = if (tempUnit == "F") {
+            val temperatureF = (temperature * 9/5) + 32
+            String.format(java.util.Locale.US, "%.1f°F", temperatureF)
+        } else {
+            String.format(java.util.Locale.US, "%.1f°C", temperature)
+        }
 
         val contentIntent = android.app.PendingIntent.getActivity(
             this, 0, Intent(this, SettingsActivity::class.java),
@@ -673,10 +707,10 @@ class NotificationAodService : NotificationListenerService() {
         val extras = android.os.Bundle()
         extras.putBoolean("android.requestPromotedOngoing", true)
 
-        if (targetTimeMillis > 0) {
+        if (targetTimestampMillis > 0) {
             notificationBuilder.setCategory("progress")
-            notificationBuilder.setWhen(targetTimeMillis)
-            val timeOnly = formatToClockTime(targetTimeMillis)
+            notificationBuilder.setWhen(targetTimestampMillis)
+            val timeOnly = formatToClockTime(targetTimestampMillis)
             val currentLimit = if (customLimitEnabled) customTarget else 80
             val pillText = if (batteryPct != -1 && batteryPct < currentLimit) "$currentLimit% $timeOnly" else "Full $timeOnly"
             extras.putString("android.shortCriticalText", pillText)

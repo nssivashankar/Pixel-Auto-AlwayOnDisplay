@@ -1,8 +1,5 @@
-- [ ] Fix hardcoded "80%" in battery completion notification
-    - [ ] Update `checkBatteryCompletion` signature and logic in `NotificationAodService.kt`
-    - [ ] Make notification title and text dynamic based on custom limit
-- [ ] Update `SetupScreen.kt` description for battery alerts
-- [ ] Release v1.1.3
-    - [ ] Bump version to `1.1.3` in `build.gradle`
-    - [ ] Build and tag release
-    - [ ] Upload to GitHub
+- [ ] Update version to 1.1.4 in `app/build.gradle`
+- [ ] Commit all changes
+- [ ] Push to master
+- [ ] Create and push tag `v1.1.4`
+- [ ] Verify GitHub Actions status

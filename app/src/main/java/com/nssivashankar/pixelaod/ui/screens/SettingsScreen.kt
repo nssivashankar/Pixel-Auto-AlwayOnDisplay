@@ -4,8 +4,13 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.database.ContentObserver
+import android.net.Uri
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
@@ -55,12 +60,48 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
+    var tempUnit by mutableStateOf(prefs.getString("temp_unit", "C") ?: "C")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
+
+    private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+            currentOptimizationMode = AodSettings.getChargeOptimizationMode(resolver)
+        }
+    }
+
+    private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { p, key ->
+        when (key) {
+            "master_switch" -> masterSwitch = p.getBoolean(key, false)
+            "charging_mode" -> chargingMode = p.getBoolean(key, false)
+            "charging_info_notif" -> chargingInfoNotif = p.getBoolean(key, false)
+            "live_notif_mode" -> liveNotifMode = p.getBoolean(key, false)
+            "dnd_mode" -> dndMode = p.getBoolean(key, false)
+            "scheduled_dnd" -> scheduledDnd = p.getBoolean(key, false)
+            "custom_limit_enabled" -> customLimitEnabled = p.getBoolean(key, false)
+            "custom_charging_limit" -> customLimit = p.getInt(key, 80)
+            "temp_unit" -> tempUnit = p.getString(key, "C") ?: "C"
+        }
+    }
+
+    fun startObserving() {
+        AodSettings.OBSERVABLE_SECURE_SETTINGS.forEach { setting ->
+            resolver.registerContentObserver(
+                AndroidSettings.Secure.getUriFor(setting),
+                false,
+                settingsObserver
+            )
+        }
+        prefs.registerOnSharedPreferenceChangeListener(prefListener)
+    }
+
+    fun stopObserving() {
+        resolver.unregisterContentObserver(settingsObserver)
+        prefs.unregisterOnSharedPreferenceChangeListener(prefListener)
+    }
 
     fun updateMasterSwitch(enabled: Boolean) {
         masterSwitch = enabled
         prefs.edit().putBoolean("master_switch", enabled).apply()
-        AodSettings.setAodEnabled(resolver, enabled)
     }
 
     fun updateChargingMode(enabled: Boolean) {
@@ -91,6 +132,11 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     fun updateCustomLimit(limit: Int) {
         customLimit = limit
         prefs.edit().putInt("custom_charging_limit", limit).apply()
+    }
+
+    fun updateTempUnit(unit: String) {
+        tempUnit = unit
+        prefs.edit().putString("temp_unit", unit).apply()
     }
 
     fun setOptimization(mode: Int, custom: Boolean) {
@@ -124,6 +170,11 @@ fun SettingsScreen(
     
     val state = remember { SettingsState(context, scope) }
     var currentTab by remember { mutableIntStateOf(0) }
+
+    DisposableEffect(state) {
+        state.startObserving()
+        onDispose { state.stopObserving() }
+    }
 
     // Sync external master switch state to state holder
     LaunchedEffect(masterSwitchEnabled) {
@@ -246,6 +297,36 @@ fun MainSettingsList(
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
+    var showTempUnitDialog by remember { mutableStateOf(false) }
+
+    if (showTempUnitDialog) {
+        AlertDialog(
+            onDismissRequest = { showTempUnitDialog = false },
+            title = { Text("Temperature Unit") },
+            text = {
+                Column {
+                    listOf("Celsius (°C)" to "C", "Fahrenheit (°F)" to "F").forEach { (label, unit) ->
+                        Row(
+                            Modifier.fillMaxWidth().clickable {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                state.updateTempUnit(unit)
+                                showTempUnitDialog = false
+                            }.padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.tempUnit == unit,
+                                onClick = null
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showTempUnitDialog = false }) { Text("Done") } }
+        )
+    }
 
     if (showChargingModeDialog) {
         AlertDialog(
@@ -348,6 +429,11 @@ fun MainSettingsList(
                 onCheckedChange = { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     state.updateChargingInfoNotif(it)
+                },
+                showSecondaryAction = true,
+                onSecondaryActionClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showTempUnitDialog = true
                 }
             )
         }

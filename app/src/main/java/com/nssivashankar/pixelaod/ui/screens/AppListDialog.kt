@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -115,11 +116,12 @@ fun AppListDialog(
                                 key = { it.packageName },
                                 contentType = { "app_item" } // Optimization for list recycling
                             ) { app ->
+                                val isSelected = currentSelected.contains(app.packageName)
                                 AppListItem(
                                     app = app,
-                                    isSelected = currentSelected.contains(app.packageName),
+                                    isSelected = isSelected,
                                     onToggle = {
-                                        if (currentSelected.contains(app.packageName)) {
+                                        if (isSelected) {
                                             currentSelected.remove(app.packageName)
                                         } else {
                                             currentSelected.add(app.packageName)
@@ -152,53 +154,63 @@ fun AppListItem(
     onToggle: () -> Unit
 ) {
     val context = LocalContext.current
+    
+    // Performance: Use the cached icon if available immediately to avoid flicker
     var iconBitmap by remember(app.packageName) { 
         mutableStateOf(AppRepository.getCachedIcon(app.packageName)) 
     }
     
-    // --- Performance: Lazy-load icons in background ---
+    // Performance: Lazy-load icons in background only if not cached
     if (iconBitmap == null) {
         LaunchedEffect(app.packageName) {
-            val bitmap = AppRepository.getIcon(context, app.appInfo)
-            iconBitmap = bitmap
+            iconBitmap = AppRepository.getIcon(context, app.appInfo)
         }
     }
 
-    Surface(
-        onClick = onToggle,
-        modifier = Modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.small,
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier.padding(vertical = 10.dp, horizontal = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(Modifier.size(42.dp)) {
-                iconBitmap?.let {
+    // Performance: Use a flat ListItem instead of a custom Row with Surface
+    // Material 3 ListItem is highly optimized for scrolling lists
+    ListItem(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle),
+        leadingContent = {
+            Box(
+                modifier = Modifier.size(42.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (iconBitmap != null) {
                     Image(
-                        bitmap = it,
+                        bitmap = iconBitmap!!,
                         contentDescription = null,
                         modifier = Modifier.fillMaxSize()
                     )
-                } ?: Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+        },
+        trailingContent = {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = null // Click handled by parent ListItem
+            )
+        },
+        colors = ListItemDefaults.colors(
+            containerColor = if (isSelected) 
+                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) 
+                else Color.Transparent
+        ),
+        headlineContent = {
             Text(
                 text = app.label,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = null
+                overflow = TextOverflow.Ellipsis
             )
         }
-    }
+    )
 }

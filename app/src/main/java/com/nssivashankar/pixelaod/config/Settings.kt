@@ -10,6 +10,12 @@ object Settings {
     const val CHARGE_OPTIMIZATION_MODE = "charge_optimization_mode"
     const val ADAPTIVE_CHARGING_ENABLED = "adaptive_charging_enabled"
 
+    val OBSERVABLE_SECURE_SETTINGS = listOf(
+        DOZE_ALWAYS_ON,
+        CHARGE_OPTIMIZATION_MODE,
+        ADAPTIVE_CHARGING_ENABLED
+    )
+
     fun isAodEnabled(contentResolver: ContentResolver): Boolean {
         return try {
             AndroidSettings.Secure.getInt(contentResolver, DOZE_ALWAYS_ON) == 1

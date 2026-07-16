@@ -1,32 +1,34 @@
-# Implementation Plan - Dynamic Battery Completion Notification
+# Push and Release v1.1.4
 
-We will fix the bug where the battery completion notification hardcodes "80%" even when a custom limit (e.g., 85%) is set.
+This plan covers updating the app version, committing all recent improvements, and pushing a new tag to GitHub to trigger the automated release workflow.
 
 ## User Review Required
 
-> [!NOTE]
-> I will make the notification title and text dynamic based on the current custom limit.
-> I will also update the onboarding description to be more accurate regarding custom limits.
+> [!IMPORTANT]
+> This action will push all local changes to the `master` branch and create a new public release on GitHub.
 
 ## Proposed Changes
 
-### Notification Logic
+### Configuration
 
-#### [MODIFY] [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
-- Update `checkBatteryCompletion` signature to accept `customLimitEnabled` and `customTarget`.
-- Replace hardcoded `"80%"` strings with dynamic values using the active target (80 or custom).
-- Update the trigger condition to correctly detect when the custom target is reached.
-- Pass the necessary parameters from `onReceive`'s `ACTION_BATTERY_CHANGED` block.
+#### [MODIFY] [app/build.gradle](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/build.gradle)
+- Update `versionName` from `1.1.3` to `1.1.4`.
 
-### Onboarding UI
+### Version Control
 
-#### [MODIFY] [SetupScreen.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/ui/screens/SetupScreen.kt)
-- Update the `PostNotificationsPage` description to say "custom limit (e.g., 80%)" instead of just "80%".
+1. **Commit Changes**:
+   - Message: "Release v1.1.4: Reliable notification actions, real-time settings sync, ETA accuracy improvements, and app list optimizations."
+2. **Push to master**:
+   - `git push origin master`
+3. **Create Tag**:
+   - `git tag v1.1.4`
+4. **Push Tag**:
+   - `git push origin v1.1.4`
 
 ## Verification Plan
 
+### Automated Verification
+- GitHub Actions will automatically start the "Build and Release APK" workflow. I will provide a link to the actions tab for monitoring.
+
 ### Manual Verification
-1. Set a custom limit of 85% in the app.
-2. Charge the device.
-3. Verify that when 85% is reached, the notification says "**85% Charging Complete**" and "**Battery has reached 85% limit**".
-4. Verify that clicking "Full Charge" correctly resumes charging to 100%.
+- Verify the new release appears on the GitHub repository's Release page with the signed APK attached.

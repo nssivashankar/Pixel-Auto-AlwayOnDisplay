@@ -70,7 +70,6 @@ class SettingsActivity : AppCompatActivity() {
                 view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
             }
             prefs.edit { putBoolean("master_switch", isChecked) }
-            AodSettings.setAodEnabled(contentResolver, isChecked)
             masterSwitchEnabled = isChecked
         }
 
