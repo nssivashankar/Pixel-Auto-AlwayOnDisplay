@@ -44,12 +44,20 @@ jobs:
             exit 1
           fi
 
-      - name: Build and Sign Release APK
+      - name: Determine Version
+        id: version
         run: |
-          # Sanitize VERSION_NAME: Strip 'v' prefix if present
-          RAW_VERSION="${{ github.ref_type == 'tag' && github.ref_name || '1.1.6' }}"
-          VERSION_NAME=$(echo $RAW_VERSION | sed 's/^v//')
-          ./gradlew assembleRelease -PversionName=$VERSION_NAME
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            RAW_VERSION="${{ github.ref_name }}"
+            VERSION_NAME="${RAW_VERSION#v}"
+          else
+            VERSION_NAME="1.1.6"
+          fi
+          echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION_NAME"
+
+      - name: Build and Sign Release APK
+        run: ./gradlew assembleRelease -PversionName=${{ steps.version.outputs.version_name }}
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
