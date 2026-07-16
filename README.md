@@ -6,12 +6,10 @@ Pixel Auto AOD is a high-performance utility designed specifically for Google Pi
 
 ---
 
-### 📺 Feature Showcase
-
-<div align="center">
-  <video src="https://github.com/user-attachments/assets/8eb3a271-120a-4d18-9030-ed0ce7ee6406" width="400">
+<p align="center">
+  <video src="https://github.com/user-attachments/assets/8eb3a271-120a-4d18-9030-ed0ce7ee6406" width="350" muted autoplay loop>
   </video>
-</div>
+</p>
 
 ---
 
