@@ -1,5 +1,6 @@
-- [ ] Update version to 1.1.5 in `app/build.gradle`
-- [ ] Commit all changes
-- [ ] Push to master
-- [ ] Create and push tag `v1.1.5`
-- [ ] Verify GitHub Actions status
+- [ ] Update version to 1.1.6 in `app/build.gradle`
+- [ ] Fix `UpdateChecker.kt` (User-Agent, Cache, Robustness)
+- [ ] Update `build.yml` to sanitize version names
+- [ ] Commit all changes for v1.1.6
+- [ ] Create and push tag `v1.1.6`
+- [ ] Verify GitHub Release status

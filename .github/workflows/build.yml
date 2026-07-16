@@ -46,7 +46,9 @@ jobs:
 
       - name: Build and Sign Release APK
         run: |
-          VERSION_NAME="${{ github.ref_type == 'tag' && github.ref_name || '1.0.9' }}"
+          # Sanitize VERSION_NAME: Strip 'v' prefix if present
+          RAW_VERSION="${{ github.ref_type == 'tag' && github.ref_name || '1.1.6' }}"
+          VERSION_NAME=$(echo $RAW_VERSION | sed 's/^v//')
           ./gradlew assembleRelease -PversionName=$VERSION_NAME
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false"

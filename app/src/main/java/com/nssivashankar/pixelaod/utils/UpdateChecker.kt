@@ -43,6 +43,9 @@ object UpdateChecker {
                 connection.requestMethod = "GET"
                 connection.connectTimeout = 5000
                 connection.readTimeout = 5000
+                connection.setRequestProperty("User-Agent", "Pixel-Auto-AOD")
+                connection.useCaches = false
+                connection.defaultUseCaches = false
 
                 if (connection.responseCode == 200) {
                     val response = connection.inputStream.bufferedReader().use { it.readText() }
@@ -77,14 +80,19 @@ object UpdateChecker {
     }
 
     private fun isNewerVersion(current: String, latest: String): Boolean {
-        // Sanitize: Remove 'v' and any non-numeric suffixes (e.g., "-debug")
-        val cleanCurrent = current.lowercase().replace("v", "").split("-")[0]
-        val cleanLatest = latest.lowercase().replace("v", "").split("-")[0]
+        // Advanced Sanitize: Handle 'v' prefix, suffixes, and empty strings
+        fun clean(v: String) = v.lowercase().replace("v", "").split("-")[0].trim()
+        
+        val cleanCurrent = clean(current)
+        val cleanLatest = clean(latest)
+
+        if (cleanCurrent == cleanLatest) return false
 
         val currParts = cleanCurrent.split(".").mapNotNull { it.toIntOrNull() }
         val lateParts = cleanLatest.split(".").mapNotNull { it.toIntOrNull() }
         
-        for (i in 0 until maxOf(currParts.size, lateParts.size)) {
+        val maxLen = maxOf(currParts.size, lateParts.size)
+        for (i in 0 until maxLen) {
             val currVal = currParts.getOrElse(i) { 0 }
             val lateVal = lateParts.getOrElse(i) { 0 }
             
