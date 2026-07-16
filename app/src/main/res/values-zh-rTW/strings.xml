@@ -19,6 +19,9 @@
     <string name="charging_info_time_remaining_80">80%% 剩餘 %1$s</string>
     <string name="charging_info_time_remaining_custom">%1$s%% 剩餘 %2$s</string>
     <string name="charging_info_time_remaining_100">充滿剩餘 %1$s</string>
+    <string name="unit_system_title">單位</string>
+    <string name="unit_system_metric">公制</string>
+    <string name="unit_system_imperial">英制</string>
     <string name="battery_health_title">電池健康 (僅限 Pixel)</string>
     <string name="charge_optimization_title">充電最佳化</string>
     <string name="charge_optimization_summary">限制充電至 80%% 或使用智慧充電</string>

@@ -236,6 +236,7 @@ class NotificationAodService : NotificationListenerService() {
             "scheduled_dnd_start",
             "scheduled_dnd_end",
             "charging_info_notif",
+            "unit_system",
             "custom_limit_enabled",
             "custom_charging_limit"
             -> {
@@ -611,7 +612,11 @@ class NotificationAodService : NotificationListenerService() {
             "Calculating..."
         }
 
-        val tempStr = String.format(java.util.Locale.US, "%.1f°C", temperature)
+        val tempStr = if (prefs.getString("unit_system", "metric") == "imperial") {
+            String.format(java.util.Locale.US, "%.1f°F", temperature * 9.0 / 5.0 + 32.0)
+        } else {
+            String.format(java.util.Locale.US, "%.1f°C", temperature)
+        }
 
         val contentIntent = android.app.PendingIntent.getActivity(
             this, 0, Intent(this, SettingsActivity::class.java),

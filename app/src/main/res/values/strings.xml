@@ -18,6 +18,9 @@
     <string name="charging_info_time_remaining_80">80%% in %1$s</string>
     <string name="charging_info_time_remaining_custom">%1$s%% in %2$s</string>
     <string name="charging_info_time_remaining_100">Full in %1$s</string>
+    <string name="unit_system_title">Unit</string>
+    <string name="unit_system_metric">Metric</string>
+    <string name="unit_system_imperial">Imperial</string>
     <string name="battery_health_title">Battery Health (Pixel Only)</string>
     <string name="charge_optimization_title">Charging Optimization</string>
     <string name="charge_optimization_summary">Limit charging to 80%% or use Adaptive Charging</string>

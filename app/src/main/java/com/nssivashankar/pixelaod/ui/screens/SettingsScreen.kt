@@ -51,6 +51,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var chargingMode by mutableStateOf(prefs.getBoolean("charging_mode", false))
     var chargingInfoNotif by mutableStateOf(prefs.getBoolean("charging_info_notif", false))
     var liveNotifMode by mutableStateOf(prefs.getBoolean("live_notif_mode", false))
+    var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric") //default is celsius
     var dndMode by mutableStateOf(prefs.getBoolean("dnd_mode", false))
     var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
@@ -76,6 +77,11 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     fun updateLiveNotifMode(enabled: Boolean) {
         liveNotifMode = enabled
         prefs.edit().putBoolean("live_notif_mode", enabled).apply()
+    }
+
+    fun updateUnitSystem(system: String) {
+        unitSystem = system
+        prefs.edit().putString("unit_system", system).apply()
     }
 
     fun updateDndMode(enabled: Boolean) {
@@ -246,6 +252,44 @@ fun MainSettingsList(
     var showAppListDialog by remember { mutableStateOf(false) }
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
+    var showUnitSystemDialog by remember { mutableStateOf(false) }
+
+    if (showUnitSystemDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnitSystemDialog = false },
+            title = { Text(stringResource(R.string.unit_system_title)) },
+            text = {
+                Column {
+                    listOf(
+                        stringResource(R.string.unit_system_metric) to "metric",
+                        stringResource(R.string.unit_system_imperial) to "imperial"
+                    ).forEach { (label, value) ->
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    state.updateUnitSystem(value)
+                                    showUnitSystemDialog = false
+                                }
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = state.unitSystem == value,
+                                onClick = null
+                            )
+                            Spacer(Modifier.width(16.dp))
+                            Text(label)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showUnitSystemDialog = false }) { Text("Done") }
+            }
+        )
+    }
 
     if (showChargingModeDialog) {
         AlertDialog(
@@ -348,6 +392,11 @@ fun MainSettingsList(
                 onCheckedChange = { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     state.updateChargingInfoNotif(it)
+                },
+                showSecondaryAction = true,
+                onSecondaryActionClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showUnitSystemDialog = true
                 }
             )
         }
