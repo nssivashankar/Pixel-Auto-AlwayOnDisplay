@@ -17,10 +17,15 @@ https://github.com/user-attachments/assets/8eb3a271-120a-4d18-9030-ed0ce7ee6406
 
 ## 🚀 Key Features
 
-### 🔋 Integrated Battery Health (Pixel Only)
+### 🔋 Ease of Charging mode control
 | Feature Details | Preview |
 | :--- | :---: |
-| - **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app.<br><br>- **⭐ Custom Limits**: Set your own charging thresholds (80%–95%) with a smooth Material 3 slider.<br><br>- **Unified Sync**: Real-time synchronization between system settings, the app UI, and the notification quick actions. | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="200" alt="Integrated Health" /> |
+| - **Direct Optimization Control**: Toggle between **Charging Optimization (80% Limit)** and **Adaptive Charging** directly from the app/lockscreen notification.<br><br> | <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="200" alt="Integrated Health" /> |
+
+### 🔋 Custom Charging Limits (First App in market to include this feature)
+| Feature Details | Preview |
+| :--- | :---: |
+| - **⭐ Custom Charging Limits**: Set your own charging Limit (80%–100%) once the limit is reached it will stop the charging.<br><br> | <img src="https://github.com/user-attachments/assets/1463e0dc-89a0-450f-88b3-00b0c79e4f91" width="200" alt="Integrated Health" /> |
 
 ### ⚡ Smart Charging Intelligence
 | Feature Details | Preview |
