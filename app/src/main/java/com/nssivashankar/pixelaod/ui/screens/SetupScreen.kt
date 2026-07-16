@@ -284,7 +284,7 @@ private fun PostNotificationsPage(
     SetupPageTemplate(
         icon = Icons.Default.Notifications,
         title = "Battery Alerts",
-        description = "To receive important health alerts, like when your battery reaches its custom limit (80%) or is fully charged, please allow the app to post notifications."
+        description = "To receive important health alerts, like when your battery reaches its custom limit or is fully charged, please allow the app to post notifications."
     ) {
         if (isGranted) {
             PermissionGrantedChip()

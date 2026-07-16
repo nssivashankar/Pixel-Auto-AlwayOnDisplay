@@ -1,13 +1,8 @@
-- [x] Create `AppRepository.kt` for high-performance caching
-- [x] Refactor `AppListDialog.kt` for instant loading and smooth scrolling
-- [x] Optimize `SettingsActivity.kt` mirror invalidation (throttle/debounce)
-- [x] Fine-tune `SettingsScreen.kt` for 120Hz performance
-- [x] Verify scrolling smoothness on device
-- [x] Refine UI Alignment & OCD Polish
-- [x] Release v1.1.1
-- [ ] Release v1.1.2
-    - [ ] Update version in `app/build.gradle`
-    - [ ] Update `README.md` release notes
-    - [ ] Commit and tag as `v1.1.2`
-    - [ ] Build signed stable APK
-    - [ ] Push to GitHub and create release
+- [ ] Fix hardcoded "80%" in battery completion notification
+    - [ ] Update `checkBatteryCompletion` signature and logic in `NotificationAodService.kt`
+    - [ ] Make notification title and text dynamic based on custom limit
+- [ ] Update `SetupScreen.kt` description for battery alerts
+- [ ] Release v1.1.3
+    - [ ] Bump version to `1.1.3` in `build.gradle`
+    - [ ] Build and tag release
+    - [ ] Upload to GitHub
