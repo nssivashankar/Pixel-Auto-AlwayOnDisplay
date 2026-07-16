@@ -1,9 +1,15 @@
 package com.nssivashankar.pixelaod.utils
 
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.nssivashankar.pixelaod.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -14,6 +20,8 @@ object UpdateChecker {
     private const val GITHUB_API_URL = "https://api.github.com/repos/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/latest"
     private const val PREFS_NAME = "update_prefs"
     private const val KEY_LAST_CHECK = "last_check_time"
+    private const val UPDATE_CHANNEL_ID = "app_updates"
+    private const val UPDATE_NOTIFICATION_ID = 5001
 
     suspend fun checkForUpdates(
         context: Context,
@@ -69,14 +77,21 @@ object UpdateChecker {
     }
 
     private fun isNewerVersion(current: String, latest: String): Boolean {
-        val currParts = current.split(".").mapNotNull { it.toIntOrNull() }
-        val lateParts = latest.split(".").mapNotNull { it.toIntOrNull() }
+        // Sanitize: Remove 'v' and any non-numeric suffixes (e.g., "-debug")
+        val cleanCurrent = current.lowercase().replace("v", "").split("-")[0]
+        val cleanLatest = latest.lowercase().replace("v", "").split("-")[0]
+
+        val currParts = cleanCurrent.split(".").mapNotNull { it.toIntOrNull() }
+        val lateParts = cleanLatest.split(".").mapNotNull { it.toIntOrNull() }
         
-        for (i in 0 until minOf(currParts.size, lateParts.size)) {
-            if (lateParts[i] > currParts[i]) return true
-            if (lateParts[i] < currParts[i]) return false
+        for (i in 0 until maxOf(currParts.size, lateParts.size)) {
+            val currVal = currParts.getOrElse(i) { 0 }
+            val lateVal = lateParts.getOrElse(i) { 0 }
+            
+            if (lateVal > currVal) return true
+            if (lateVal < currVal) return false
         }
-        return lateParts.size > currParts.size
+        return false
     }
 
     fun showUpdateDialog(context: Context, latestVersion: String, downloadUrl: String) {
@@ -89,5 +104,34 @@ object UpdateChecker {
             }
             .setNegativeButton("Remind Later", null)
             .show()
+    }
+
+    fun showUpdateNotification(context: Context, latestVersion: String, downloadUrl: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                UPDATE_CHANNEL_ID,
+                "App Updates",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            nm.createNotificationChannel(channel)
+        }
+
+        val updateIntent = Intent(Intent.ACTION_VIEW, Uri.parse(downloadUrl))
+        val pendingIntent = PendingIntent.getActivity(
+            context, 0, updateIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val builder = Notification.Builder(context, UPDATE_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_bolt_24)
+            .setContentTitle("Update Available")
+            .setContentText("A new version ($latestVersion) is available. Tap to update.")
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setVisibility(Notification.VISIBILITY_PUBLIC)
+
+        nm.notify(UPDATE_NOTIFICATION_ID, builder.build())
     }
 }

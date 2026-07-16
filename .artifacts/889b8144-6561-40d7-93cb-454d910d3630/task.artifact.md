@@ -1,5 +1,5 @@
-- [ ] Update version to 1.1.4 in `app/build.gradle`
+- [ ] Update version to 1.1.5 in `app/build.gradle`
 - [ ] Commit all changes
 - [ ] Push to master
-- [ ] Create and push tag `v1.1.4`
+- [ ] Create and push tag `v1.1.5`
 - [ ] Verify GitHub Actions status

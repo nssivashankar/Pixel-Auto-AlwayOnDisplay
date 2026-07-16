@@ -31,7 +31,7 @@ android {
         //noinspection OldTargetApi
         targetSdkVersion 35
         versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 13
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.3"
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.5"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -89,6 +89,8 @@ dependencies {
     def shizuku_version = "13.1.5"
     implementation "dev.rikka.shizuku:api:$shizuku_version"
     implementation "dev.rikka.shizuku:provider:$shizuku_version"
+
+    implementation "androidx.work:work-runtime-ktx:2.10.0"
 
     compileOnly "dev.rikka.hidden:stub:4.4.0"
 }

@@ -60,8 +60,18 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
-    var tempUnit by mutableStateOf(prefs.getString("temp_unit", "C") ?: "C")
+    var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
+
+    init {
+        // Migration: Move v1.1.4 'temp_unit' to v1.1.5 'unit_system'
+        if (prefs.contains("temp_unit")) {
+            val oldVal = prefs.getString("temp_unit", "C")
+            val newVal = if (oldVal == "F") "imperial" else "metric"
+            prefs.edit().putString("unit_system", newVal).remove("temp_unit").apply()
+            unitSystem = newVal
+        }
+    }
 
     private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
@@ -79,7 +89,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
             "scheduled_dnd" -> scheduledDnd = p.getBoolean(key, false)
             "custom_limit_enabled" -> customLimitEnabled = p.getBoolean(key, false)
             "custom_charging_limit" -> customLimit = p.getInt(key, 80)
-            "temp_unit" -> tempUnit = p.getString(key, "C") ?: "C"
+            "unit_system" -> unitSystem = p.getString(key, "metric") ?: "metric"
         }
     }
 
@@ -134,9 +144,9 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
         prefs.edit().putInt("custom_charging_limit", limit).apply()
     }
 
-    fun updateTempUnit(unit: String) {
-        tempUnit = unit
-        prefs.edit().putString("temp_unit", unit).apply()
+    fun updateUnitSystem(system: String) {
+        unitSystem = system
+        prefs.edit().putString("unit_system", system).apply()
     }
 
     fun setOptimization(mode: Int, custom: Boolean) {
@@ -302,20 +312,23 @@ fun MainSettingsList(
     if (showTempUnitDialog) {
         AlertDialog(
             onDismissRequest = { showTempUnitDialog = false },
-            title = { Text("Temperature Unit") },
+            title = { Text(stringResource(R.string.temp_unit_title)) },
             text = {
                 Column {
-                    listOf("Celsius (°C)" to "C", "Fahrenheit (°F)" to "F").forEach { (label, unit) ->
+                    listOf(
+                        stringResource(R.string.temp_unit_celsius) to "metric",
+                        stringResource(R.string.temp_unit_fahrenheit) to "imperial"
+                    ).forEach { (label, value) ->
                         Row(
                             Modifier.fillMaxWidth().clickable {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                state.updateTempUnit(unit)
+                                state.updateUnitSystem(value)
                                 showTempUnitDialog = false
                             }.padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = state.tempUnit == unit,
+                                selected = state.unitSystem == value,
                                 onClick = null
                             )
                             Spacer(Modifier.width(16.dp))

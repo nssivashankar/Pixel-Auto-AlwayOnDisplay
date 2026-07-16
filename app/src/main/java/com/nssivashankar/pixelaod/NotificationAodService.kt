@@ -23,6 +23,7 @@ class NotificationAodService : NotificationListenerService() {
 
     private val activeNotifKeys = mutableSetOf<String>()
     private var isCharging = false
+    private var isChargingPaused = false
     private var isBatteryFull = false
     private var isDndActive = false
     private var plugInTime = 0L
@@ -141,10 +142,21 @@ class NotificationAodService : NotificationListenerService() {
                     
                     isCharging = plugged != 0
                     
+                    val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+                    val voltage = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) // mV
+                    val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
+                    val currentWattage = (kotlin.math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
+
                     val prefs = getPrefs()
                     val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
+                    val isAdaptiveLegacy = AodSettings.isAdaptiveChargingEnabled(contentResolver)
                     val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
                     val customTarget = prefs.getInt("custom_charging_limit", 80)
+
+                    // --- Adaptive Hold / Pause Detection ---
+                    // Detect if system has reached 80% and paused charging (wattage < 0.7W)
+                    val isAdaptiveActive = optMode == 2 || isAdaptiveLegacy
+                    isChargingPaused = isCharging && isAdaptiveActive && pct >= 80 && pct < 98 && currentWattage < 0.7
 
                     // --- Custom Limit Logic ---
                     if (customLimitEnabled && isCharging) {
@@ -248,6 +260,7 @@ class NotificationAodService : NotificationListenerService() {
             "scheduled_dnd_start",
             "scheduled_dnd_end",
             "charging_info_notif",
+            "unit_system",
             "custom_limit_enabled",
             "custom_charging_limit"
             -> {
@@ -442,8 +455,8 @@ class NotificationAodService : NotificationListenerService() {
         val chargingMode = prefs.getBoolean("charging_mode", false)
         val chargingInfoMode = prefs.getBoolean("charging_info_notif", false)
         
-        // Charging trigger only stays active if NOT full
-        val chargingTrigger = (chargingMode || chargingInfoMode) && isCharging && !isBatteryFull
+        // Charging trigger only stays active if NOT full AND not paused by Adaptive Charging
+        val chargingTrigger = (chargingMode || chargingInfoMode) && isCharging && !isBatteryFull && !isChargingPaused
         
         // System DND check
         val respectDnd = prefs.getBoolean("dnd_mode", false)
@@ -639,8 +652,8 @@ class NotificationAodService : NotificationListenerService() {
             "Calculating..."
         }
 
-        val tempUnit = prefs.getString("temp_unit", "C") ?: "C"
-        val tempStr = if (tempUnit == "F") {
+        val tempUnit = prefs.getString("unit_system", "metric") ?: "metric"
+        val tempStr = if (tempUnit == "imperial") {
             val temperatureF = (temperature * 9/5) + 32
             String.format(java.util.Locale.US, "%.1f°F", temperatureF)
         } else {
