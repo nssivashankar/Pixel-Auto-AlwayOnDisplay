@@ -1,27 +1,27 @@
-# Walkthrough - Release v1.1.8
+# Walkthrough - Decoupled Charging Info from AOD Trigger
 
-I have fixed the issue where the AOD would not turn off at 0.0W and released **v1.1.8**.
+I have modified the AOD logic to ensure that the charging notification does not force the display on. This is a local build for testing and has not been pushed to Git.
 
 ## Changes Made
 
-### AOD Automation & Wattage Guard
-- **Fixed Notification Bypass:** Previously, the app's own "Charging Info Notification" was being treated as a live update. This added it to the active notification set, which kept the AOD on regardless of the wattage. I've now excluded the app's own notification from the trigger set.
-- **Improved Wattage Guard:** The AOD state during charging is now strictly controlled by the charging logic (wattage and charging status) and is no longer bypassed by the charging notification itself.
-- **Initialization Fix:** Ensured the wattage timer is correctly initialized when the app starts while already charging.
-
-### Infrastructure
-- Updated project version to **v1.1.8**.
-- Pushed changes and created a new release tag.
+### AOD Automation Service
+#### [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
+- **Decoupled Notification Trigger:** I removed the `charging_info_notif` setting from the AOD trigger condition.
+- Now, turning on "Charging Info Notification" will show the stats in your notification shade, but it will **not** automatically turn on the AOD when you plug in the phone.
+- The AOD will now strictly follow the **Charging Mode** toggle for its power-on behavior.
 
 ## Verification Results
 
 ### Automated Tests
-- [x] Local build successful.
-- [x] Verified code logic for notification filtering.
+- [x] Successfully compiled the project.
+- [x] Verified that `:app:assembleDebug` produced a new APK.
 
-### Release Status
-- [x] Pushed to `master` and tagged as `v1.1.8`.
-- [x] GitHub Action triggered.
+### Manual Verification Steps
+1. **Disable Charging Mode:** Go to app settings and turn OFF "Charging Mode".
+2. **Enable Charging Info:** Turn ON "Charging Info Notification".
+3. **Plug in:** Connect your charger.
+4. **Result:** Verify that the notification appears, but the AOD **stays off**.
 
 > [!TIP]
-> The fixed APK is now available under the [v1.1.8 Tag](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/tag/v1.1.8).
+> You can find the new debug APK here:
+> `app/build/outputs/apk/debug/app-debug.apk`

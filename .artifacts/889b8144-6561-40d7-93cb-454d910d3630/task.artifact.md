@@ -1,8 +1,4 @@
-- [x] Implement Wattage Guard in `NotificationAodService.kt`
-- [x] Refine Charging Optimization logic in `SettingsScreen.kt`
-- [x] Build Debug APK
-- [x] Verify build and notify user
-- [x] Fix AOD Notification Bypass for Charging Info
-- [x] Re-tag and Release v1.1.8
-- [ ] Remove manual notification key bypass in `updateChargingNotification`
-- [ ] Re-tag and Release v1.1.9
+- [x] Decouple Charging Info Notification from AOD trigger in `NotificationAodService.kt`
+- [x] Build Debug APK for testing
+- [x] Verify AOD behavior (OFF when only notification is enabled)
+- [x] Notify user for manual testing

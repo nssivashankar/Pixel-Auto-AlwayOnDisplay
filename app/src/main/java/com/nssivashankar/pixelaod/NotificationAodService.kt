@@ -462,14 +462,14 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         val chargingMode = prefs.getBoolean("charging_mode", false)
-        val chargingInfoMode = prefs.getBoolean("charging_info_notif", false)
         
         // Wattage Guard: Turn off AOD if power draw is ~0W for more than 10 minutes
         val isWattageIdle = isCharging && lastActiveWattageTime != 0L && 
                            (System.currentTimeMillis() - lastActiveWattageTime > 10 * 60 * 1000)
 
         // Charging trigger only stays active if NOT full AND not paused by Adaptive Charging AND not idle
-        val chargingTrigger = (chargingMode || chargingInfoMode) && isCharging && 
+        // Note: chargingInfoMode (Notification) no longer forces the AOD state.
+        val chargingTrigger = chargingMode && isCharging && 
                              !isBatteryFull && !isChargingPaused && !isWattageIdle
         
         // System DND check
