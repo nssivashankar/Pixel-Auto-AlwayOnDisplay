@@ -28,6 +28,8 @@ class NotificationAodService : NotificationListenerService() {
     private var isDndActive = false
     private var plugInTime = 0L
     private var lastActiveWattageTime = 0L
+    private var isScreenOffAodActive = false
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
 
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
@@ -201,6 +203,22 @@ class NotificationAodService : NotificationListenerService() {
                         updateChargingNotification(null)
                     }
                 }
+                Intent.ACTION_SCREEN_OFF -> {
+                    if (getPrefs().getBoolean("screen_off_aod", false)) {
+                        isScreenOffAodActive = true
+                        updateAodState()
+                        handler.removeCallbacksAndMessages(null)
+                        handler.postDelayed({
+                            isScreenOffAodActive = false
+                            updateAodState()
+                        }, 10000)
+                    }
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    isScreenOffAodActive = false
+                    handler.removeCallbacksAndMessages(null)
+                    updateAodState()
+                }
             }
         }
     }
@@ -269,7 +287,8 @@ class NotificationAodService : NotificationListenerService() {
             "charging_info_notif",
             "unit_system",
             "custom_limit_enabled",
-            "custom_charging_limit"
+            "custom_charging_limit",
+            "screen_off_aod"
             -> {
                 syncActiveNotifications()
                 updateChargingNotification(null)
@@ -319,6 +338,8 @@ class NotificationAodService : NotificationListenerService() {
             addAction(ACTION_OPT_80)
             addAction(ACTION_OPT_ADAPTIVE)
             addAction(ACTION_FULL_CHARGE)
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
         }
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -487,9 +508,9 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         val notifTrigger = systemNotifAllowed && !isQuietHours && activeNotifKeys.isNotEmpty()
-        val shouldBeOn = chargingTrigger || notifTrigger
+        val shouldBeOn = chargingTrigger || notifTrigger || isScreenOffAodActive
 
-        Log.d("AodService", "State Update: Charging=$isCharging, Notifs=${activeNotifKeys.size}, ShouldBeOn=$shouldBeOn")
+        Log.d("AodService", "State Update: Charging=$isCharging, Notifs=${activeNotifKeys.size}, ScreenOffAod=$isScreenOffAodActive, ShouldBeOn=$shouldBeOn")
 
         setAod(enable = shouldBeOn)
     }
@@ -527,30 +548,27 @@ class NotificationAodService : NotificationListenerService() {
         try {
             AodSettings.setAodEnabled(contentResolver, enable)
             
-            // Fix for Android 15/16/17: Force display state refresh when turning OFF.
-            // When unplugged or notifications cleared, we send a "Ghost" notification
-            // to kick the system out of the stale AOD state.
-            if (!enable) {
-                val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                val channelId = "aod_refresh_channel"
-                
-                val channel = NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW)
-                notificationManager.createNotificationChannel(channel)
+            // Fix for Android 15/16/17: Force display state refresh.
+            // When turning ON or OFF, we poke the doze machine to re-evaluate the state immediately.
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val channelId = "aod_refresh_channel"
+            
+            val channel = NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW)
+            notificationManager.createNotificationChannel(channel)
 
-                val ghostNotif = Notification.Builder(this, channelId)
-                    .setSmallIcon(android.R.color.transparent)
-                    .setContentTitle("")
-                    .setGroup("aod_sync_group")
-                    .setGroupAlertBehavior(Notification.GROUP_ALERT_ALL)
-                    .build()
+            val ghostNotif = Notification.Builder(this, channelId)
+                .setSmallIcon(android.R.color.transparent)
+                .setContentTitle("")
+                .setGroup("aod_sync_group")
+                .setGroupAlertBehavior(Notification.GROUP_ALERT_ALL)
+                .build()
 
-                // Post and immediately cancel to trigger a "wake" and settings re-read
-                notificationManager.notify(999, ghostNotif)
-                notificationManager.cancel(999)
-                
-                // Fallback: system-level pulse intent
-                sendBroadcast(Intent("com.android.systemui.doze.pulse"))
-            }
+            // Post and immediately cancel to trigger a "wake" and settings re-read
+            notificationManager.notify(999, ghostNotif)
+            notificationManager.cancel(999)
+            
+            // Pulse intent tells SystemUI to transition to the new AOD state NOW
+            sendBroadcast(Intent("com.android.systemui.doze.pulse"))
         } catch (e: SecurityException) {
             Log.e("NotificationAodService", "Failed to set AOD state", e)
         }

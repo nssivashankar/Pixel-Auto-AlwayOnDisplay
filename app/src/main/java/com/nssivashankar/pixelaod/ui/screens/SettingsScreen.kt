@@ -60,6 +60,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
+    var screenOffAod by mutableStateOf(prefs.getBoolean("screen_off_aod", false))
     var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
 
@@ -89,6 +90,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
             "scheduled_dnd" -> scheduledDnd = p.getBoolean(key, false)
             "custom_limit_enabled" -> customLimitEnabled = p.getBoolean(key, false)
             "custom_charging_limit" -> customLimit = p.getInt(key, 80)
+            "screen_off_aod" -> screenOffAod = p.getBoolean(key, false)
             "unit_system" -> unitSystem = p.getString(key, "metric") ?: "metric"
         }
     }
@@ -137,6 +139,11 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     fun updateScheduledDnd(enabled: Boolean) {
         scheduledDnd = enabled
         prefs.edit().putBoolean("scheduled_dnd", enabled).apply()
+    }
+
+    fun updateScreenOffAod(enabled: Boolean) {
+        screenOffAod = enabled
+        prefs.edit().putBoolean("screen_off_aod", enabled).apply()
     }
 
     fun updateCustomLimit(limit: Int) {
@@ -419,7 +426,10 @@ fun MainSettingsList(
         contentPadding = contentPadding,
         state = lazyListState
     ) {
-        item(key = "cat_auto") { PreferenceCategory(title = "Automation & Triggers", isFirst = true) }
+        // --- Category 1: Charging Automation ---
+        item(key = "cat_charging") { 
+            PreferenceCategory(title = "Charging Automation", isFirst = true) 
+        }
         
         item(key = "pref_charging") {
             PreferenceSwitch(
@@ -431,6 +441,25 @@ fun MainSettingsList(
                 onCheckedChange = { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     state.updateChargingMode(it)
+                }
+            )
+        }
+
+        item(key = "pref_opt") {
+            val modeSummary = when {
+                state.customLimitEnabled -> "Custom Limit: ${state.customLimit}%"
+                state.currentOptimizationMode == 1 -> "Limit to 80%"
+                state.currentOptimizationMode == 2 -> "Adaptive Charging"
+                else -> "Off"
+            }
+            PreferenceItem(
+                title = "Charging Optimization",
+                summary = modeSummary,
+                icon = Icons.Default.BatterySaver,
+                enabled = state.masterSwitch,
+                onClick = { 
+                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                    showChargingModeDialog = true 
                 }
             )
         }
@@ -454,23 +483,9 @@ fun MainSettingsList(
             )
         }
 
-        item(key = "pref_opt") {
-            val modeSummary = when {
-                state.customLimitEnabled -> "Custom Limit: ${state.customLimit}%"
-                state.currentOptimizationMode == 1 -> "Limit to 80%"
-                state.currentOptimizationMode == 2 -> "Adaptive Charging"
-                else -> "Off"
-            }
-            PreferenceItem(
-                title = "Charging Optimization",
-                summary = modeSummary,
-                icon = Icons.Default.BatterySaver,
-                enabled = state.masterSwitch,
-                onClick = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showChargingModeDialog = true 
-                }
-            )
+        // --- Category 2: Notification Triggers ---
+        item(key = "cat_notif") { 
+            PreferenceCategory(title = "Notification Triggers") 
         }
 
         item(key = "pref_apps") {
@@ -505,11 +520,33 @@ fun MainSettingsList(
             )
         }
 
-        item(key = "cat_restrict") { PreferenceCategory(title = "Restrictions") }
+        // --- Category 3: Display Automation ---
+        item(key = "cat_display") { 
+            PreferenceCategory(title = "Display Automation") 
+        }
+
+        item(key = "pref_screen_off") {
+            PreferenceSwitch(
+                title = "Lock Screen AOD",
+                summary = "Show AOD for 10 seconds after locking",
+                icon = Icons.Default.LockClock,
+                checked = state.screenOffAod,
+                enabled = state.masterSwitch,
+                onCheckedChange = { 
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.updateScreenOffAod(it)
+                }
+            )
+        }
+
+        // --- Category 4: Quiet Hours ---
+        item(key = "cat_restrict") { 
+            PreferenceCategory(title = "Quiet Hours") 
+        }
 
         item(key = "pref_dnd") {
             PreferenceSwitch(
-                title = stringResource(R.string.dnd_mode_title),
+                title = "Respect System DND",
                 summary = stringResource(R.string.dnd_mode_summary),
                 icon = Icons.Default.DoNotDisturbOn,
                 checked = state.dndMode,
@@ -523,8 +560,8 @@ fun MainSettingsList(
         
         item(key = "pref_scheduled") {
             PreferenceSwitch(
-                title = stringResource(R.string.scheduled_dnd_title),
-                summary = stringResource(R.string.scheduled_dnd_summary),
+                title = "Scheduled Sleep",
+                summary = "Disable AOD during specific hours",
                 icon = Icons.Default.Schedule,
                 checked = state.scheduledDnd,
                 enabled = state.masterSwitch,
@@ -574,13 +611,16 @@ fun MainSettingsList(
             }
         }
 
-        item(key = "cat_service") { PreferenceCategory(title = "Service Status") }
+        // --- Category 5: System & Status ---
+        item(key = "cat_service") { 
+            PreferenceCategory(title = "System & Status") 
+        }
 
         item(key = "pref_secure") {
             val hasWriteSecure = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
             PreferenceItem(
                 title = "Write Secure Settings",
-                summary = if (hasWriteSecure) "Granted" else "Missing - Tap to grant via Shizuku",
+                summary = if (hasWriteSecure) "Permission Granted" else "Permission Missing - Tap to grant",
                 icon = Icons.Default.VpnKey,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -594,7 +634,7 @@ fun MainSettingsList(
             val hasNotifyAccess = enabledListeners?.contains(context.packageName) == true
             PreferenceItem(
                 title = "Notification Access",
-                summary = if (hasNotifyAccess) "Granted" else "Missing - Required for app detection",
+                summary = if (hasNotifyAccess) "Permission Granted" else "Permission Missing - Tap to grant",
                 icon = Icons.Default.SettingsSuggest,
                 onClick = { 
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -606,7 +646,7 @@ fun MainSettingsList(
         item(key = "pref_reset_setup") {
             PreferenceItem(
                 title = "Reset Onboarding",
-                summary = "Re-run the first-time setup flow",
+                summary = "Re-run first-time setup guide",
                 icon = Icons.Default.RestartAlt,
                 onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)

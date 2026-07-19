@@ -1,4 +1,4 @@
-- [x] Decouple Charging Info Notification from AOD trigger in `NotificationAodService.kt`
-- [x] Build Debug APK for testing
-- [x] Verify AOD behavior (OFF when only notification is enabled)
-- [x] Notify user for manual testing
+- [x] Reorganize settings in `SettingsScreen.kt` into 5 categories
+- [x] Verify UI layout and settings persistence
+- [x] Build and deploy debug APK for final check
+- [x] Notify user for approval

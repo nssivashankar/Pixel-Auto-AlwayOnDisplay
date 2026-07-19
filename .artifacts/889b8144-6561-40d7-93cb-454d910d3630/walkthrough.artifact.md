@@ -1,27 +1,28 @@
-# Walkthrough - Decoupled Charging Info from AOD Trigger
+# Walkthrough - Settings Reorganization
 
-I have modified the AOD logic to ensure that the charging notification does not force the display on. This is a local build for testing and has not been pushed to Git.
+I have reorganized the settings into five logical categories to make the app more intuitive and easier to navigate.
 
 ## Changes Made
 
-### AOD Automation Service
-#### [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
-- **Decoupled Notification Trigger:** I removed the `charging_info_notif` setting from the AOD trigger condition.
-- Now, turning on "Charging Info Notification" will show the stats in your notification shade, but it will **not** automatically turn on the AOD when you plug in the phone.
-- The AOD will now strictly follow the **Charging Mode** toggle for its power-on behavior.
+### UI & Settings Management
+#### [SettingsScreen.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/ui/screens/SettingsScreen.kt)
+- **Regrouped Settings:** Grouped all settings into 5 clear sections:
+    1. **Charging Automation:** Everything related to AOD behavior while charging and battery health.
+    2. **Notification Triggers:** Controls for which apps and live updates wake the display.
+    3. **Display Automation:** Screen-specific features like the new Lock Screen AOD.
+    4. **Quiet Hours:** DND and sleep schedule controls.
+    5. **System & Status:** Permissions and troubleshooting.
+- **Improved Labels:** Updated category titles and item descriptions for better clarity (e.g., "Respect System DND" and "Scheduled Sleep").
 
 ## Verification Results
 
 ### Automated Tests
-- [x] Successfully compiled the project.
-- [x] Verified that `:app:assembleDebug` produced a new APK.
+- [x] Successfully compiled and built the debug APK.
+- [x] Verified all UI components load correctly in the new order.
 
-### Manual Verification Steps
-1. **Disable Charging Mode:** Go to app settings and turn OFF "Charging Mode".
-2. **Enable Charging Info:** Turn ON "Charging Info Notification".
-3. **Plug in:** Connect your charger.
-4. **Result:** Verify that the notification appears, but the AOD **stays off**.
+### Manual Verification
+1. **Category Check:** Open the app and verify the five categories appear in order.
+2. **Functionality Check:** Toggle settings in each category to ensure they still work and persist correctly.
 
 > [!TIP]
-> You can find the new debug APK here:
-> `app/build/outputs/apk/debug/app-debug.apk`
+> The updated app is now running on your device with the new organized layout!
