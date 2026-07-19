@@ -764,9 +764,10 @@ class NotificationAodService : NotificationListenerService() {
             startForeground(CHARGING_NOTIF_ID, notification)
         }
         
-        if (activeNotifKeys.add(this.packageName + "|" + CHARGING_NOTIF_ID)) {
-            updateAodState()
-        }
+        // Simply trigger a state re-evaluation. 
+        // We no longer manually add the charging notification to activeNotifKeys 
+        // to prevent it from bypassing the wattage-based idle timer.
+        updateAodState()
     }
 
     private fun formatToClockTime(targetMillis: Long): String {

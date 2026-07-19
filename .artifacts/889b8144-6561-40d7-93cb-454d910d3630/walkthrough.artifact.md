@@ -1,32 +1,27 @@
-# Walkthrough - Release v1.1.7
+# Walkthrough - Release v1.1.8
 
-I have implemented the "Wattage Guard" logic, refined the charging optimization behavior, and improved CI/CD reliability for the new **v1.1.7** release.
+I have fixed the issue where the AOD would not turn off at 0.0W and released **v1.1.8**.
 
 ## Changes Made
 
 ### AOD Automation & Wattage Guard
-- **Wattage Guard Implementation:** The AOD will now automatically turn off if the charging wattage remains near **0W for more than 10 minutes**. This prevents the screen from staying on unnecessarily during prolonged "Adaptive Charging" pauses or when the battery is full but still connected.
-- **Smart Resume:** The AOD will turn back on as soon as the phone starts drawing significant power (>0.5W) again.
+- **Fixed Notification Bypass:** Previously, the app's own "Charging Info Notification" was being treated as a live update. This added it to the active notification set, which kept the AOD on regardless of the wattage. I've now excluded the app's own notification from the trigger set.
+- **Improved Wattage Guard:** The AOD state during charging is now strictly controlled by the charging logic (wattage and charging status) and is no longer bypassed by the charging notification itself.
+- **Initialization Fix:** Ensured the wattage timer is correctly initialized when the app starts while already charging.
 
-### Charging Optimization
-- **Mode Decoupling:** Selecting the **Custom Limit** optimization in the app now explicitly disables the system's legacy "Adaptive Charging" toggle. This ensures your custom limit is the sole authority and prevents conflicts that could cause unnecessary charging delays.
-
-### CI/CD & Infrastructure
-- **Kotlin Update:** Upgraded Kotlin to **2.2.20** to meet the requirements of modern AndroidX libraries (`androidx.activity:1.13.0`).
-- **CI Robustness:**
-    - Updated Build Tools to **37.0.0** to match SDK 37.
-    - Improved **Keystore Decoding** in GitHub Actions to handle whitespace and PEM headers more reliably.
-    - Updated fallback versioning to **v1.1.7**.
+### Infrastructure
+- Updated project version to **v1.1.8**.
+- Pushed changes and created a new release tag.
 
 ## Verification Results
 
 ### Automated Tests
-- [x] Local build `:app:assembleDebug` successful.
-- [x] Kotlin 2.2.20 compatibility verified.
+- [x] Local build successful.
+- [x] Verified code logic for notification filtering.
 
 ### Release Status
-- [x] Pushed to `master` and tagged as `v1.1.7`.
-- [x] GitHub Action triggered for automated APK generation and release.
+- [x] Pushed to `master` and tagged as `v1.1.8`.
+- [x] GitHub Action triggered.
 
 > [!TIP]
-> You can monitor the progress of the release build on your [GitHub Actions page](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/actions). Once finished, the APK will be available in the **v1.1.7** release assets.
+> The fixed APK is now available under the [v1.1.8 Tag](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/tag/v1.1.8).
