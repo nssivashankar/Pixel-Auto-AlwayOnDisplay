@@ -1,31 +1,32 @@
-# Walkthrough - Smart Wattage Guard and Optimization Fix
+# Walkthrough - Release v1.1.7
 
-I have implemented the "Wattage Guard" logic to turn off the AOD during prolonged charging pauses (0W) and decoupled the "Custom Limit" from the system's "Adaptive Charging" to prevent conflicts.
+I have implemented the "Wattage Guard" logic, refined the charging optimization behavior, and improved CI/CD reliability for the new **v1.1.7** release.
 
 ## Changes Made
 
-### AOD Automation Service
-#### [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
-- Added a **Wattage Guard** that monitors active power draw.
-- If the phone is plugged in but the wattage stays below **0.5W for more than 10 minutes**, the AOD will automatically turn off.
-- This addresses your feedback about the AOD staying on unnecessarily during all-night "Adaptive Charging" holds.
-- The AOD will turn back on automatically as soon as the phone starts drawing power again (e.g., when the "Adaptive Hold" finishes or you unplug/replug).
+### AOD Automation & Wattage Guard
+- **Wattage Guard Implementation:** The AOD will now automatically turn off if the charging wattage remains near **0W for more than 10 minutes**. This prevents the screen from staying on unnecessarily during prolonged "Adaptive Charging" pauses or when the battery is full but still connected.
+- **Smart Resume:** The AOD will turn back on as soon as the phone starts drawing significant power (>0.5W) again.
 
-### Settings & Optimization
-#### [SettingsScreen.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/ui/screens/SettingsScreen.kt)
-- Selecting **Custom Limit** now explicitly disables the system's "Adaptive Charging" setting.
-- This ensures that your custom limit is the primary authority, preventing the system from pausing charging at 80% for hours when you've set a higher custom limit.
+### Charging Optimization
+- **Mode Decoupling:** Selecting the **Custom Limit** optimization in the app now explicitly disables the system's legacy "Adaptive Charging" toggle. This ensures your custom limit is the sole authority and prevents conflicts that could cause unnecessary charging delays.
+
+### CI/CD & Infrastructure
+- **Kotlin Update:** Upgraded Kotlin to **2.2.20** to meet the requirements of modern AndroidX libraries (`androidx.activity:1.13.0`).
+- **CI Robustness:**
+    - Updated Build Tools to **37.0.0** to match SDK 37.
+    - Improved **Keystore Decoding** in GitHub Actions to handle whitespace and PEM headers more reliably.
+    - Updated fallback versioning to **v1.1.7**.
 
 ## Verification Results
 
 ### Automated Tests
-- [x] Successfully compiled the project with **Kotlin 2.2.10** and **SDK 37**.
-- [x] Verified that `:app:assembleDebug` completes without errors.
+- [x] Local build `:app:assembleDebug` successful.
+- [x] Kotlin 2.2.20 compatibility verified.
 
-### Manual Verification Required
-- [ ] **Wattage Guard:** Plug in the phone and wait for the "Adaptive Hold" (0W). Verify that after ~10 minutes, the AOD turns off.
-- [ ] **Custom Limit:** Enable a Custom Limit (e.g., 90%) and verify in Android Settings -> Battery -> Charging Optimization that "Adaptive Charging" is turned OFF.
+### Release Status
+- [x] Pushed to `master` and tagged as `v1.1.7`.
+- [x] GitHub Action triggered for automated APK generation and release.
 
 > [!TIP]
-> You can find the debug APK in your project directory at:
-> `app/build/outputs/apk/debug/app-debug.apk`
+> You can monitor the progress of the release build on your [GitHub Actions page](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/actions). Once finished, the APK will be available in the **v1.1.7** release assets.

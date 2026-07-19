@@ -2,3 +2,5 @@
 - [x] Refine Charging Optimization logic in `SettingsScreen.kt`
 - [x] Build Debug APK
 - [x] Verify build and notify user
+- [ ] Fix AOD Notification Bypass for Charging Info
+- [ ] Re-tag and Release v1.1.8

@@ -304,6 +304,7 @@ class NotificationAodService : NotificationListenerService() {
 
         if (isCharging) {
             plugInTime = System.currentTimeMillis()
+            lastActiveWattageTime = System.currentTimeMillis()
         }
 
         updateDndStatus()
@@ -392,9 +393,10 @@ class NotificationAodService : NotificationListenerService() {
     ): Boolean {
         val packageName = sbn.packageName
         
-        // 0. Own charging notification should always be treated as a live update if enabled
+        // 0. Own charging notification: Never include in activeNotifKeys.
+        // The charging AOD state is handled separately by chargingTrigger in updateAodState().
         if (packageName == this.packageName && sbn.id == CHARGING_NOTIF_ID) {
-            return getPrefs().getBoolean("charging_info_notif", false)
+            return false
         }
 
         // 1. Explicitly watched apps always trigger
