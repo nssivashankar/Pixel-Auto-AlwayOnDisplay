@@ -31,7 +31,7 @@ android {
         //noinspection OldTargetApi
         targetSdkVersion 35
         versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 13
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.6"
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.1.7"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

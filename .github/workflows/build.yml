@@ -28,7 +28,7 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           api-level: 37
-          build-tools-version: 35.0.0
+          build-tools-version: 37.0.0
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -37,7 +37,8 @@ jobs:
         env:
           KEYSTORE_FILE: ${{ secrets.KEYSTORE_FILE }}
         run: |
-          echo "$KEYSTORE_FILE" | base64 --decode > app/pixelautoaod.jks
+          # Robust base64 decoding: remove any potential PEM headers and whitespace
+          echo "$KEYSTORE_FILE" | sed 's/---.*---//g' | tr -d '[:space:]' | base64 --decode > app/pixelautoaod.jks
           
           if [ ! -s app/pixelautoaod.jks ]; then
             echo "❌ Error: Decoded keystore is empty! Check your KEYSTORE_FILE secret."
@@ -51,7 +52,7 @@ jobs:
             RAW_VERSION="${{ github.ref_name }}"
             VERSION_NAME="${RAW_VERSION#v}"
           else
-            VERSION_NAME="1.1.6"
+            VERSION_NAME="1.1.7"
           fi
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION_NAME"

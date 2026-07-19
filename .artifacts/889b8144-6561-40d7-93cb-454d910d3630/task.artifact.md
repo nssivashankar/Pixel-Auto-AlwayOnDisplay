@@ -1,6 +1,4 @@
-- [ ] Update version to 1.1.6 in `app/build.gradle`
-- [ ] Fix `UpdateChecker.kt` (User-Agent, Cache, Robustness)
-- [ ] Update `build.yml` to sanitize version names
-- [ ] Commit all changes for v1.1.6
-- [ ] Create and push tag `v1.1.6`
-- [ ] Verify GitHub Release status
+- [x] Implement Wattage Guard in `NotificationAodService.kt`
+- [x] Refine Charging Optimization logic in `SettingsScreen.kt`
+- [x] Build Debug APK
+- [x] Verify build and notify user

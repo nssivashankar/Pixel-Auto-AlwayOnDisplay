@@ -160,7 +160,10 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
                 else if (mode == 0) AodSettings.setAdaptiveChargingEnabled(resolver, false)
                 currentOptimizationMode = mode
             } else {
+                // When Custom Limit is active, we disable system-level Adaptive Charging
+                // to prevent conflicting '0.0W' holds and maintain consistent charging.
                 AodSettings.setChargeOptimizationMode(resolver, 0)
+                AodSettings.setAdaptiveChargingEnabled(resolver, false)
                 currentOptimizationMode = 0
             }
         }

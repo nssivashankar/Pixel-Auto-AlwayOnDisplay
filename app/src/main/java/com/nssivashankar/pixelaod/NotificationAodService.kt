@@ -27,6 +27,7 @@ class NotificationAodService : NotificationListenerService() {
     private var isBatteryFull = false
     private var isDndActive = false
     private var plugInTime = 0L
+    private var lastActiveWattageTime = 0L
 
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
@@ -120,12 +121,14 @@ class NotificationAodService : NotificationListenerService() {
                 Intent.ACTION_POWER_CONNECTED -> {
                     isCharging = true
                     plugInTime = System.currentTimeMillis()
+                    lastActiveWattageTime = System.currentTimeMillis()
                     updateAodState()
                     updateChargingNotification(null)
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> {
                     isCharging = false
                     plugInTime = 0L
+                    lastActiveWattageTime = 0L
                     syncActiveNotifications()
                     updateAodState()
                     updateChargingNotification(null)
@@ -146,6 +149,10 @@ class NotificationAodService : NotificationListenerService() {
                     val voltage = intent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) // mV
                     val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
                     val currentWattage = (kotlin.math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
+
+                    if (currentWattage > 0.5) {
+                        lastActiveWattageTime = System.currentTimeMillis()
+                    }
 
                     val prefs = getPrefs()
                     val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
@@ -455,8 +462,13 @@ class NotificationAodService : NotificationListenerService() {
         val chargingMode = prefs.getBoolean("charging_mode", false)
         val chargingInfoMode = prefs.getBoolean("charging_info_notif", false)
         
-        // Charging trigger only stays active if NOT full AND not paused by Adaptive Charging
-        val chargingTrigger = (chargingMode || chargingInfoMode) && isCharging && !isBatteryFull && !isChargingPaused
+        // Wattage Guard: Turn off AOD if power draw is ~0W for more than 10 minutes
+        val isWattageIdle = isCharging && lastActiveWattageTime != 0L && 
+                           (System.currentTimeMillis() - lastActiveWattageTime > 10 * 60 * 1000)
+
+        // Charging trigger only stays active if NOT full AND not paused by Adaptive Charging AND not idle
+        val chargingTrigger = (chargingMode || chargingInfoMode) && isCharging && 
+                             !isBatteryFull && !isChargingPaused && !isWattageIdle
         
         // System DND check
         val respectDnd = prefs.getBoolean("dnd_mode", false)

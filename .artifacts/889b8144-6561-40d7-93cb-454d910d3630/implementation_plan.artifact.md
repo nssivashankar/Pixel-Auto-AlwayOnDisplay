@@ -1,32 +1,32 @@
-# Fix Update Detection for Older Versions and CI/CD Cleanup
+# Fix GitHub Actions Build Failure
 
-The update checker in version v1.1.4 and older is broken when the version name starts with a 'v'. This plan fixes the CI/CD pipeline to ensure future versions are stored correctly and improves the app's update logic to handle inconsistent versioning better.
+The build in GitHub Actions likely failed due to complex shell logic and comments inside the "Build and Sign Release APK" step. This plan simplifies the workflow and makes the version name calculation more robust.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> Because version v1.1.4 has a "broken" update checker, it will **not** automatically see the v1.1.5 update. You will need to manually install v1.1.5 (or newer) on those devices once. From v1.1.5 onwards, the logic is fixed and future updates will work correctly.
+> [!NOTE]
+> I am moving the version name calculation to its own dedicated step using official GitHub Actions syntax. This makes the build more reliable and easier to debug.
 
 ## Proposed Changes
 
-### CI/CD Workflow
+### Version Control & CI/CD
 
 #### [MODIFY] [build.yml](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/.github/workflows/build.yml)
-- Update the `VERSION_NAME` logic to automatically strip the 'v' prefix before passing it to the Android build.
-- This ensures that the app's internal version name is always a clean numeric string (e.g., `1.1.6` instead of `v1.1.6`), which is the standard practice.
-
-### Automation & Logic
-
-#### [MODIFY] [UpdateChecker.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/utils/UpdateChecker.kt)
-- **User-Agent Requirement**: Add a custom `User-Agent` to the HTTP request. GitHub API sometimes returns 403 or 503 errors to requests without a User-Agent.
-- **Cache Busting**: Disable HTTP caching to ensure the app always sees the absolute latest release.
-- **Enhanced Comparison**: Further improve the numeric comparison to handle edge cases like empty strings or unexpected characters.
+- **New Step: "Determine Version"**:
+    - Uses a clear `if/else` logic to set the version name.
+    - Automatically strips the `v` prefix from tags.
+    - Defaults to `1.1.6` for development builds.
+- **Simplified Build Step**:
+    - Removes internal shell assignments and comments.
+    - Directly uses the output from the "Determine Version" step.
+- **Improved Logging**:
+    - Added an `echo` to verify the version name being used before starting Gradle.
 
 ## Verification Plan
 
-### Automated Tests
-- Build verification via `gradle assembleDebug`.
+### Automated Verification
+- I will verify the YAML syntax.
+- Once pushed, GitHub Actions will re-run.
 
 ### Manual Verification
-1. **CI/CD Test**: Trigger a manual build from GitHub Actions and verify (via the build logs) that the `versionName` passed to Gradle does not contain a 'v'.
-2. **Logic Test**: Manually set `currentVersion` to `v1.1.4` in the code and verify that it correctly identifies `1.1.5` as a newer version with the new logic.
+- Monitor the GitHub Actions tab to ensure the "Build and Release APK" workflow completes successfully for the new commit.
