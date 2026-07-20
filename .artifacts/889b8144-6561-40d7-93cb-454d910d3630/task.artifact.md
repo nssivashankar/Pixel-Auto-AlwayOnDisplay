@@ -1,4 +1,4 @@
-- [x] Reorganize settings in `SettingsScreen.kt` into 5 categories
-- [x] Verify UI layout and settings persistence
-- [x] Build and deploy debug APK for final check
-- [x] Notify user for approval
+- [x] Decouple Charging Details Notification from Master Switch in `NotificationAodService.kt`
+- [x] Make Charging Details toggle independent in `SettingsScreen.kt`
+- [/] Build and Deploy Debug APK
+- [ ] Verify standalone notification functionality

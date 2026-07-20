@@ -467,10 +467,10 @@ fun MainSettingsList(
         item(key = "pref_info") {
             PreferenceSwitch(
                 title = stringResource(R.string.charging_info_title),
-                summary = stringResource(R.string.charging_info_summary),
+                summary = stringResource(R.string.charging_info_summary) + " (Standalone Feature)",
                 icon = Icons.Default.Info,
                 checked = state.chargingInfoNotif,
-                enabled = state.masterSwitch,
+                enabled = true,
                 onCheckedChange = { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     state.updateChargingInfoNotif(it)

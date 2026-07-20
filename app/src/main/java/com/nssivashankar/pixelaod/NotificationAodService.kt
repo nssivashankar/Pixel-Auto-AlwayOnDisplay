@@ -478,7 +478,9 @@ class NotificationAodService : NotificationListenerService() {
         val masterEnabled = prefs.getBoolean("master_switch", false)
         
         if (!masterEnabled) {
-            setAod(enable = false)
+            // When master switch is off, the app stops controlling the AOD state.
+            // This allows users to keep AOD enabled manually while still using 
+            // standalone features like the Charging Details Notification.
             return
         }
 
