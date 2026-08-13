@@ -2,7 +2,9 @@ package com.nssivashankar.pixelaod.ui.screens
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,12 +20,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import kotlinx.coroutines.delay
@@ -65,9 +70,9 @@ fun AboutScreen(contentPadding: PaddingValues) {
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Favorite,
+                        painter = painterResource(id = R.drawable.ic_round_aod_24),
                         contentDescription = null,
-                        modifier = Modifier.size(60.dp),
+                        modifier = Modifier.size(64.dp),
                         tint = MaterialTheme.colorScheme.primary
                     )
                 }
@@ -157,7 +162,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                         )
                         Spacer(Modifier.width(16.dp))
                         Text(
-                            "Added Lift to wake AOD",
+                            "Added Lift to wake AOD & Glass UI",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.Medium
                         )

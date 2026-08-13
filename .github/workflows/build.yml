@@ -51,10 +51,21 @@ jobs:
           if [[ "${{ github.ref_type }}" == "tag" ]]; then
             RAW_VERSION="${{ github.ref_name }}"
             VERSION_NAME="${RAW_VERSION#v}"
+            # Try to get the tag message, fallback to commit message
+            RELEASE_NOTES=$(git tag -l --format='%(contents)' "${{ github.ref_name }}" | head -n 5)
+            if [ -z "$RELEASE_NOTES" ]; then
+              RELEASE_NOTES=$(git log -1 --pretty=%B)
+            fi
           else
-            VERSION_NAME="1.2.1"
+            VERSION_NAME="1.2.2"
+            RELEASE_NOTES=$(git log -1 --pretty=%B)
           fi
+          
+          # Clean up release notes for the YAML body (remove newlines for the output var)
+          NOTES_CLEAN=$(echo "$RELEASE_NOTES" | tr '\n' ' ' | sed 's/"/\\"/g')
+          
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
+          echo "release_notes=$NOTES_CLEAN" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION_NAME"
 
       - name: Build and Sign Release APK
@@ -85,15 +96,7 @@ jobs:
           generate_release_notes: true
           make_latest: true
           body: |
-            ### Pixel Auto AOD Release
-            This build was automatically generated.
-            
-            **Version:** ${{ github.ref_type == 'tag' && github.ref_name || 'Development Build (Latest)' }}
-            **Commit:** ${{ github.sha }}
-            
-            ### Features
-            - Charging Mode: AoD automation
-            - Live Notification Mode: Maps, Uber etc.
-            - Per-App Notifications
+            ### What's New!
+            ${{ steps.version.outputs.release_notes }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
