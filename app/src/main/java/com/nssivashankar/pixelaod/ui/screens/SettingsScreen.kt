@@ -12,17 +12,16 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings as AndroidSettings
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -61,6 +60,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
     var screenOffAod by mutableStateOf(prefs.getBoolean("screen_off_aod", false))
+    var liftToWakeAod by mutableStateOf(prefs.getBoolean("lift_to_wake_aod", false))
     var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
 
@@ -91,6 +91,7 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
             "custom_limit_enabled" -> customLimitEnabled = p.getBoolean(key, false)
             "custom_charging_limit" -> customLimit = p.getInt(key, 80)
             "screen_off_aod" -> screenOffAod = p.getBoolean(key, false)
+            "lift_to_wake_aod" -> liftToWakeAod = p.getBoolean(key, false)
             "unit_system" -> unitSystem = p.getString(key, "metric") ?: "metric"
         }
     }
@@ -146,6 +147,11 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
         prefs.edit().putBoolean("screen_off_aod", enabled).apply()
     }
 
+    fun updateLiftToWakeAod(enabled: Boolean) {
+        liftToWakeAod = enabled
+        prefs.edit().putBoolean("lift_to_wake_aod", enabled).apply()
+    }
+
     fun updateCustomLimit(limit: Int) {
         customLimit = limit
         prefs.edit().putInt("custom_charging_limit", limit).apply()
@@ -181,15 +187,17 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
 fun SettingsScreen(
     masterSwitchEnabled: Boolean,
     onPermissionRequest: () -> Unit,
+    currentTab: Int,
     contentPadding: PaddingValues = PaddingValues(0.dp),
-    onMasterSwitchChange: (Boolean) -> Unit = {}
+    onMasterSwitchChange: (Boolean) -> Unit = {},
+    onTabSelected: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     val haptic = LocalHapticFeedback.current
     val scope = rememberCoroutineScope()
     
     val state = remember { SettingsState(context, scope) }
-    var currentTab by remember { mutableIntStateOf(0) }
+    val pagerState = rememberPagerState { 2 }
 
     DisposableEffect(state) {
         state.startObserving()
@@ -206,89 +214,45 @@ fun SettingsScreen(
         onMasterSwitchChange(state.masterSwitch)
     }
 
+    // --- Premium Bidirectional Sync ---
+    
+    // 1. External tab changes (from Navigation Pill) -> Pager Animation
+    LaunchedEffect(currentTab) {
+        if (pagerState.currentPage != currentTab) {
+            pagerState.animateScrollToPage(
+                page = currentTab,
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessLow, 
+                    dampingRatio = Spring.DampingRatioLowBouncy
+                )
+            )
+        }
+    }
+
+    // 2. Pager swipes (user finger) -> Update external state
+    // Use snapshotFlow to detect when the page settles for better UX
+    LaunchedEffect(pagerState.currentPage) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        onTabSelected(pagerState.currentPage)
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = Color.Transparent, 
-        bottomBar = {
-            // --- Material 3 ULTRA-COMPACT Floating Navigation Pill ---
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 32.dp),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                    tonalElevation = 6.dp,
-                    shadowElevation = 8.dp,
-                    modifier = Modifier.wrapContentSize()
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // Home Pill Button
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp, 40.dp)
-                                .clip(CircleShape)
-                                .background(if (currentTab == 0) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable {
-                                    if (currentTab != 0) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        currentTab = 0
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Home, 
-                                contentDescription = "Home",
-                                tint = if (currentTab == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-
-                        // About Pill Button
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp, 40.dp)
-                                .clip(CircleShape)
-                                .background(if (currentTab == 1) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                                .clickable {
-                                    if (currentTab != 1) {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        currentTab = 1
-                                    }
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                Icons.Default.Info, 
-                                contentDescription = "About",
-                                tint = if (currentTab == 1) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-        }
+        containerColor = Color.Transparent
     ) { innerPadding ->
-        AnimatedContent(
-            targetState = currentTab,
-            transitionSpec = {
-                fadeIn(animationSpec = tween(300)) togetherWith fadeOut(animationSpec = tween(300))
-            },
-            label = "navigation"
-        ) { targetTab ->
-            if (targetTab == 0) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+            userScrollEnabled = true,
+            pageSpacing = 16.dp // Subtle gap during transition
+        ) { page ->
+            if (page == 0) {
                 MainSettingsList(
                     state = state, 
                     contentPadding = PaddingValues(
                         top = contentPadding.calculateTopPadding(),
-                        bottom = 160.dp // Increased to clear floating pill with shadow
+                        bottom = 160.dp 
                     ), 
                     onPermissionRequest = onPermissionRequest
                 )
@@ -298,6 +262,72 @@ fun SettingsScreen(
                         top = contentPadding.calculateTopPadding(),
                         bottom = 160.dp
                     )
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun NavigationPill(
+    currentTab: Int,
+    onTabSelected: (Int) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            modifier = Modifier
+                .width(136.dp) // Exact width from 1.1.12 logic
+                .fillMaxHeight()
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Home Pill Button
+            val isHome = currentTab == 0
+            Box(
+                modifier = Modifier
+                    .size(56.dp, 40.dp) // Size from stable 1.1.12
+                    .clip(CircleShape)
+                    .background(if (isHome) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                    .clickable {
+                        if (!isHome) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onTabSelected(0)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Home, 
+                    contentDescription = "Home",
+                    tint = if (isHome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            // About Pill Button
+            val isAbout = currentTab == 1
+            Box(
+                modifier = Modifier
+                    .size(56.dp, 40.dp) // Size from stable 1.1.12
+                    .clip(CircleShape)
+                    .background(if (isAbout) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
+                    .clickable {
+                        if (!isAbout) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onTabSelected(1)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Info, 
+                    contentDescription = "About",
+                    tint = if (isAbout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -535,6 +565,20 @@ fun MainSettingsList(
                 onCheckedChange = { 
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     state.updateScreenOffAod(it)
+                }
+            )
+        }
+
+        item(key = "pref_lift_to_wake") {
+            PreferenceSwitch(
+                title = "Lift to Wake AOD",
+                summary = "Show AOD for 10 seconds when you pick up your phone",
+                icon = Icons.Default.VerticalAlignTop,
+                checked = state.liftToWakeAod,
+                enabled = state.masterSwitch,
+                onCheckedChange = { 
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    state.updateLiftToWakeAod(it)
                 }
             )
         }

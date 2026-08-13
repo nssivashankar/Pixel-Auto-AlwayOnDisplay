@@ -18,7 +18,7 @@ class UpdateWorker(
             "1.0.0"
         }
 
-        UpdateChecker.checkForUpdates(context, currentVersion) { latest, url ->
+        UpdateChecker.checkForUpdates(context, currentVersion) { latest, _, url ->
             UpdateChecker.showUpdateNotification(context, latest, url)
         }
 

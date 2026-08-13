@@ -20,6 +20,7 @@ import com.google.android.material.materialswitch.MaterialSwitch
 import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
 import com.nssivashankar.pixelaod.permissions.ShizukuStatus
 import com.nssivashankar.pixelaod.permissions.ShizukuUtils
+import com.nssivashankar.pixelaod.ui.screens.NavigationPill
 import com.nssivashankar.pixelaod.ui.screens.SettingsScreen
 import com.nssivashankar.pixelaod.ui.screens.SetupScreen
 import com.nssivashankar.pixelaod.ui.theme.PixelAodTheme
@@ -48,8 +49,8 @@ class SettingsActivity : AppCompatActivity() {
         } catch (e: Exception) { "1.0.0" }
         
         MainScope().launch {
-            UpdateChecker.checkForUpdates(this@SettingsActivity, currentVersion) { latest, url ->
-                UpdateChecker.showUpdateDialog(this@SettingsActivity, latest, url)
+            UpdateChecker.checkForUpdates(this@SettingsActivity, currentVersion) { latest, notes, url ->
+                UpdateChecker.showUpdateDialog(this@SettingsActivity, latest, notes, url)
             }
         }
 
@@ -73,12 +74,18 @@ class SettingsActivity : AppCompatActivity() {
             masterSwitchEnabled = isChecked
         }
 
-        val mirror = findViewById<View>(R.id.header_blur_mirror)
         val composeView = findViewById<ComposeView>(R.id.settings_compose_view)
+        val footerButtonsView = findViewById<ComposeView>(R.id.footer_buttons_compose_view)
+        
+        val mirror = findViewById<View>(R.id.header_blur_mirror)
+        val footerMirror = findViewById<View>(R.id.footer_blur_mirror)
         val tint = findViewById<View>(R.id.header_glass_tint)
+        val footerTint = findViewById<View>(R.id.footer_glass_tint)
+        val footerContainer = findViewById<View>(R.id.glass_footer_container)
         
         val initialSetupComplete = prefs.getBoolean("is_setup_complete", false)
         var isSetupComplete by mutableStateOf(initialSetupComplete)
+        var currentTab by mutableIntStateOf(0)
 
         // --- Bridge Compose Screen ---
         composeView.setContent {
@@ -89,7 +96,8 @@ class SettingsActivity : AppCompatActivity() {
             val systemBarsTop = systemBars?.top ?: 0
             val systemBarsBottom = systemBars?.bottom ?: 0
             
-            val headerHeightDp = (56 + (systemBarsTop / density)).dp
+            // Floating Header height: 56dp (toolbar) + 16dp (top margin) + 16dp (bottom margin)
+            val headerHeightDp = (56 + 16 + 16 + (systemBarsTop / density)).dp
             val bottomPaddingDp = (systemBarsBottom / density).dp
             
             PixelAodTheme {
@@ -111,6 +119,8 @@ class SettingsActivity : AppCompatActivity() {
                     SettingsScreen(
                         masterSwitchEnabled = masterSwitchEnabled,
                         onPermissionRequest = { handleMissingPermission() },
+                        currentTab = currentTab,
+                        onTabSelected = { currentTab = it },
                         contentPadding = PaddingValues(
                             top = headerHeightDp,
                             bottom = bottomPaddingDp + 16.dp
@@ -124,11 +134,24 @@ class SettingsActivity : AppCompatActivity() {
             }
         }
 
+        // --- Bottom Navigation Pill (Sharp Layer) ---
+        footerButtonsView.setContent {
+            PixelAodTheme {
+                if (isSetupComplete) {
+                    NavigationPill(
+                        currentTab = currentTab,
+                        onTabSelected = { currentTab = it }
+                    )
+                }
+            }
+        }
+
         // Hide master UI elements during setup
         masterSwitch.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
         toolbar.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
         mirror.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
         tint.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
+        footerContainer.visibility = if (initialSetupComplete) View.VISIBLE else View.GONE
 
         // React to setup completion
         snapshotFlow { isSetupComplete }.let {
@@ -139,6 +162,9 @@ class SettingsActivity : AppCompatActivity() {
                         toolbar.visibility = View.VISIBLE
                         mirror.visibility = View.VISIBLE
                         tint.visibility = View.VISIBLE
+                        footerContainer.visibility = View.VISIBLE
+                    } else {
+                        footerContainer.visibility = View.GONE
                     }
                 }
             }
@@ -146,20 +172,53 @@ class SettingsActivity : AppCompatActivity() {
 
         // --- HARDWARE-ACCELERATED MIRROR (Optimized for 120Hz) ---
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            // Force hardware acceleration for the mirror layer
+            // Force hardware acceleration for the mirror layers
             mirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
+            footerMirror.setLayerType(View.LAYER_TYPE_HARDWARE, null)
             
             val surfaceColor = com.google.android.material.color.MaterialColors.getColor(
                 this, com.google.android.material.R.attr.colorSurface, android.graphics.Color.BLACK
             )
 
             // Extremely efficient blur radius for high-refresh-rate Pixels
-            mirror.setRenderEffect(
-                android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.CLAMP)
-            )
+            val blurEffect = android.graphics.RenderEffect.createBlurEffect(20f, 20f, android.graphics.Shader.TileMode.CLAMP)
+            mirror.setRenderEffect(blurEffect)
+            footerMirror.setRenderEffect(blurEffect)
 
+            // Header Mirror (with floating alignment)
             mirror.background = object : android.graphics.drawable.Drawable() {
                 private var isDrawing = false
+                private val headerLocation = IntArray(2)
+                private val composeLocation = IntArray(2)
+
+                override fun draw(canvas: android.graphics.Canvas) {
+                    if (isDrawing || composeView.width <= 0) return
+                    isDrawing = true
+                    canvas.drawColor(surfaceColor)
+                    canvas.save()
+                    
+                    // Map coordinate system for the floating header
+                    mirror.getLocationOnScreen(headerLocation)
+                    composeView.getLocationOnScreen(composeLocation)
+                    
+                    val dy = headerLocation[1] - composeLocation[1]
+                    canvas.translate(0f, -dy.toFloat())
+                    
+                    composeView.draw(canvas)
+                    canvas.restore()
+                    isDrawing = false
+                }
+                override fun setAlpha(alpha: Int) {}
+                override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+                @Suppress("DEPRECATION")
+                override fun getOpacity(): Int = android.graphics.PixelFormat.OPAQUE
+            }
+
+            // Footer Mirror (with perfect alignment)
+            footerMirror.background = object : android.graphics.drawable.Drawable() {
+                private var isDrawing = false
+                private val footerLocation = IntArray(2)
+                private val composeLocation = IntArray(2)
 
                 override fun draw(canvas: android.graphics.Canvas) {
                     if (isDrawing || composeView.width <= 0) return
@@ -168,7 +227,13 @@ class SettingsActivity : AppCompatActivity() {
                     canvas.drawColor(surfaceColor)
                     
                     canvas.save()
-                    // NO CLIPPING or SCALING - Just direct hardware capture
+                    // Map the coordinate system of the compose list to the footer pill
+                    footerMirror.getLocationOnScreen(footerLocation)
+                    composeView.getLocationOnScreen(composeLocation)
+                    
+                    val dy = footerLocation[1] - composeLocation[1]
+                    canvas.translate(0f, -dy.toFloat())
+                    
                     composeView.draw(canvas)
                     canvas.restore()
                     
@@ -189,6 +254,7 @@ class SettingsActivity : AppCompatActivity() {
                 override fun doFrame(frameTimeNanos: Long) {
                     if (isInvalidationPending) {
                         mirror.invalidate()
+                        footerMirror.invalidate()
                         isInvalidationPending = false
                     }
                 }
@@ -206,19 +272,35 @@ class SettingsActivity : AppCompatActivity() {
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             val density = resources.displayMetrics.density
             
+            // --- Refined Top Cap Logic ---
+            val headerCard = findViewById<com.google.android.material.card.MaterialCardView>(R.id.glass_header_container)
+            
+            val typedValue = android.util.TypedValue()
+            var actionBarHeight = (56 * density).toInt() 
+            if (theme.resolveAttribute(android.R.attr.actionBarSize, typedValue, true)) {
+                actionBarHeight = android.util.TypedValue.complexToDimensionPixelSize(typedValue.data, resources.displayMetrics)
+            }
+            
+            // 1. Top Cap (Merged with Status Bar)
+            val headerParams = headerCard.layoutParams
+            headerParams.height = systemBars.top + actionBarHeight
+            headerCard.layoutParams = headerParams
             toolbar.setPadding(0, systemBars.top, 0, 0)
-            val params = toolbar.layoutParams
-            params.height = (56 * density).toInt() + systemBars.top
-            toolbar.layoutParams = params
+            
+            // Apply custom shapes for Top Cap
+            val cornerRadius = 28 * density
+            headerCard.shapeAppearanceModel = headerCard.shapeAppearanceModel.toBuilder()
+                .setTopLeftCornerSize(0f).setTopRightCornerSize(0f)
+                .setBottomLeftCornerSize(cornerRadius).setBottomRightCornerSize(cornerRadius).build()
 
             val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-            if (isDark) {
-                tint.setBackgroundColor(android.graphics.Color.BLACK)
-                tint.alpha = 0.4f 
-            } else {
-                tint.setBackgroundColor(android.graphics.Color.WHITE)
-                tint.alpha = 0.6f
-            }
+            val tintColor = if (isDark) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+            val tintAlpha = if (isDark) 0.4f else 0.6f
+
+            tint.setBackgroundColor(tintColor)
+            tint.alpha = tintAlpha
+            footerTint.setBackgroundColor(tintColor)
+            footerTint.alpha = tintAlpha
 
             insets
         }

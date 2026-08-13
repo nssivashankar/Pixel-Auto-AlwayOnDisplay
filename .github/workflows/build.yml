@@ -52,7 +52,7 @@ jobs:
             RAW_VERSION="${{ github.ref_name }}"
             VERSION_NAME="${RAW_VERSION#v}"
           else
-            VERSION_NAME="1.1.12"
+            VERSION_NAME="1.2.0"
           fi
           echo "version_name=$VERSION_NAME" >> $GITHUB_OUTPUT
           echo "Building version: $VERSION_NAME"

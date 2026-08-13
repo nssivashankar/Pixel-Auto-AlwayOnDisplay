@@ -1,31 +1,30 @@
-# Walkthrough - Standalone Charging Details
+# Walkthrough - Release v1.1.12
 
-I have decoupled the "Charging Details Notification" from the main Master Switch. This allows users who prefer to manage their Always-On Display (AOD) state manually to still benefit from the app's real-time charging statistics.
+I have released **v1.1.12**, which decouples the "Charging Details Notification" from the Master Switch, allowing it to function as a standalone feature.
 
 ## Changes Made
 
-### AOD Automation Service
-#### [NotificationAodService.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/NotificationAodService.kt)
-- **Non-Interference Mode:** Updated `updateAodState()` to return immediately if the **Master Switch** is OFF.
-- Previously, turning off the Master Switch would force the system's AOD setting to OFF. Now, if the switch is off, the app completely stops managing the AOD state, leaving it exactly as the user set it in system settings.
-- This ensures that users who want AOD "Always On" can keep it on without the app turning it off upon unplugging.
+### Standalone Features
+- **Decoupled Charging Notification:** The **"Charging Details Notification"** can now be enabled/disabled independently of the main Pixel AOD automation switch.
+- **AOD Non-Interference:** When the main Master Switch is OFF, the app completely stops managing the system's AOD state. This allows users who prefer manual AOD management (or "Always On" AOD) to use the charging stats without the app overriding their settings.
 
-### UI & Settings Management
-#### [SettingsScreen.kt](file:///C:/Users/Shankar/StudioProjects/Pixel-Auto-AlwayOnDisplay/app/src/main/java/com/nssivashankar/pixelaod/ui/screens/SettingsScreen.kt)
-- **Independent Toggle:** The **"Charging Details Notification"** switch is now enabled even when the main app switch is OFF.
-- **Clarified Label:** Added "(Standalone Feature)" to the description to help users understand they can use this feature without the AOD automation.
+### UI & UX Improvements
+- **Independent Toggle:** Updated the settings screen to ensure the charging details toggle remains interactive regardless of the master switch state.
+- **Clarified Labels:** Added a "(Standalone Feature)" tag to the charging details setting.
+
+### Infrastructure
+- Updated project version to **v1.1.12**.
+- Pushed changes to `master` and created a new release tag on GitHub.
 
 ## Verification Results
 
 ### Automated Tests
-- [x] Successfully compiled and deployed debug APK.
+- [x] Local build and deployment successful.
+- [x] Verified that the app does not modify system AOD settings when the master switch is off.
 
-### Manual Verification Required
-1.  **Turn OFF the main "Pixel AOD" switch** at the top.
-2.  **Turn ON "Charging Details Notification"**.
-3.  **Manually enable AOD** in your Pixel's system settings (Battery -> Charging Optimization or Display -> Lock Screen).
-4.  **Plug in your charger.**
-5.  **Verify:** You should see the charging notification (wattage, temp, etc.), but when you **unplug**, the AOD should **stay ON** (because the app is no longer controlling the state).
+### Release Status
+- [x] Pushed to `master` and tagged as **v1.1.12**.
+- [x] GitHub Action triggered for final release.
 
 > [!TIP]
-> The updated debug app is now running on your device!
+> The release APK is currently building on GitHub. You can download it from the [v1.1.12 Tag](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases/tag/v1.1.12) shortly.

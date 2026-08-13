@@ -1,4 +1,6 @@
-- [x] Decouple Charging Details Notification from Master Switch in `NotificationAodService.kt`
-- [x] Make Charging Details toggle independent in `SettingsScreen.kt`
-- [/] Build and Deploy Debug APK
-- [ ] Verify standalone notification functionality
+- [ ] Add `REQUEST_INSTALL_PACKAGES` and `FileProvider` to `AndroidManifest.xml`
+- [ ] Create `res/xml/file_paths.xml` for `FileProvider`
+- [ ] Implement haptic feedback for Pager in `SettingsScreen.kt`
+- [ ] Enhance `UpdateChecker.kt` with changelog parsing and direct download/install logic
+- [ ] Update `AboutScreen.kt` to use the improved update flow
+- [ ] Build and deploy debug APK for testing

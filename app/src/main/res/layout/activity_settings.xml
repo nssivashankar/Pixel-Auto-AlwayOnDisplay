@@ -12,21 +12,24 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <!-- 2. The Glass Header Layer (Native View for Zero Friction) -->
-    <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/app_bar"
+
+
+    <!-- 2. The Glass Top Cap Layer (Continuous with Status Bar) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/glass_header_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/transparent"
-        app:elevation="0dp"
-        app:liftOnScroll="false">
+        android:layout_gravity="top"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="8dp"
+        app:strokeWidth="0dp">
 
         <FrameLayout
-            android:id="@+id/glass_header_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
-            <!-- iOS Style Ultra-Frosted Lens -->
+            <!-- Ultra-Frosted Mirror -->
             <View
                 android:id="@+id/header_blur_mirror"
                 android:layout_width="match_parent"
@@ -39,39 +42,65 @@
                 android:layout_height="match_parent"
                 android:alpha="0.4" />
 
-            <LinearLayout
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical">
+                android:layout_height="match_parent"
+                android:background="@android:color/transparent"
+                app:title="Pixel AOD"
+                app:titleTextAppearance="@style/PixelAodTitle"
+                app:titleTextColor="?attr/colorOnSurface">
 
-                <com.google.android.material.appbar.MaterialToolbar
-                    android:id="@+id/toolbar"
-                    android:layout_width="match_parent"
-                    android:layout_height="?attr/actionBarSize"
-                    android:background="@android:color/transparent"
-                    app:title="Pixel AOD"
-                    app:titleTextAppearance="@style/PixelAodTitle"
-                    app:titleTextColor="?attr/colorOnSurface">
+                <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/master_switch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginEnd="16dp" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/master_switch"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end"
-                        android:layout_marginEnd="16dp" />
+            </com.google.android.material.appbar.MaterialToolbar>
 
-                </com.google.android.material.appbar.MaterialToolbar>
-
-                <View
-                    android:id="@+id/header_separator"
-                    android:layout_width="match_parent"
-                    android:layout_height="1dp"
-                    android:background="?attr/colorOutlineVariant"
-                    android:alpha="0.2" />
-
-            </LinearLayout>
         </FrameLayout>
 
-    </com.google.android.material.appbar.AppBarLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- 3. The Glass Footer Layer (Floating Pill) -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/glass_footer_container"
+        android:layout_width="136dp"
+        android:layout_height="56dp"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="32dp"
+        app:cardBackgroundColor="@android:color/transparent"
+        app:cardCornerRadius="1000dp"
+        app:cardElevation="8dp"
+        app:strokeWidth="0dp">
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <!-- Mirror of the content behind the pill -->
+            <View
+                android:id="@+id/footer_blur_mirror"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <!-- Translucent Tint -->
+            <View
+                android:id="@+id/footer_glass_tint"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:alpha="0.4" />
+
+            <!-- Sharp Compose Buttons on top of the Glass -->
+            <androidx.compose.ui.platform.ComposeView
+                android:id="@+id/footer_buttons_compose_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+        </FrameLayout>
+
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

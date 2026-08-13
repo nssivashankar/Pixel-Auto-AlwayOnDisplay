@@ -10,6 +10,10 @@ import android.content.IntentFilter
 import android.content.LocusId
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
+import android.hardware.Sensor
+import android.hardware.SensorManager
+import android.hardware.TriggerEvent
+import android.hardware.TriggerEventListener
 import android.os.BatteryManager
 import android.os.Build
 import android.service.notification.NotificationListenerService
@@ -29,7 +33,33 @@ class NotificationAodService : NotificationListenerService() {
     private var plugInTime = 0L
     private var lastActiveWattageTime = 0L
     private var isScreenOffAodActive = false
+    private var isLiftToWakeActive = false
     private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+
+    private val sensorManager by lazy { getSystemService(Context.SENSOR_SERVICE) as SensorManager }
+    private val pickUpSensor by lazy { sensorManager.getDefaultSensor(25) } // Sensor.TYPE_PICK_UP_GESTURE
+
+    private val triggerEventListener = object : TriggerEventListener() {
+        override fun onTrigger(event: TriggerEvent?) {
+            if (getPrefs().getBoolean("lift_to_wake_aod", false)) {
+                isLiftToWakeActive = true
+                updateAodState()
+                
+                // Re-use same 10s timer logic
+                handler.removeCallbacksAndMessages("LIFT_TIMER")
+                handler.postAtTime({
+                    isLiftToWakeActive = false
+                    updateAodState()
+                }, "LIFT_TIMER", android.os.SystemClock.uptimeMillis() + 10000)
+                
+                // Re-register if screen is still off
+                val isScreenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
+                if (!isScreenOn) {
+                    sensorManager.requestTriggerSensor(this, pickUpSensor)
+                }
+            }
+        }
+    }
 
     companion object {
         private const val CHARGING_NOTIF_ID = 1001
@@ -204,19 +234,27 @@ class NotificationAodService : NotificationListenerService() {
                     }
                 }
                 Intent.ACTION_SCREEN_OFF -> {
-                    if (getPrefs().getBoolean("screen_off_aod", false)) {
+                    val prefs = getPrefs()
+                    if (prefs.getBoolean("screen_off_aod", false)) {
                         isScreenOffAodActive = true
                         updateAodState()
-                        handler.removeCallbacksAndMessages(null)
-                        handler.postDelayed({
+                        handler.removeCallbacksAndMessages("SCREEN_OFF_TIMER")
+                        handler.postAtTime({
                             isScreenOffAodActive = false
                             updateAodState()
-                        }, 10000)
+                        }, "SCREEN_OFF_TIMER", android.os.SystemClock.uptimeMillis() + 10000)
+                    }
+                    
+                    if (prefs.getBoolean("lift_to_wake_aod", false) && pickUpSensor != null) {
+                        sensorManager.requestTriggerSensor(triggerEventListener, pickUpSensor)
                     }
                 }
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOffAodActive = false
-                    handler.removeCallbacksAndMessages(null)
+                    isLiftToWakeActive = false
+                    handler.removeCallbacksAndMessages("SCREEN_OFF_TIMER")
+                    handler.removeCallbacksAndMessages("LIFT_TIMER")
+                    sensorManager.cancelTriggerSensor(triggerEventListener, pickUpSensor)
                     updateAodState()
                 }
             }
@@ -288,7 +326,8 @@ class NotificationAodService : NotificationListenerService() {
             "unit_system",
             "custom_limit_enabled",
             "custom_charging_limit",
-            "screen_off_aod"
+            "screen_off_aod",
+            "lift_to_wake_aod"
             -> {
                 syncActiveNotifications()
                 updateChargingNotification(null)
@@ -510,9 +549,9 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         val notifTrigger = systemNotifAllowed && !isQuietHours && activeNotifKeys.isNotEmpty()
-        val shouldBeOn = chargingTrigger || notifTrigger || isScreenOffAodActive
+        val shouldBeOn = chargingTrigger || notifTrigger || isScreenOffAodActive || isLiftToWakeActive
 
-        Log.d("AodService", "State Update: Charging=$isCharging, Notifs=${activeNotifKeys.size}, ScreenOffAod=$isScreenOffAodActive, ShouldBeOn=$shouldBeOn")
+        Log.d("AodService", "State Update: Charging=$isCharging, Notifs=${activeNotifKeys.size}, ScreenOffAod=$isScreenOffAodActive, LiftToWake=$isLiftToWakeActive, ShouldBeOn=$shouldBeOn")
 
         setAod(enable = shouldBeOn)
     }

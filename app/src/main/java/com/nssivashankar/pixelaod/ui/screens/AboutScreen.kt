@@ -112,8 +112,8 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             scope.launch {
                                 isCheckingUpdates = true
                                 delay(2000)
-                                UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, url ->
-                                    UpdateChecker.showUpdateDialog(context, latest, url)
+                                UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, notes, url ->
+                                    UpdateChecker.showUpdateDialog(context, latest, notes, url)
                                 }
                                 isCheckingUpdates = false
                             }
