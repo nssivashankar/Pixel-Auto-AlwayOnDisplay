@@ -273,8 +273,6 @@ fun NavigationPill(
     currentTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
-
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -296,7 +294,6 @@ fun NavigationPill(
                     .background(if (isHome) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                     .clickable {
                         if (!isHome) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTabSelected(0)
                         }
                     },
@@ -318,7 +315,6 @@ fun NavigationPill(
                     .background(if (isAbout) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                     .clickable {
                         if (!isAbout) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             onTabSelected(1)
                         }
                     },
