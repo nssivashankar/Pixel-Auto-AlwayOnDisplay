@@ -80,3 +80,12 @@ lint/tmp/
 # Android Profiling
 *.hprof
 
+# Internal AI/IDE Artifacts
+.artifacts/
+
+# Keystore files (Security Cleanup)
+*.jks
+keystore_base64.txt
+
+# Module-specific build outputs
+app/release/
