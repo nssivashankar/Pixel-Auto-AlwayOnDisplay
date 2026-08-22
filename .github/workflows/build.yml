@@ -57,7 +57,7 @@ jobs:
               RELEASE_NOTES=$(git log -1 --pretty=%B)
             fi
           else
-            VERSION_NAME="1.2.2"
+            VERSION_NAME="1.2.3"
             RELEASE_NOTES=$(git log -1 --pretty=%B)
           fi
           
