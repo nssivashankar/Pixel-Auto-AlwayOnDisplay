@@ -18,10 +18,15 @@ import com.google.android.material.checkbox.MaterialCheckBox
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
 
 open class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSelectListPreference(context, attrs) {
 
     protected val iconCache = ConcurrentHashMap<String, Drawable>()
+
+    companion object {
+        private val iconExecutor = Executors.newFixedThreadPool(4)
+    }
 
     override fun onClick() {
         val pm = context.packageManager
@@ -99,16 +104,18 @@ open class AppListPreference(context: Context, attrs: AttributeSet?) : MultiSele
                 holder.appIcon.setImageDrawable(cachedIcon)
             } else {
                 holder.appIcon.setImageResource(android.R.color.transparent)
-                // Using a simple thread for icon loading to keep UI smooth
-                Thread {
-                    val icon = pm.getApplicationIcon(item.appInfo)
-                    iconCache[item.packageName] = icon
-                    holder.itemView.post {
-                        if (holder.adapterPosition == position) {
-                            holder.appIcon.setImageDrawable(icon)
+                // Shared executor thread pool to keep UI smooth without thread creation overhead
+                iconExecutor.execute {
+                    try {
+                        val icon = pm.getApplicationIcon(item.appInfo)
+                        iconCache[item.packageName] = icon
+                        holder.itemView.post {
+                            if (holder.bindingAdapterPosition == position) {
+                                holder.appIcon.setImageDrawable(icon)
+                            }
                         }
-                    }
-                }.start()
+                    } catch (_: Exception) {}
+                }
             }
 
             holder.itemView.setOnClickListener {

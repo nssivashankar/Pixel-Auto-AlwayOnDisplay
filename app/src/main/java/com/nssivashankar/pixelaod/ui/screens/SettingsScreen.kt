@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
+import com.nssivashankar.pixelaod.ui.theme.AppHaptics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -230,9 +231,13 @@ fun SettingsScreen(
     }
 
     // 2. Pager swipes (user finger) -> Update external state
-    // Use snapshotFlow to detect when the page settles for better UX
+    var isInitialPagerLoad by remember { mutableStateOf(true) }
     LaunchedEffect(pagerState.currentPage) {
-        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        if (isInitialPagerLoad) {
+            isInitialPagerLoad = false
+        } else {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        }
         onTabSelected(pagerState.currentPage)
     }
 
@@ -817,7 +822,7 @@ fun PreferenceItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(enabled = enabled) { 
-                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                AppHaptics.performClick(haptic)
                 onClick() 
             }
     )
@@ -888,11 +893,7 @@ fun PreferenceSwitch(
             .fillMaxWidth()
             .clickable(enabled = enabled) { 
                 val newState = !checked
-                if (newState) {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                } else {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                }
+                AppHaptics.performClick(haptic)
                 onCheckedChange(newState) 
             }
     )

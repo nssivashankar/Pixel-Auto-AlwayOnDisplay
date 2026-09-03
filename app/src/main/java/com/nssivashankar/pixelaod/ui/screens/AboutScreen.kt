@@ -4,14 +4,12 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.*
@@ -20,12 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
@@ -64,16 +62,15 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 // App Logo
                 Box(
                     modifier = Modifier
-                        .size(110.dp) // Slightly larger for better presence
+                        .size(96.dp)
                         .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
+                        .background(Color.Black),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_round_aod_24),
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.primary
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                        contentDescription = "Pixel Auto AOD Logo",
+                        modifier = Modifier.requiredSize(140.dp)
                     )
                 }
                 Spacer(Modifier.height(20.dp))
@@ -205,3 +202,12 @@ fun AboutScreen(contentPadding: PaddingValues) {
         }
     }
 }
+
+@Preview(showBackground = true)
+@Composable
+fun AboutScreenPreview() {
+    MaterialTheme {
+        AboutScreen(contentPadding = PaddingValues(0.dp))
+    }
+}
+

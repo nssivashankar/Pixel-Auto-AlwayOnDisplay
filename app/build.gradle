@@ -12,6 +12,14 @@ android {
     // require Android 16/15QPR APIs to compile.
     compileSdk = 37
 
+    def versionPropsFile = file('../version.properties')
+    def versionProps = new Properties()
+    if (versionPropsFile.exists()) {
+        versionProps.load(new FileInputStream(versionPropsFile))
+    }
+    def vName = "${versionProps['major']}.${versionProps['minor']}.${versionProps['patch']}"
+    def vCode = versionProps['code'].toInteger()
+
     buildFeatures {
         compose true
     }
@@ -29,9 +37,9 @@ android {
         applicationId "com.nssivashankar.pixelaod"
         minSdkVersion 26
         //noinspection OldTargetApi
-        targetSdkVersion 35
-        versionCode System.getenv("GITHUB_RUN_NUMBER") ? System.getenv("GITHUB_RUN_NUMBER").toInteger() : 13
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "1.2.3"
+        targetSdkVersion 36
+        versionCode vCode
+        versionName vName
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -93,4 +101,54 @@ dependencies {
     implementation "androidx.work:work-runtime-ktx:2.10.0"
 
     compileOnly "dev.rikka.hidden:stub:4.4.0"
+}
+
+tasks.register("incrementVersion") {
+    doLast {
+        def versionPropsFile = file('../version.properties')
+        if (versionPropsFile.exists()) {
+            def versionProps = new Properties()
+            versionPropsFile.withInputStream { versionProps.load(it) }
+            
+            def patch = (versionProps['patch'] ?: "0").toInteger() + 1
+            def code = (versionProps['code'] ?: "1").toInteger() + 1
+            
+            versionProps['patch'] = patch.toString()
+            versionProps['code'] = code.toString()
+            versionPropsFile.withOutputStream { versionProps.store(it, "Pixel Auto AOD Versioning") }
+            
+            println "Version incremented to: ${versionProps['major']}.${versionProps['minor']}.${patch} (Code: ${code})"
+        }
+    }
+}
+
+tasks.register("releaseToGit") {
+    doLast {
+        def versionPropsFile = file('../version.properties')
+        def versionProps = new Properties()
+        versionPropsFile.withInputStream { versionProps.load(it) }
+        def vName = "v${versionProps['major']}.${versionProps['minor']}.${versionProps['patch']}"
+        
+        exec {
+            commandLine 'git', 'add', versionPropsFile.absolutePath
+        }
+        exec {
+            commandLine 'git', 'commit', '-m', "Release $vName"
+        }
+        exec {
+            commandLine 'git', 'tag', vName
+        }
+        exec {
+            commandLine 'git', 'push', 'origin', 'master'
+        }
+        exec {
+            commandLine 'git', 'push', 'origin', '--tags'
+        }
+        println "Git commit, tag $vName, and push to origin master successful."
+    }
+}
+
+tasks.register("buildAndRelease") {
+    dependsOn("assembleRelease")
+    finalizedBy("incrementVersion", "releaseToGit")
 }

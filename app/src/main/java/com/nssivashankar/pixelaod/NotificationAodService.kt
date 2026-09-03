@@ -10,12 +10,14 @@ import android.content.IntentFilter
 import android.content.LocusId
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
-import android.hardware.Sensor
+import android.graphics.drawable.Icon
 import android.hardware.SensorManager
 import android.hardware.TriggerEvent
 import android.hardware.TriggerEventListener
 import android.os.BatteryManager
 import android.os.Build
+import android.os.Bundle
+import android.os.SystemClock
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.util.Log
@@ -39,6 +41,17 @@ class NotificationAodService : NotificationListenerService() {
     private val sensorManager by lazy { getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     private val pickUpSensor by lazy { sensorManager.getDefaultSensor(25) } // Sensor.TYPE_PICK_UP_GESTURE
 
+    // Cached Reflection classes to eliminate Class.forName overhead on battery events
+    private val progressStyleClass by lazy {
+        try { Class.forName("android.app.Notification\$ProgressStyle") } catch (_: Throwable) { null }
+    }
+    private val pointClass by lazy {
+        try { Class.forName("android.app.Notification\$ProgressStyle\$Point") } catch (_: Throwable) { null }
+    }
+
+    private val tokenScreenOff = Any()
+    private val tokenLift = Any()
+
     private val triggerEventListener = object : TriggerEventListener() {
         override fun onTrigger(event: TriggerEvent?) {
             if (getPrefs().getBoolean("lift_to_wake_aod", false)) {
@@ -46,11 +59,11 @@ class NotificationAodService : NotificationListenerService() {
                 updateAodState()
                 
                 // Re-use same 10s timer logic
-                handler.removeCallbacksAndMessages("LIFT_TIMER")
+                handler.removeCallbacksAndMessages(tokenLift)
                 handler.postAtTime({
                     isLiftToWakeActive = false
                     updateAodState()
-                }, "LIFT_TIMER", android.os.SystemClock.uptimeMillis() + 10000)
+                }, tokenLift, SystemClock.uptimeMillis() + 10000)
                 
                 // Re-register if screen is still off
                 val isScreenOn = (getSystemService(Context.POWER_SERVICE) as android.os.PowerManager).isInteractive
@@ -238,11 +251,11 @@ class NotificationAodService : NotificationListenerService() {
                     if (prefs.getBoolean("screen_off_aod", false)) {
                         isScreenOffAodActive = true
                         updateAodState()
-                        handler.removeCallbacksAndMessages("SCREEN_OFF_TIMER")
+                        handler.removeCallbacksAndMessages(tokenScreenOff)
                         handler.postAtTime({
                             isScreenOffAodActive = false
                             updateAodState()
-                        }, "SCREEN_OFF_TIMER", android.os.SystemClock.uptimeMillis() + 10000)
+                        }, tokenScreenOff, SystemClock.uptimeMillis() + 10000)
                     }
                     
                     if (prefs.getBoolean("lift_to_wake_aod", false) && pickUpSensor != null) {
@@ -252,8 +265,8 @@ class NotificationAodService : NotificationListenerService() {
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOffAodActive = false
                     isLiftToWakeActive = false
-                    handler.removeCallbacksAndMessages("SCREEN_OFF_TIMER")
-                    handler.removeCallbacksAndMessages("LIFT_TIMER")
+                    handler.removeCallbacksAndMessages(tokenScreenOff)
+                    handler.removeCallbacksAndMessages(tokenLift)
                     sensorManager.cancelTriggerSensor(triggerEventListener, pickUpSensor)
                     updateAodState()
                 }
@@ -337,7 +350,7 @@ class NotificationAodService : NotificationListenerService() {
 
     private fun getPrefs() = getSharedPreferences("aod_prefs", MODE_PRIVATE)
 
-        override fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
         getPrefs().registerOnSharedPreferenceChangeListener(prefListener)
@@ -384,6 +397,7 @@ class NotificationAodService : NotificationListenerService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(receiver, filter, RECEIVER_EXPORTED)
         } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
             registerReceiver(receiver, filter)
         }
     }
@@ -454,7 +468,6 @@ class NotificationAodService : NotificationListenerService() {
         val packageName = sbn.packageName
         
         // 0. Own charging notification: Never include in activeNotifKeys.
-        // The charging AOD state is handled separately by chargingTrigger in updateAodState().
         if (packageName == this.packageName && sbn.id == CHARGING_NOTIF_ID) {
             return false
         }
@@ -474,30 +487,18 @@ class NotificationAodService : NotificationListenerService() {
                 val extras = notification.extras
                 val category = notification.category
                 
-                // Exclude media playback notifications (Spotify, YouTube, etc.)
+                // Exclude media playback notifications
                 val isMedia = category == Notification.CATEGORY_TRANSPORT || 
                              extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
                              extras.getString(Notification.EXTRA_TEMPLATE)?.contains("MediaStyle") == true
                 
                 if (!isMedia) {
-                    // Detect high-value ongoing updates (Navigation, Delivery, Rides, Progress)
                     val hasProgress = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0
-                    
-                    // Category-based detection (broadened)
-                    val isLiveCategory = category in listOf(
-                        "navigation",      // Notification.CATEGORY_NAVIGATION (API 28)
-                        "service",         // Notification.CATEGORY_SERVICE
-                        "progress",        // Notification.CATEGORY_PROGRESS
-                        "location_sharing", // Notification.CATEGORY_LOCATION_SHARING (API 31)
-                        "transport"
-                    )
-
-                    // Keyword-based fallback for apps that don't set categories correctly (Zomato, Uber, etc.)
+                    val isLiveCategory = category in listOf("navigation", "service", "progress", "location_sharing", "transport")
                     val appKeywords = listOf("uber", "ride", "delivery", "food", "track", "map", "grab", "rapido", "ola", "zomato", "swiggy")
                     val hasKeyword = appKeywords.any { packageName.contains(it, ignoreCase = true) }
 
                     if (isLiveCategory || hasProgress || hasKeyword) {
-                        Log.d("AodService", "Live Update detected: $packageName")
                         return true
                     }
                 }
@@ -516,42 +517,25 @@ class NotificationAodService : NotificationListenerService() {
         val prefs = getPrefs()
         val masterEnabled = prefs.getBoolean("master_switch", false)
         
-        if (!masterEnabled) {
-            // When master switch is off, the app stops controlling the AOD state.
-            // This allows users to keep AOD enabled manually while still using 
-            // standalone features like the Charging Details Notification.
-            return
-        }
+        if (!masterEnabled) return
 
         val chargingMode = prefs.getBoolean("charging_mode", false)
-        
-        // Wattage Guard: Turn off AOD if power draw is ~0W for more than 10 minutes
-        val isWattageIdle = isCharging && lastActiveWattageTime != 0L && 
-                           (System.currentTimeMillis() - lastActiveWattageTime > 10 * 60 * 1000)
+        val isWattageIdle = isCharging && lastActiveWattageTime != 0L && (System.currentTimeMillis() - lastActiveWattageTime > 10 * 60 * 1000)
 
-        // Charging trigger only stays active if NOT full AND not paused by Adaptive Charging AND not idle
-        // Note: chargingInfoMode (Notification) no longer forces the AOD state.
-        val chargingTrigger = chargingMode && isCharging && 
-                             !isBatteryFull && !isChargingPaused && !isWattageIdle
+        val chargingTrigger = chargingMode && isCharging && !isBatteryFull && !isChargingPaused && !isWattageIdle
         
-        // System DND check
         val respectDnd = prefs.getBoolean("dnd_mode", false)
         val systemNotifAllowed = if (respectDnd) !isDndActive else true
         
-        // Scheduled DND check
         val isQuietHours = if (prefs.getBoolean("scheduled_dnd", false)) {
             isInQuietHours(
                 prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00",
                 prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00"
             )
-        } else {
-            false
-        }
+        } else { false }
 
         val notifTrigger = systemNotifAllowed && !isQuietHours && activeNotifKeys.isNotEmpty()
         val shouldBeOn = chargingTrigger || notifTrigger || isScreenOffAodActive || isLiftToWakeActive
-
-        Log.d("AodService", "State Update: Charging=$isCharging, Notifs=${activeNotifKeys.size}, ScreenOffAod=$isScreenOffAodActive, LiftToWake=$isLiftToWakeActive, ShouldBeOn=$shouldBeOn")
 
         setAod(enable = shouldBeOn)
     }
@@ -560,59 +544,32 @@ class NotificationAodService : NotificationListenerService() {
         try {
             val now = Calendar.getInstance()
             val currentMinutes = now[Calendar.HOUR_OF_DAY] * 60 + now[Calendar.MINUTE]
-
             val startParts = startStr.split(":")
             val startMinutes = startParts[0].toInt() * 60 + startParts[1].toInt()
-
             val endParts = endStr.split(":")
             val endMinutes = endParts[0].toInt() * 60 + endParts[1].toInt()
-
             return if (startMinutes <= endMinutes) {
                 currentMinutes in startMinutes..endMinutes
             } else {
-                // Overnight period (e.g., 22:00 to 07:00)
                 currentMinutes >= startMinutes || currentMinutes <= endMinutes
             }
-        } catch (_: Exception) {
-            return false
-        }
+        } catch (_: Exception) { return false }
     }
 
     private fun setAod(enable: Boolean) {
-        if (checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) {
-            return
-        }
-
+        if (checkSelfPermission(android.Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) return
         val currentState = AodSettings.isAodEnabled(contentResolver)
-        if (currentState == enable) return // Avoid redundant writes
-
+        if (currentState == enable) return
         try {
             AodSettings.setAodEnabled(contentResolver, enable)
-            
-            // Fix for Android 15/16/17: Force display state refresh.
-            // When turning ON or OFF, we poke the doze machine to re-evaluate the state immediately.
-            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+            val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             val channelId = "aod_refresh_channel"
-            
-            val channel = NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW)
-            notificationManager.createNotificationChannel(channel)
-
-            val ghostNotif = Notification.Builder(this, channelId)
-                .setSmallIcon(android.R.color.transparent)
-                .setContentTitle("")
-                .setGroup("aod_sync_group")
-                .setGroupAlertBehavior(Notification.GROUP_ALERT_ALL)
-                .build()
-
-            // Post and immediately cancel to trigger a "wake" and settings re-read
-            notificationManager.notify(999, ghostNotif)
-            notificationManager.cancel(999)
-            
-            // Pulse intent tells SystemUI to transition to the new AOD state NOW
+            nm.createNotificationChannel(NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW))
+            val ghostNotif = Notification.Builder(this, channelId).setSmallIcon(android.R.color.transparent).setContentTitle("").setGroup("aod_sync_group").build()
+            nm.notify(999, ghostNotif)
+            nm.cancel(999)
             sendBroadcast(Intent("com.android.systemui.doze.pulse"))
-        } catch (e: SecurityException) {
-            Log.e("NotificationAodService", "Failed to set AOD state", e)
-        }
+        } catch (e: SecurityException) { Log.e("NotificationAodService", "Failed to set AOD state", e) }
     }
 
     private fun updateChargingNotification(intent: Intent?) {
@@ -623,7 +580,6 @@ class NotificationAodService : NotificationListenerService() {
         val batteryIntent = intent ?: registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return
         val plugged = batteryIntent.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1)
         val isPlugged = plugged != 0
-
         val level = batteryIntent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = batteryIntent.getIntExtra(BatteryManager.EXTRA_SCALE, -1)
         val batteryPct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
@@ -633,13 +589,9 @@ class NotificationAodService : NotificationListenerService() {
         val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
         val customTarget = prefs.getInt("custom_charging_limit", 80)
         
-        val isFull = status == BatteryManager.BATTERY_STATUS_FULL || 
-                    (optMode == 1 && batteryPct >= 80) || 
-                    (customLimitEnabled && batteryPct >= customTarget) ||
-                    batteryPct >= 100
+        val isFull = status == BatteryManager.BATTERY_STATUS_FULL || (optMode == 1 && batteryPct >= 80) || (customLimitEnabled && batteryPct >= customTarget) || batteryPct >= 100
 
         if (!enabled || !isPlugged || isFull) {
-            activeNotifKeys.remove(this.packageName + "|" + CHARGING_NOTIF_ID)
             stopForeground(STOP_FOREGROUND_REMOVE)
             nm.cancel(CHARGING_NOTIF_ID)
             updateAodState()
@@ -648,192 +600,192 @@ class NotificationAodService : NotificationListenerService() {
 
         val temperature = batteryIntent.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10.0
         val voltage = batteryIntent.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) // mV
-        
         val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
         val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
         val currentWattage = (kotlin.math.abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
-        
-        val wattageStr = String.format(java.util.Locale.US, "%.1fW", currentWattage)
-
-        val systemTimeToFull = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
-            bm.computeChargeTimeRemaining()
-        } else {
-            -1L
-        }
-
+        val systemTimeToFull = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) bm.computeChargeTimeRemaining() else -1L
         val currentMa = Math.abs(currentNow) / 1000.0
-        // Natural estimate: 50mAh per 1% (approx for Pixel series)
         val msPerPct = if (currentMa > 100) (50.0 / currentMa * 3600.0 * 1000.0).toLong() else 0L
-        
-        val now = System.currentTimeMillis()
-        val limit = if (customLimitEnabled) customTarget else 80
-        
-        val targetTimestampMillis = when {
-            batteryPct >= 100 -> 0L
-            
-            batteryPct < limit -> {
-                if (optMode == 1 && systemTimeToFull > 0) {
-                    // When "Limit to 80%" is active, system ETA targets 80%
-                    now + systemTimeToFull
-                } else {
-                    val pctsToLimit = limit - batteryPct
-                    val naturalTimeToLimit = pctsToLimit * msPerPct
-                    
-                    if (systemTimeToFull > 0) {
-                        // Detect Adaptive Charging (which inflates ETA to morning)
-                        val pctsToFull = 100 - batteryPct
-                        val naturalTimeToFull = (pctsToFull * msPerPct * 1.3).toLong() // +30% for trickle
-                        
-                        if (systemTimeToFull > naturalTimeToFull * 1.5) {
-                            // High discrepancy -> Adaptive Charging. Use natural speed to reach limit.
-                            if (naturalTimeToLimit > 0) now + naturalTimeToLimit else 0L
-                        } else {
-                            // Use system ETA with a non-linear weight to account for the slow 80-100% phase
-                            val weightToLimit = pctsToLimit.toDouble()
-                            val weightRemaining = (100 - limit) * 2.5 // Trickle phase is ~2.5x slower
-                            val ratio = weightToLimit / (weightToLimit + weightRemaining)
-                            now + (systemTimeToFull * ratio).toLong()
-                        }
-                    } else {
-                        if (naturalTimeToLimit > 0) now + naturalTimeToLimit else 0L
-                    }
-                }
-            }
-            
-            else -> { // batteryPct >= limit, targeting 100%
-                if (systemTimeToFull > 0) {
-                    now + systemTimeToFull
-                } else {
-                    val naturalTime = (100 - batteryPct) * msPerPct * 2 // Trickle phase fallback
-                    if (naturalTime > 0) now + naturalTime else 0L
-                }
-            }
+
+        // --- Multi-Target Estimation Logic ---
+        fun estimateTimeTo(targetPct: Int): Long {
+            if (batteryPct >= targetPct) return 0L
+            if (systemTimeToFull > 0 && targetPct == 100) return systemTimeToFull
+            if (targetPct == 80 && optMode == 1 && systemTimeToFull > 0) return systemTimeToFull
+            var estimatedMs = (targetPct - batteryPct) * msPerPct
+            if (targetPct > 80 && batteryPct < 80) estimatedMs += ((targetPct - maxOf(80, batteryPct)) * msPerPct * 0.5).toLong() 
+            return estimatedMs
         }
 
-        val timeStr = if (targetTimestampMillis > now) {
-            val clockTimeStr = formatToClockTime(targetTimestampMillis)
-            if (batteryPct != -1 && batteryPct < limit) {
-                if (customLimitEnabled) {
-                    getString(R.string.charging_info_time_remaining_custom, limit.toString(), clockTimeStr)
-                } else {
-                    getString(R.string.charging_info_time_remaining_80, clockTimeStr)
-                }
-            } else {
-                getString(R.string.charging_info_time_remaining_100, clockTimeStr)
-            }
-        } else {
-            "Calculating..."
+        val msTo80 = estimateTimeTo(80)
+        val msTo100 = estimateTimeTo(100)
+        val targetLimit = if (customLimitEnabled) customTarget else 80
+        val currentTime = System.currentTimeMillis()
+        val clockTime80 = if (msTo80 > 0) formatToClockTime(currentTime + msTo80) else ""
+        val clockTime100 = if (msTo100 > 0) formatToClockTime(currentTime + msTo100) else ""
+
+        val combinedStatus = when {
+            batteryPct < targetLimit -> if (clockTime80.isNotEmpty()) "$targetLimit% at $clockTime80 \u2022 Full at $clockTime100" else "Full at $clockTime100"
+            else -> "Full at $clockTime100"
         }
 
         val tempUnit = prefs.getString("unit_system", "metric") ?: "metric"
-        val tempStr = if (tempUnit == "imperial") {
-            val temperatureF = (temperature * 9/5) + 32
-            String.format(java.util.Locale.US, "%.1f°F", temperatureF)
-        } else {
-            String.format(java.util.Locale.US, "%.1f°C", temperature)
-        }
+        val tempStr = if (tempUnit == "imperial") String.format(java.util.Locale.US, "%.1f°F", (temperature * 9/5) + 32) else String.format(java.util.Locale.US, "%.1f°C", temperature)
+        val wattageStr = String.format(java.util.Locale.US, "%.1fW", currentWattage)
+        val notificationContentText = "$wattageStr \u2022 $tempStr\n$combinedStatus"
 
-        val contentIntent = android.app.PendingIntent.getActivity(
-            this, 0, Intent(this, SettingsActivity::class.java),
-            android.app.PendingIntent.FLAG_IMMUTABLE
-        )
-
-        val contentText = "$timeStr \u2022 $wattageStr \u2022 $tempStr"
-        
-        val isAdaptiveLegacy = AodSettings.isAdaptiveChargingEnabled(contentResolver)
-
-        val offIntent = android.app.PendingIntent.getBroadcast(this, 1, Intent(ACTION_OPT_OFF).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
-        val opt80Intent = android.app.PendingIntent.getBroadcast(this, 2, Intent(ACTION_OPT_80).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
-        val adaptiveIntent = android.app.PendingIntent.getBroadcast(this, 3, Intent(ACTION_OPT_ADAPTIVE).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
-
-        val offLabel = if (optMode == 0 && !isAdaptiveLegacy && !customLimitEnabled) "● Off" else "Off"
-        val opt80Label = if (optMode == 1 && !customLimitEnabled) "● 80%" else "80%"
-        val adaptiveLabel = if ((optMode == 2 || (optMode == 0 && isAdaptiveLegacy)) && !customLimitEnabled) "● Adaptive" else "Adaptive"
-
+        val contentIntent = android.app.PendingIntent.getActivity(this, 0, Intent(this, SettingsActivity::class.java), android.app.PendingIntent.FLAG_IMMUTABLE)
         val isDark = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        
-        // Force high-contrast colors for icons in light mode
         val accentColor = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (isDark) getColor(android.R.color.system_accent1_200) else getColor(android.R.color.system_accent1_700)
         } else {
             getColor(android.R.color.holo_blue_dark)
         }
 
-        // --- Android 15 Live Update Design Standards ---
+        // --- Android 16/17 Live Update Engine (ProgressStyle) ---
         val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
+        val targetTimeMs = if (batteryPct < targetLimit) currentTime + msTo80 else currentTime + msTo100
+        val pillEtaText = if (targetTimeMs > currentTime) formatToClockTime(targetTimeMs) else ""
+
+        val dotIconRes = if (isDark) R.drawable.ic_dot_8 else R.drawable.ic_dot_8_dark
+        val dotIcon = android.graphics.drawable.Icon.createWithResource(this, dotIconRes)
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(liveUpdateIcon)
-            .setLargeIcon(android.graphics.drawable.Icon.createWithResource(this, liveUpdateIcon))
-            .setContentTitle(getString(R.string.charging_info_notification_title, batteryPct))
-            .setContentText(contentText)
+            .setLargeIcon(null as android.graphics.drawable.Icon?) // Remove big square battery
+            .setContentTitle("$batteryPct% Charged")
+            .setContentText(notificationContentText)
             .setOngoing(true)
             .setVisibility(Notification.VISIBILITY_PUBLIC)
-            .setShowWhen(false) 
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent)
             .setColor(accentColor)
             .setShortcutId("charging_status")
+            .setCategory(Notification.CATEGORY_PROGRESS)
 
-        // --- Dynamic Actions: Prevent inconsistency when Custom Limit is active ---
+        // Native ProgressStyle Implementation (Android 16+)
+        try {
+            val styleClass = progressStyleClass
+            val pClass = pointClass
+            
+            if (styleClass != null && pClass != null) {
+                val style = styleClass.getConstructor().newInstance()
+                
+                // setProgress(Int) - Current progress
+                styleClass.getMethod("setProgress", Int::class.javaPrimitiveType).invoke(style, batteryPct)
+
+
+                // Helper to set point icon safely across Android 16/17 variations
+                fun setPointIconSafely(point: Any, icon: Icon) {
+                    val pMethods = arrayOf("setIcon", "setPointIcon", "setProgressPointIcon", "setMarkerIcon")
+                    for (pName in pMethods) {
+                        try {
+                            pClass.getMethod(pName, Icon::class.java).invoke(point, icon)
+                            break
+                        } catch (_: Throwable) {}
+                    }
+                }
+
+                // Create Milestone Points
+                val points = ArrayList<Any>()
+                
+                // Milestone 1: Target (80% or Custom)
+                val p1 = pClass.getConstructor(Int::class.javaPrimitiveType).newInstance(targetLimit)
+                try {
+                    if (clockTime80.isNotEmpty()) {
+                        pClass.getMethod("setLabel", CharSequence::class.java).invoke(p1, clockTime80)
+                    }
+                    pClass.getMethod("setTimeText", CharSequence::class.java).invoke(p1, "$targetLimit%")
+                    setPointIconSafely(p1, dotIcon)
+                } catch (_: Exception) {}
+                points.add(p1)
+                
+                // Milestone 2: 100%
+                val p2 = pClass.getConstructor(Int::class.javaPrimitiveType).newInstance(100)
+                try {
+                    if (clockTime100.isNotEmpty()) {
+                        pClass.getMethod("setLabel", CharSequence::class.java).invoke(p2, clockTime100)
+                    }
+                    pClass.getMethod("setTimeText", CharSequence::class.java).invoke(p2, "100%")
+                    setPointIconSafely(p2, dotIcon)
+                } catch (_: Exception) {}
+                points.add(p2)
+
+
+                try {
+                    if (msTo100 > 0) {
+                        pClass.getMethod("setLabel", CharSequence::class.java).invoke(p2, formatDuration(msTo100))
+                    }
+                    pClass.getMethod("setTimeText", CharSequence::class.java).invoke(p2, "100%")
+                    setPointIconSafely(p2, dotIcon)
+                } catch (_: Exception) {}
+                points.add(p2)
+                
+                // setProgressPoints(List<Point>)
+                styleClass.getMethod("setProgressPoints", List::class.java).invoke(style, points)
+
+                notificationBuilder.setStyle(style as Notification.Style)
+                
+                // setRequestPromotedOngoing(Boolean) - Native Android 16+ Method
+                try {
+                    notificationBuilder.javaClass.getMethod("setRequestPromotedOngoing", Boolean::class.javaPrimitiveType).invoke(notificationBuilder, true)
+                } catch (_: Exception) {}
+            } else {
+                notificationBuilder.setProgress(100, batteryPct, false)
+            }
+        } catch (e: Exception) {
+            // High-compatibility fallback
+            notificationBuilder.setProgress(100, batteryPct, false)
+        }
+
+        // Add legacy extras for "Pill" ETA and promotion on older 15/15QPR builds
+        val extras = Bundle()
+        extras.putBoolean("android.requestPromotedOngoing", true)
+        extras.putCharSequence("android.substName", "Pixel AOD")
+        if (pillEtaText.isNotEmpty()) {
+            val pillText = if (batteryPct < targetLimit) "${targetLimit}% $pillEtaText" else "Full $pillEtaText"
+            extras.putString("android.shortCriticalText", pillText)
+        }
+        notificationBuilder.addExtras(extras)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) notificationBuilder.setLocusId(LocusId("charging_activity"))
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) notificationBuilder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
+
+        // --- Optimization Actions ---
+        val isAdaptiveLegacy = AodSettings.isAdaptiveChargingEnabled(contentResolver)
+        val offIntent = android.app.PendingIntent.getBroadcast(this, 1, Intent(ACTION_OPT_OFF).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val opt80Intent = android.app.PendingIntent.getBroadcast(this, 2, Intent(ACTION_OPT_80).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val adaptiveIntent = android.app.PendingIntent.getBroadcast(this, 3, Intent(ACTION_OPT_ADAPTIVE).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+        val offLabel = if (optMode == 0 && !isAdaptiveLegacy && !customLimitEnabled) "● Off" else "Off"
+        val opt80Label = if (optMode == 1 && !customLimitEnabled) "● 80%" else "80%"
+        val adaptiveLabel = if ((optMode == 2 || (optMode == 0 && isAdaptiveLegacy)) && !customLimitEnabled) "● Adaptive" else "Adaptive"
+
         if (customLimitEnabled) {
-            // When Custom Limit is active, only show "Disable Limit" to go to 100% cleanly
-            val fullChargeIntent = android.app.PendingIntent.getBroadcast(
-                this, 4, Intent(ACTION_FULL_CHARGE).setPackage(packageName), 
-                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
-            )
-            notificationBuilder.addAction(Notification.Action.Builder(null, "Disable Limit (Full Charge)", fullChargeIntent).build())
+            val fullChargeIntent = android.app.PendingIntent.getBroadcast(this, 4, Intent(ACTION_FULL_CHARGE).setPackage(packageName), android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE)
+            notificationBuilder.addAction(Notification.Action.Builder(null, "Full Charge", fullChargeIntent).build())
         } else {
-            // Standard system optimization modes
             notificationBuilder.addAction(Notification.Action.Builder(null, offLabel, offIntent).build())
             notificationBuilder.addAction(Notification.Action.Builder(null, opt80Label, opt80Intent).build())
             notificationBuilder.addAction(Notification.Action.Builder(null, adaptiveLabel, adaptiveIntent).build())
         }
 
-        val extras = android.os.Bundle()
-        extras.putBoolean("android.requestPromotedOngoing", true)
-
-        if (targetTimestampMillis > 0) {
-            notificationBuilder.setCategory("progress")
-            notificationBuilder.setWhen(targetTimestampMillis)
-            val timeOnly = formatToClockTime(targetTimestampMillis)
-            val currentLimit = if (customLimitEnabled) customTarget else 80
-            val pillText = if (batteryPct != -1 && batteryPct < currentLimit) "$currentLimit% $timeOnly" else "Full $timeOnly"
-            extras.putString("android.shortCriticalText", pillText)
-        } else {
-            notificationBuilder.setCategory(Notification.CATEGORY_SERVICE)
-        }
-
-        extras.putBoolean("android.substName", true)
-        notificationBuilder.addExtras(extras)
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            notificationBuilder.setLocusId(LocusId("charging_activity"))
-        }
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-            notificationBuilder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
-        }
-
-        val notification = notificationBuilder.build()
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(CHARGING_NOTIF_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        } else {
-            startForeground(CHARGING_NOTIF_ID, notification)
-        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) startForeground(CHARGING_NOTIF_ID, notificationBuilder.build(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+        else startForeground(CHARGING_NOTIF_ID, notificationBuilder.build())
         
-        // Simply trigger a state re-evaluation. 
-        // We no longer manually add the charging notification to activeNotifKeys 
-        // to prevent it from bypassing the wattage-based idle timer.
         updateAodState()
+    }
+
+    private fun formatDuration(millis: Long): String {
+        val totalMinutes = millis / (1000 * 60)
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return if (hours > 0) "${hours}h ${minutes}m" else "${minutes}m"
     }
 
     private fun formatToClockTime(targetMillis: Long): String {
         val calendar = Calendar.getInstance()
         calendar.timeInMillis = targetMillis
-        val is24Hour = android.text.format.DateFormat.is24HourFormat(this)
-        val pattern = if (is24Hour) "HH:mm" else "h:mm a"
+        val pattern = if (android.text.format.DateFormat.is24HourFormat(this)) "HH:mm" else "h:mm a"
         return android.text.format.DateFormat.format(pattern, calendar).toString()
     }
 }

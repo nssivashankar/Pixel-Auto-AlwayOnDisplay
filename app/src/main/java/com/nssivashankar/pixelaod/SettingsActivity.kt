@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.materialswitch.MaterialSwitch
 import com.nssivashankar.pixelaod.permissions.GrantWriteSecureSettingsUseCase
@@ -23,11 +24,10 @@ import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import com.nssivashankar.pixelaod.ui.screens.NavigationPill
 import com.nssivashankar.pixelaod.ui.screens.SettingsScreen
 import com.nssivashankar.pixelaod.ui.screens.SetupScreen
+import com.nssivashankar.pixelaod.ui.theme.AppHaptics
 import com.nssivashankar.pixelaod.ui.theme.PixelAodTheme
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import rikka.shizuku.Shizuku
-import com.nssivashankar.pixelaod.config.Settings as AodSettings
-import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 
 class SettingsActivity : AppCompatActivity() {
@@ -48,7 +48,7 @@ class SettingsActivity : AppCompatActivity() {
             packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
         } catch (e: Exception) { "1.0.0" }
         
-        MainScope().launch {
+        lifecycleScope.launch {
             UpdateChecker.checkForUpdates(this@SettingsActivity, currentVersion) { latest, notes, url ->
                 UpdateChecker.showUpdateDialog(this@SettingsActivity, latest, notes, url)
             }
@@ -66,9 +66,9 @@ class SettingsActivity : AppCompatActivity() {
         
         masterSwitch.setOnCheckedChangeListener { view, isChecked ->
             if (isChecked) {
-                view.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK)
+                AppHaptics.performToggleOn(view)
             } else {
-                view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
+                AppHaptics.performToggleOff(view)
             }
             prefs.edit { putBoolean("master_switch", isChecked) }
             masterSwitchEnabled = isChecked
@@ -155,7 +155,7 @@ class SettingsActivity : AppCompatActivity() {
 
         // React to setup completion
         snapshotFlow { isSetupComplete }.let {
-            MainScope().launch {
+            lifecycleScope.launch {
                 it.collect { complete ->
                     if (complete) {
                         masterSwitch.visibility = View.VISIBLE

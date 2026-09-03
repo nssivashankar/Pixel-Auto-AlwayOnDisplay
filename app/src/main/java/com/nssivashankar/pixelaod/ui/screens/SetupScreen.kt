@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -40,34 +43,34 @@ fun SetupScreen(
     val pagerState = rememberPagerState(pageCount = { 6 })
 
     val hasSecureSettings by produceState(initialValue = false) {
-        while (true) {
+        while (!value) {
             value = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
-            kotlinx.coroutines.delay(1000)
+            if (!value) delay(1000)
         }
     }
 
     val hasNotificationAccess by produceState(initialValue = false) {
-        while (true) {
+        while (!value) {
             val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
             value = enabledListeners?.contains(context.packageName) == true
-            kotlinx.coroutines.delay(1000)
+            if (!value) delay(1000)
         }
     }
 
     val hasPostNotifications by produceState(initialValue = false) {
-        while (true) {
-            value = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        while (!value) {
+            value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
             } else true
-            kotlinx.coroutines.delay(1000)
+            if (!value) delay(1000)
         }
     }
 
-    val isBatteryOptimized by produceState(initialValue = true) {
-        while (true) {
-            val powerManager = context.getSystemService(android.os.PowerManager::class.java)
-            value = powerManager.isIgnoringBatteryOptimizations(context.packageName)
-            kotlinx.coroutines.delay(1000)
+    val isBatteryOptimized by produceState(initialValue = false) {
+        while (!value) {
+            val powerManager = context.getSystemService(PowerManager::class.java)
+            value = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+            if (!value) delay(1000)
         }
     }
 
