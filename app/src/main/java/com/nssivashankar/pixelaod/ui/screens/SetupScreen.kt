@@ -28,7 +28,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.launch
 
 @Composable
@@ -41,36 +43,48 @@ fun SetupScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 6 })
+    val lifecycleOwner = LocalLifecycleOwner.current
 
-    val hasSecureSettings by produceState(initialValue = false) {
-        while (!value) {
-            value = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
-            if (!value) delay(1000)
-        }
+    var hasSecureSettings by remember {
+        mutableStateOf(context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED)
     }
 
-    val hasNotificationAccess by produceState(initialValue = false) {
-        while (!value) {
-            val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
-            value = enabledListeners?.contains(context.packageName) == true
-            if (!value) delay(1000)
-        }
+    var hasNotificationAccess by remember {
+        mutableStateOf(
+            Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")?.contains(context.packageName) == true
+        )
     }
 
-    val hasPostNotifications by produceState(initialValue = false) {
-        while (!value) {
-            value = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+    var hasPostNotifications by remember {
+        mutableStateOf(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
             } else true
-            if (!value) delay(1000)
-        }
+        )
     }
 
-    val isBatteryOptimized by produceState(initialValue = false) {
-        while (!value) {
-            val powerManager = context.getSystemService(PowerManager::class.java)
-            value = powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
-            if (!value) delay(1000)
+    var isBatteryOptimized by remember {
+        mutableStateOf(
+            context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) == true
+        )
+    }
+
+    // Refresh permissions on activity resume (when user returns from system settings)
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                hasSecureSettings = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+                val enabledListeners = Settings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                hasNotificationAccess = enabledListeners?.contains(context.packageName) == true
+                hasPostNotifications = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+                } else true
+                isBatteryOptimized = context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) == true
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
 

@@ -1,6 +1,7 @@
 package com.nssivashankar.pixelaod.data
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.util.LruCache
 import androidx.compose.runtime.Stable
@@ -15,27 +16,35 @@ import kotlinx.coroutines.withContext
  * Prevents UI jank by centralizing heavy package manager operations.
  */
 object AppRepository {
-    // Cache ~100 icons (72x72 is approx 20KB per bitmap -> 2MB total)
-    private val iconCache = LruCache<String, ImageBitmap>(100)
+    private val iconCache = LruCache<String, ImageBitmap>(300)
+    @Volatile
     private var cachedAppList: List<CachedAppInfo>? = null
 
     suspend fun getInstalledApps(context: Context): List<CachedAppInfo> = withContext(Dispatchers.IO) {
         cachedAppList?.let { return@withContext it }
 
         val pm = context.packageManager
-        val apps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            .asSequence()
-            .filter { pm.getLaunchIntentForPackage(it.packageName) != null }
-            .map { appInfo ->
+        val mainIntent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        
+        // Single IPC query instead of 100+ individual getLaunchIntentForPackage Binder calls
+        val resolveInfos = pm.queryIntentActivities(mainIntent, 0)
+        val seenPackages = mutableSetOf<String>()
+
+        val apps = resolveInfos.mapNotNull { resolveInfo ->
+            val appInfo = resolveInfo.activityInfo.applicationInfo
+            if (seenPackages.add(appInfo.packageName)) {
                 CachedAppInfo(
                     packageName = appInfo.packageName,
-                    label = pm.getApplicationLabel(appInfo).toString(),
+                    label = resolveInfo.loadLabel(pm).toString(),
                     appInfo = appInfo
                 )
+            } else {
+                null
             }
-            .sortedBy { it.label.lowercase() }
-            .toList()
-        
+        }.sortedBy { it.label.lowercase() }
+
         cachedAppList = apps
         apps
     }
@@ -45,8 +54,7 @@ object AppRepository {
 
         return@withContext try {
             val drawable = context.packageManager.getApplicationIcon(appInfo)
-            // 72x72 is the standard for 42dp list icons on high-density displays
-            val bitmap = drawable.toBitmap(width = 72, height = 72).asImageBitmap()
+            val bitmap = drawable.toBitmap(width = 120, height = 120).asImageBitmap()
             iconCache.put(appInfo.packageName, bitmap)
             bitmap
         } catch (e: Exception) {
@@ -55,6 +63,11 @@ object AppRepository {
     }
 
     fun getCachedIcon(packageName: String): ImageBitmap? = iconCache.get(packageName)
+
+    fun clearCache() {
+        iconCache.evictAll()
+        cachedAppList = null
+    }
 }
 
 @Stable

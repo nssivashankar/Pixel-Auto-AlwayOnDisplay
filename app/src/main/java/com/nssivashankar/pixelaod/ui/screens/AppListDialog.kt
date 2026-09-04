@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.nssivashankar.pixelaod.data.AppRepository
 import com.nssivashankar.pixelaod.data.CachedAppInfo
 import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
+import com.nssivashankar.pixelaod.ui.theme.iosTouchFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -117,16 +118,20 @@ fun AppListDialog(
                                 contentType = { "app_item" } // Optimization for list recycling
                             ) { app ->
                                 val isSelected = currentSelected.contains(app.packageName)
-                                AppListItem(
-                                    app = app,
-                                    isSelected = isSelected,
-                                    onToggle = {
+                                val onToggleApp = remember(app.packageName, isSelected) {
+                                    {
                                         if (isSelected) {
                                             currentSelected.remove(app.packageName)
                                         } else {
                                             currentSelected.add(app.packageName)
                                         }
+                                        Unit
                                     }
+                                }
+                                AppListItem(
+                                    app = app,
+                                    isSelected = isSelected,
+                                    onToggle = onToggleApp
                                 )
                             }
                         }
@@ -155,62 +160,63 @@ fun AppListItem(
 ) {
     val context = LocalContext.current
     
-    // Performance: Use the cached icon if available immediately to avoid flicker
-    var iconBitmap by remember(app.packageName) { 
-        mutableStateOf(AppRepository.getCachedIcon(app.packageName)) 
-    }
-    
-    // Performance: Lazy-load icons in background only if not cached
-    if (iconBitmap == null) {
-        LaunchedEffect(app.packageName) {
-            iconBitmap = AppRepository.getIcon(context, app.appInfo)
+    // Performance: produceState with key guarantees non-blocking async icon load
+    // and automatically cancels pending icon decodes if item scrolls off screen
+    val iconBitmap by produceState<ImageBitmap?>(
+        initialValue = AppRepository.getCachedIcon(app.packageName),
+        key1 = app.packageName
+    ) {
+        if (value == null) {
+            value = AppRepository.getIcon(context, app.appInfo)
         }
     }
 
-    // Performance: Use a flat ListItem instead of a custom Row with Surface
-    // Material 3 ListItem is highly optimized for scrolling lists
-    ListItem(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle),
-        leadingContent = {
-            Box(
-                modifier = Modifier.size(42.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (iconBitmap != null) {
-                    Image(
-                        bitmap = iconBitmap!!,
-                        contentDescription = null,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
-                    )
-                }
-            }
-        },
-        trailingContent = {
-            Checkbox(
-                checked = isSelected,
-                onCheckedChange = null // Click handled by parent ListItem
-            )
-        },
-        colors = ListItemDefaults.colors(
-            containerColor = if (isSelected) 
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f) 
+            .background(
+                if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
                 else Color.Transparent
-        ),
-        headlineContent = {
-            Text(
-                text = app.label,
-                style = MaterialTheme.typography.bodyLarge,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
             )
+            .iosTouchFeedback(onClick = onToggle)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier.size(40.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val bitmap = iconBitmap
+            if (bitmap != null) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                )
+            }
         }
-    )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Text(
+            text = app.label,
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Checkbox(
+            checked = isSelected,
+            onCheckedChange = null
+        )
+    }
 }

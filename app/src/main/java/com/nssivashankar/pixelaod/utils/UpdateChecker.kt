@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.nssivashankar.pixelaod.R
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,7 @@ object UpdateChecker {
         context: Context,
         currentVersion: String,
         isManual: Boolean = false,
+        onUpToDate: (() -> Unit)? = null,
         onUpdateAvailable: (String, String, String) -> Unit
     ) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -59,7 +61,11 @@ object UpdateChecker {
                         }
                     } else if (isManual) {
                         withContext(Dispatchers.Main) {
-                            android.widget.Toast.makeText(context, "App is up to date ($currentVersion)", android.widget.Toast.LENGTH_SHORT).show()
+                            if (onUpToDate != null) {
+                                onUpToDate()
+                            } else {
+                                Toast.makeText(context, "App is up to date ($currentVersion)", Toast.LENGTH_SHORT).show()
+                            }
                         }
                     }
                 } else if (isManual) {
@@ -77,6 +83,35 @@ object UpdateChecker {
             }
         }
     }
+
+    suspend fun fetchLatestReleaseInfo(): ReleaseInfo? = withContext(Dispatchers.IO) {
+        try {
+            val url = URL(GITHUB_API_URL)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            connection.setRequestProperty("User-Agent", "Pixel-Auto-AOD")
+            connection.useCaches = false
+
+            if (connection.responseCode == 200) {
+                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONObject(response)
+                val latestVersion = json.getString("tag_name")
+                val changelog = json.getString("body")
+                val downloadUrl = json.getString("html_url")
+                ReleaseInfo(latestVersion, changelog, downloadUrl)
+            } else null
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    data class ReleaseInfo(
+        val version: String,
+        val changelog: String,
+        val downloadUrl: String
+    )
 
     private fun isNewerVersion(current: String, latest: String): Boolean {
         fun clean(v: String) = v.lowercase().replace("v", "").split("-")[0].trim()

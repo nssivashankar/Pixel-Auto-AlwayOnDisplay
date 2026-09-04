@@ -1,15 +1,26 @@
 package com.nssivashankar.pixelaod.ui.screens
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.widget.Toast
+import android.provider.Settings as AndroidSettings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material3.*
@@ -57,7 +68,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
             state = lazyListState,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            item {
+            item(key = "about_header", contentType = "header") {
                 Spacer(Modifier.height(32.dp))
                 // App Logo
                 Box(
@@ -90,7 +101,72 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 Spacer(Modifier.height(40.dp))
             }
 
-            item {
+            item(key = "about_feedback", contentType = "preference_item") {
+                PreferenceCategory(title = "Support & Community")
+
+                PreferenceItem(
+                    title = "Send Bug Report / Feedback",
+                    summary = "Email developer with device info & issue template",
+                    icon = Icons.Default.Email,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val hasWriteSecurePermission = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+                        val enabledListeners = AndroidSettings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
+                        val hasNotificationAccess = enabledListeners?.contains(context.packageName) == true
+
+                        val body = """
+                            --- DEVICE & SYSTEM DIAGNOSTICS ---
+                            App Version: $currentVersion
+                            Device: ${Build.MANUFACTURER.uppercase()} ${Build.MODEL}
+                            Android Version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})
+                            Write Secure Settings: ${if (hasWriteSecurePermission) "Granted" else "Missing"}
+                            Notification Access: ${if (hasNotificationAccess) "Granted" else "Missing"}
+                            
+                            --- ISSUE DETAILS & FEEDBACK ---
+                            [Describe what happened, what you expected, or feature requested here]
+                            
+                            
+                            --- STEPS TO REPRODUCE (if bug) ---
+                            1. 
+                            2. 
+                            
+                            --- ATTACHMENTS ---
+                            [Please attach any relevant screenshots or screen recordings to this email]
+                        """.trimIndent()
+
+                        val subject = "Pixel Auto AOD v$currentVersion - Bug Report & Feedback"
+                        val mailtoUrl = "mailto:nssivashankar@gmail.com" +
+                                "?subject=" + Uri.encode(subject) +
+                                "&body=" + Uri.encode(body)
+
+                        val intent = Intent(Intent.ACTION_SENDTO, Uri.parse(mailtoUrl)).apply {
+                            putExtra(Intent.EXTRA_EMAIL, arrayOf("nssivashankar@gmail.com"))
+                            putExtra(Intent.EXTRA_SUBJECT, subject)
+                            putExtra(Intent.EXTRA_TEXT, body)
+                        }
+                        try {
+                            context.startActivity(Intent.createChooser(intent, "Send Email"))
+                        } catch (e: Exception) {
+                            try {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(mailtoUrl)))
+                            } catch (_: Exception) {}
+                        }
+                    }
+                )
+
+                PreferenceItem(
+                    title = "GitHub Issues & Requests",
+                    summary = "Report issues or suggest features directly on GitHub",
+                    icon = Icons.Default.Forum,
+                    onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/issues"))
+                        context.startActivity(intent)
+                    }
+                )
+            }
+
+            item(key = "about_info", contentType = "preference_item") {
                 PreferenceCategory(title = "Information")
                 PreferenceItem(
                     title = "View on GitHub",
@@ -104,7 +180,9 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 )
             }
 
-            item {
+            item(key = "about_updates", contentType = "preference_item") {
+                var isUpToDate by remember { mutableStateOf(false) }
+
                 PreferenceItem(
                     title = "Check for Updates",
                     summary = if (isCheckingUpdates) "Checking backend..." else "Manually verify latest version",
@@ -114,33 +192,132 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             scope.launch {
                                 isCheckingUpdates = true
-                                delay(2000)
-                                UpdateChecker.checkForUpdates(context, currentVersion, isManual = true) { latest, notes, url ->
-                                    UpdateChecker.showUpdateDialog(context, latest, notes, url)
-                                }
+                                isUpToDate = false
+                                var upToDateDetected = false
+                                UpdateChecker.checkForUpdates(
+                                    context = context,
+                                    currentVersion = currentVersion,
+                                    isManual = true,
+                                    onUpToDate = {
+                                        upToDateDetected = true
+                                    },
+                                    onUpdateAvailable = { latest, notes, url ->
+                                        UpdateChecker.showUpdateDialog(context, latest, notes, url)
+                                    }
+                                )
+                                delay(1200) // allow the morphing loader to display smoothly
                                 isCheckingUpdates = false
+                                if (upToDateDetected) {
+                                    isUpToDate = true
+                                }
                             }
                         }
                     }
                 )
                 
-                // NEW: Official M3 Expressive Morphing Loader for Updates
+                // Official M3 Expressive Morphing Loader for Updates
                 if (isCheckingUpdates) {
-                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
                         M3OfficialExpressiveLoader(
                             modifier = Modifier.size(48.dp),
                             color = MaterialTheme.colorScheme.primary
                         )
                     }
+                } else if (isUpToDate) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                                shape = MaterialTheme.shapes.medium
+                            )
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .background(Color(0xFF2E7D32), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Your app is up to date (v$currentVersion)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
                 }
             }
 
-            item {
+            item(key = "about_whats_new", contentType = "card") {
+                var isFetchingNotes by remember { mutableStateOf(false) }
+                var releaseInfo by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
+                var showDialog by remember { mutableStateOf(false) }
+
+                if (showDialog && releaseInfo != null) {
+                    val info = releaseInfo!!
+                    AlertDialog(
+                        onDismissRequest = { showDialog = false },
+                        title = { Text("What's New (${info.version})") },
+                        text = {
+                            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(
+                                rememberScrollState()
+                            )) {
+                                Text(
+                                    text = info.changelog.ifBlank { "No detailed release notes provided." },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showDialog = false }) {
+                                Text("Close")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))
+                                context.startActivity(intent)
+                            }) {
+                                Text("View on GitHub")
+                            }
+                        }
+                    )
+                }
+
                 PreferenceCategory(title = "What's New!")
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clip(MaterialTheme.shapes.large)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (!isFetchingNotes) {
+                                scope.launch {
+                                    isFetchingNotes = true
+                                    val result = UpdateChecker.fetchLatestReleaseInfo()
+                                    isFetchingNotes = false
+                                    if (result != null) {
+                                        releaseInfo = result
+                                        showDialog = true
+                                    } else {
+                                        Toast.makeText(context, "Could not fetch release notes", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            }
+                        },
                     shape = MaterialTheme.shapes.large,
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
@@ -158,16 +335,24 @@ fun AboutScreen(contentPadding: PaddingValues) {
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(Modifier.width(16.dp))
-                        Text(
-                            "Added Lift to wake AOD & Glass UI",
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Latest Release Notes",
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                if (isFetchingNotes) "Fetching from GitHub..." else "Tap to view full changelog from GitHub",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
 
-            item {
+            item(key = "about_credits", contentType = "card") {
                 PreferenceCategory(title = "Credits")
                 Card(
                     modifier = Modifier
@@ -196,7 +381,7 @@ fun AboutScreen(contentPadding: PaddingValues) {
                 }
             }
 
-            item {
+            item(key = "about_spacer", contentType = "spacer") {
                 Spacer(Modifier.height(80.dp))
             }
         }
@@ -210,4 +395,3 @@ fun AboutScreenPreview() {
         AboutScreen(contentPadding = PaddingValues(0.dp))
     }
 }
-

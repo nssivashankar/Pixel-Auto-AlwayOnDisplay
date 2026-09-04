@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.provider.Settings as AndroidSettings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -43,11 +45,14 @@ import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import com.nssivashankar.pixelaod.ui.theme.AppHaptics
+import com.nssivashankar.pixelaod.ui.theme.iosTouchFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
 
 // --- High-Performance Settings State Holder ---
+@Stable
 class SettingsState(context: Context, private val scope: kotlinx.coroutines.CoroutineScope) {
     val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
     private val resolver = context.contentResolver
@@ -58,12 +63,29 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     var liveNotifMode by mutableStateOf(prefs.getBoolean("live_notif_mode", false))
     var dndMode by mutableStateOf(prefs.getBoolean("dnd_mode", false))
     var scheduledDnd by mutableStateOf(prefs.getBoolean("scheduled_dnd", false))
+    var scheduledDndStart by mutableStateOf(prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00")
+    var scheduledDndEnd by mutableStateOf(prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00")
+    var watchedApps by mutableStateOf(prefs.getStringSet("watched_apps", emptySet()) ?: emptySet())
+    var liveNotifBlocklist by mutableStateOf(prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet())
     var customLimitEnabled by mutableStateOf(prefs.getBoolean("custom_limit_enabled", false))
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
     var screenOffAod by mutableStateOf(prefs.getBoolean("screen_off_aod", false))
     var liftToWakeAod by mutableStateOf(prefs.getBoolean("lift_to_wake_aod", false))
     var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
+
+    var hasWriteSecurePermission by mutableStateOf(
+        context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+    )
+    var hasNotificationAccessPermission by mutableStateOf(
+        AndroidSettings.Secure.getString(resolver, "enabled_notification_listeners")?.contains(context.packageName) == true
+    )
+
+    fun refreshPermissions(context: Context) {
+        hasWriteSecurePermission = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+        val enabledListeners = AndroidSettings.Secure.getString(resolver, "enabled_notification_listeners")
+        hasNotificationAccessPermission = enabledListeners?.contains(context.packageName) == true
+    }
 
     init {
         // Migration: Move v1.1.4 'temp_unit' to v1.1.5 'unit_system'
@@ -77,7 +99,12 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
 
     private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
-            currentOptimizationMode = AodSettings.getChargeOptimizationMode(resolver)
+            scope.launch(Dispatchers.IO) {
+                val mode = AodSettings.getChargeOptimizationMode(resolver)
+                withContext(Dispatchers.Main) {
+                    currentOptimizationMode = mode
+                }
+            }
         }
     }
 
@@ -89,6 +116,10 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
             "live_notif_mode" -> liveNotifMode = p.getBoolean(key, false)
             "dnd_mode" -> dndMode = p.getBoolean(key, false)
             "scheduled_dnd" -> scheduledDnd = p.getBoolean(key, false)
+            "scheduled_dnd_start" -> scheduledDndStart = p.getString(key, "22:00") ?: "22:00"
+            "scheduled_dnd_end" -> scheduledDndEnd = p.getString(key, "07:00") ?: "07:00"
+            "watched_apps" -> watchedApps = p.getStringSet(key, emptySet()) ?: emptySet()
+            "live_notif_blocklist" -> liveNotifBlocklist = p.getStringSet(key, emptySet()) ?: emptySet()
             "custom_limit_enabled" -> customLimitEnabled = p.getBoolean(key, false)
             "custom_charging_limit" -> customLimit = p.getInt(key, 80)
             "screen_off_aod" -> screenOffAod = p.getBoolean(key, false)
@@ -141,6 +172,26 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     fun updateScheduledDnd(enabled: Boolean) {
         scheduledDnd = enabled
         prefs.edit().putBoolean("scheduled_dnd", enabled).apply()
+    }
+
+    fun updateScheduledDndStart(time: String) {
+        scheduledDndStart = time
+        prefs.edit().putString("scheduled_dnd_start", time).apply()
+    }
+
+    fun updateScheduledDndEnd(time: String) {
+        scheduledDndEnd = time
+        prefs.edit().putString("scheduled_dnd_end", time).apply()
+    }
+
+    fun updateWatchedApps(apps: Set<String>) {
+        watchedApps = apps
+        prefs.edit().putStringSet("watched_apps", apps).apply()
+    }
+
+    fun updateLiveNotifBlocklist(apps: Set<String>) {
+        liveNotifBlocklist = apps
+        prefs.edit().putStringSet("live_notif_blocklist", apps).apply()
     }
 
     fun updateScreenOffAod(enabled: Boolean) {
@@ -198,10 +249,10 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     
     val state = remember { SettingsState(context, scope) }
-    val pagerState = rememberPagerState { 2 }
 
-    DisposableEffect(state) {
+    DisposableEffect(state, context) {
         state.startObserving()
+        state.refreshPermissions(context)
         onDispose { state.stopObserving() }
     }
 
@@ -210,63 +261,38 @@ fun SettingsScreen(
         state.masterSwitch = masterSwitchEnabled
     }
 
-    // Sync state changes back to Activity (for XML Master Switch sync)
+    // Sync state changes back to Activity
     LaunchedEffect(state.masterSwitch) {
         onMasterSwitchChange(state.masterSwitch)
-    }
-
-    // --- Premium Bidirectional Sync ---
-    
-    // 1. External tab changes (from Navigation Pill) -> Pager Animation
-    LaunchedEffect(currentTab) {
-        if (pagerState.currentPage != currentTab) {
-            pagerState.animateScrollToPage(
-                page = currentTab,
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessLow, 
-                    dampingRatio = Spring.DampingRatioLowBouncy
-                )
-            )
-        }
-    }
-
-    // 2. Pager swipes (user finger) -> Update external state
-    var isInitialPagerLoad by remember { mutableStateOf(true) }
-    LaunchedEffect(pagerState.currentPage) {
-        if (isInitialPagerLoad) {
-            isInitialPagerLoad = false
-        } else {
-            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-        }
-        onTabSelected(pagerState.currentPage)
     }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         containerColor = Color.Transparent
-    ) { innerPadding ->
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxSize(),
-            beyondViewportPageCount = 1,
-            userScrollEnabled = true,
-            pageSpacing = 16.dp // Subtle gap during transition
+    ) { scaffoldPadding ->
+        AnimatedContent(
+            targetState = currentTab,
+            modifier = Modifier.fillMaxSize().padding(scaffoldPadding),
+            transitionSpec = {
+                if (targetState > initialState) {
+                    (slideInHorizontally { width -> width } + fadeIn(tween(220))) togetherWith
+                        (slideOutHorizontally { width -> -width } + fadeOut(tween(220)))
+                } else {
+                    (slideInHorizontally { width -> -width } + fadeIn(tween(220))) togetherWith
+                        (slideOutHorizontally { width -> width } + fadeOut(tween(220)))
+                }
+            },
+            label = "tabTransition"
         ) { page ->
             if (page == 0) {
                 MainSettingsList(
                     state = state, 
-                    contentPadding = PaddingValues(
-                        top = contentPadding.calculateTopPadding(),
-                        bottom = 160.dp 
-                    ), 
+                    contentPadding = contentPadding, 
                     onPermissionRequest = onPermissionRequest
                 )
             } else {
                 AboutScreen(
-                    contentPadding = PaddingValues(
-                        top = contentPadding.calculateTopPadding(),
-                        bottom = 160.dp
-                    )
+                    contentPadding = contentPadding
                 )
             }
         }
@@ -278,57 +304,115 @@ fun NavigationPill(
     currentTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+    val haptic = LocalHapticFeedback.current
+
+    Row(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Row(
+        // Home Pill Button
+        val isHome = currentTab == 0
+        val homeBg by animateColorAsState(
+            targetValue = if (isHome) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            animationSpec = tween(durationMillis = 200),
+            label = "homeBg"
+        )
+        val homeTint by animateColorAsState(
+            targetValue = if (isHome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            animationSpec = tween(durationMillis = 200),
+            label = "homeTint"
+        )
+
+        Box(
             modifier = Modifier
-                .width(136.dp) // Exact width from 1.1.12 logic
+                .weight(1f)
                 .fillMaxHeight()
-                .padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .clip(CircleShape)
+                .background(homeBg)
+                .clickable {
+                    if (!isHome) {
+                        AppHaptics.performTabSelect(haptic)
+                        onTabSelected(0)
+                    }
+                },
+            contentAlignment = Alignment.Center
         ) {
-            // Home Pill Button
-            val isHome = currentTab == 0
-            Box(
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .size(56.dp, 40.dp) // Size from stable 1.1.12
-                    .clip(CircleShape)
-                    .background(if (isHome) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                    .clickable {
-                        if (!isHome) {
-                            onTabSelected(0)
-                        }
-                    },
-                contentAlignment = Alignment.Center
+                    .animateContentSize(tween(durationMillis = 200))
+                    .padding(horizontal = 10.dp)
             ) {
-                Icon(
-                    Icons.Default.Home, 
-                    contentDescription = "Home",
-                    tint = if (isHome) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                if (isHome) {
+                    Icon(
+                        imageVector = Icons.Default.Home, 
+                        contentDescription = "Home",
+                        tint = homeTint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(
+                    text = "Home",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isHome) FontWeight.Bold else FontWeight.Medium,
+                    color = homeTint
                 )
             }
+        }
 
-            // About Pill Button
-            val isAbout = currentTab == 1
-            Box(
+        // About Pill Button
+        val isAbout = currentTab == 1
+        val aboutBg by animateColorAsState(
+            targetValue = if (isAbout) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+            animationSpec = tween(durationMillis = 200),
+            label = "aboutBg"
+        )
+        val aboutTint by animateColorAsState(
+            targetValue = if (isAbout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+            animationSpec = tween(durationMillis = 200),
+            label = "aboutTint"
+        )
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxHeight()
+                .clip(CircleShape)
+                .background(aboutBg)
+                .clickable {
+                    if (!isAbout) {
+                        AppHaptics.performTabSelect(haptic)
+                        onTabSelected(1)
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
                 modifier = Modifier
-                    .size(56.dp, 40.dp) // Size from stable 1.1.12
-                    .clip(CircleShape)
-                    .background(if (isAbout) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
-                    .clickable {
-                        if (!isAbout) {
-                            onTabSelected(1)
-                        }
-                    },
-                contentAlignment = Alignment.Center
+                    .animateContentSize(tween(durationMillis = 200))
+                    .padding(horizontal = 10.dp)
             ) {
-                Icon(
-                    Icons.Default.Info, 
-                    contentDescription = "About",
-                    tint = if (isAbout) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                if (isAbout) {
+                    Icon(
+                        imageVector = Icons.Default.Info, 
+                        contentDescription = "About",
+                        tint = aboutTint,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                }
+                Text(
+                    text = "About",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (isAbout) FontWeight.Bold else FontWeight.Medium,
+                    color = aboutTint
                 )
             }
         }
@@ -349,6 +433,19 @@ fun MainSettingsList(
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
     var showTempUnitDialog by remember { mutableStateOf(false) }
+
+    val onChargingModeChange = remember(state) { { enabled: Boolean -> state.updateChargingMode(enabled) } }
+    val onChargingInfoChange = remember(state) { { enabled: Boolean -> state.updateChargingInfoNotif(enabled) } }
+    val onLiveNotifChange = remember(state) { { enabled: Boolean -> state.updateLiveNotifMode(enabled) } }
+    val onDndModeChange = remember(state) { { enabled: Boolean -> state.updateDndMode(enabled) } }
+    val onScheduledDndChange = remember(state) { { enabled: Boolean -> state.updateScheduledDnd(enabled) } }
+    val onScreenOffAodChange = remember(state) { { enabled: Boolean -> state.updateScreenOffAod(enabled) } }
+    val onLiftToWakeAodChange = remember(state) { { enabled: Boolean -> state.updateLiftToWakeAod(enabled) } }
+
+    val onShowChargingModeDialog = remember { { showChargingModeDialog = true } }
+    val onShowTempUnitDialog = remember { { showTempUnitDialog = true } }
+    val onShowAppListDialog = remember { { showAppListDialog = true } }
+    val onShowBlockListDialog = remember { { showBlockListDialog = true } }
 
     if (showTempUnitDialog) {
         AlertDialog(
@@ -431,10 +528,10 @@ fun MainSettingsList(
     if (showAppListDialog) {
         AppListDialog(
             title = "Per-App Notifications",
-            selectedPackages = state.prefs.getStringSet("watched_apps", emptySet()) ?: emptySet(),
+            selectedPackages = state.watchedApps,
             onDismiss = { showAppListDialog = false },
             onConfirm = { packages ->
-                state.prefs.edit().putStringSet("watched_apps", packages).apply()
+                state.updateWatchedApps(packages)
                 showAppListDialog = false
             }
         )
@@ -443,10 +540,10 @@ fun MainSettingsList(
     if (showBlockListDialog) {
         AppListDialog(
             title = "Manage Block List",
-            selectedPackages = state.prefs.getStringSet("live_notif_blocklist", emptySet()) ?: emptySet(),
+            selectedPackages = state.liveNotifBlocklist,
             onDismiss = { showBlockListDialog = false },
             onConfirm = { packages ->
-                state.prefs.edit().putStringSet("live_notif_blocklist", packages).apply()
+                state.updateLiveNotifBlocklist(packages)
                 showBlockListDialog = false
             }
         )
@@ -458,25 +555,35 @@ fun MainSettingsList(
         state = lazyListState
     ) {
         // --- Category 1: Charging Automation ---
-        item(key = "cat_charging") { 
+        item(key = "cat_charging", contentType = "header") { 
             PreferenceCategory(title = "Charging Automation", isFirst = true) 
         }
         
-        item(key = "pref_charging") {
+        item(key = "pref_charging", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Charging Mode",
                 summary = "Turn on AOD automatically when charger is connected",
                 icon = Icons.Default.BatteryChargingFull,
                 checked = state.chargingMode,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateChargingMode(it)
-                }
+                onCheckedChange = onChargingModeChange
             )
         }
 
-        item(key = "pref_opt") {
+        item(key = "pref_info", contentType = "preference_switch") {
+            PreferenceSwitch(
+                title = stringResource(R.string.charging_info_title),
+                summary = stringResource(R.string.charging_info_summary) + " (Standalone Feature)",
+                icon = Icons.Default.Info,
+                checked = state.chargingInfoNotif,
+                enabled = true,
+                onCheckedChange = onChargingInfoChange,
+                showSecondaryAction = true,
+                onSecondaryActionClick = onShowTempUnitDialog
+            )
+        }
+
+        item(key = "pref_opt", contentType = "preference_item") {
             val modeSummary = when {
                 state.customLimitEnabled -> "Custom Limit: ${state.customLimit}%"
                 state.currentOptimizationMode == 1 -> "Limit to 80%"
@@ -488,139 +595,98 @@ fun MainSettingsList(
                 summary = modeSummary,
                 icon = Icons.Default.BatterySaver,
                 enabled = state.masterSwitch,
-                onClick = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showChargingModeDialog = true 
-                }
-            )
-        }
-
-        item(key = "pref_info") {
-            PreferenceSwitch(
-                title = stringResource(R.string.charging_info_title),
-                summary = stringResource(R.string.charging_info_summary) + " (Standalone Feature)",
-                icon = Icons.Default.Info,
-                checked = state.chargingInfoNotif,
-                enabled = true,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateChargingInfoNotif(it)
-                },
-                showSecondaryAction = true,
-                onSecondaryActionClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showTempUnitDialog = true
-                }
+                onClick = onShowChargingModeDialog
             )
         }
 
         // --- Category 2: Notification Triggers ---
-        item(key = "cat_notif") { 
+        item(key = "cat_notif", contentType = "header") { 
             PreferenceCategory(title = "Notification Triggers") 
         }
 
-        item(key = "pref_apps") {
-            PreferenceItem(
-                title = "Per-App Notifications",
-                summary = "Always trigger AOD for these apps",
-                icon = Icons.Default.Notifications,
-                enabled = state.masterSwitch,
-                onClick = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showAppListDialog = true 
-                }
-            )
-        }
-
-        item(key = "pref_live") {
+        item(key = "pref_live", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Live Notification Mode",
                 summary = "AOD for Maps, Uber etc.",
                 icon = Icons.Default.Map,
                 checked = state.liveNotifMode,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateLiveNotifMode(it)
-                },
+                onCheckedChange = onLiveNotifChange,
                 showSecondaryAction = true,
-                onSecondaryActionClick = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    showBlockListDialog = true 
-                }
+                onSecondaryActionClick = onShowBlockListDialog
+            )
+        }
+
+        item(key = "pref_apps", contentType = "preference_item") {
+            PreferenceItem(
+                title = "Per-App Notifications",
+                summary = "Always trigger AOD for these apps",
+                icon = Icons.Default.Notifications,
+                enabled = state.masterSwitch,
+                onClick = onShowAppListDialog
             )
         }
 
         // --- Category 3: Display Automation ---
-        item(key = "cat_display") { 
+        item(key = "cat_display", contentType = "header") { 
             PreferenceCategory(title = "Display Automation") 
         }
 
-        item(key = "pref_screen_off") {
+        item(key = "pref_screen_off", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Lock Screen AOD",
                 summary = "Show AOD for 10 seconds after locking",
                 icon = Icons.Default.LockClock,
                 checked = state.screenOffAod,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateScreenOffAod(it)
-                }
+                onCheckedChange = onScreenOffAodChange
             )
         }
 
-        item(key = "pref_lift_to_wake") {
+        item(key = "pref_lift_to_wake", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Lift to Wake AOD",
                 summary = "Show AOD for 10 seconds when you pick up your phone",
                 icon = Icons.Default.VerticalAlignTop,
                 checked = state.liftToWakeAod,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateLiftToWakeAod(it)
-                }
+                onCheckedChange = onLiftToWakeAodChange
             )
         }
 
         // --- Category 4: Quiet Hours ---
-        item(key = "cat_restrict") { 
+        item(key = "cat_restrict", contentType = "header") { 
             PreferenceCategory(title = "Quiet Hours") 
         }
 
-        item(key = "pref_dnd") {
+        item(key = "pref_dnd", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Respect System DND",
                 summary = stringResource(R.string.dnd_mode_summary),
                 icon = Icons.Default.DoNotDisturbOn,
                 checked = state.dndMode,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateDndMode(it)
-                }
+                onCheckedChange = onDndModeChange
             )
         }
         
-        item(key = "pref_scheduled") {
+        item(key = "pref_scheduled", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Scheduled Sleep",
                 summary = "Disable AOD during specific hours",
                 icon = Icons.Default.Schedule,
                 checked = state.scheduledDnd,
                 enabled = state.masterSwitch,
-                onCheckedChange = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.updateScheduledDnd(it)
-                }
+                onCheckedChange = onScheduledDndChange
             )
         }
 
         if (state.scheduledDnd) {
-            item(key = "pref_start") {
-                val currentStart = state.prefs.getString("scheduled_dnd_start", "22:00") ?: "22:00"
+            item(key = "pref_start", contentType = "preference_item") {
+                val currentStart = state.scheduledDndStart
                 val parts = currentStart.split(":")
+                val startHour = parts.getOrNull(0)?.toIntOrNull() ?: 22
+                val startMin = parts.getOrNull(1)?.toIntOrNull() ?: 0
                 PreferenceItem(
                     title = "Start Time",
                     summary = currentStart,
@@ -630,15 +696,16 @@ fun MainSettingsList(
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val time = String.format(Locale.US, "%02d:%02d", h, m)
-                            state.prefs.edit().putString("scheduled_dnd_start", time).apply()
-                            state.updateScheduledDnd(state.scheduledDnd) // Trigger recompose
-                        }, parts[0].toInt(), parts[1].toInt(), true).show()
+                            state.updateScheduledDndStart(time)
+                        }, startHour, startMin, true).show()
                     }
                 )
             }
-            item(key = "pref_end") {
-                val currentEnd = state.prefs.getString("scheduled_dnd_end", "07:00") ?: "07:00"
+            item(key = "pref_end", contentType = "preference_item") {
+                val currentEnd = state.scheduledDndEnd
                 val parts = currentEnd.split(":")
+                val endHour = parts.getOrNull(0)?.toIntOrNull() ?: 7
+                val endMin = parts.getOrNull(1)?.toIntOrNull() ?: 0
                 PreferenceItem(
                     title = "End Time",
                     summary = currentEnd,
@@ -648,38 +715,31 @@ fun MainSettingsList(
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             val time = String.format(Locale.US, "%02d:%02d", h, m)
-                            state.prefs.edit().putString("scheduled_dnd_end", time).apply()
-                            state.updateScheduledDnd(state.scheduledDnd) // Trigger recompose
-                        }, parts[0].toInt(), parts[1].toInt(), true).show()
+                            state.updateScheduledDndEnd(time)
+                        }, endHour, endMin, true).show()
                     }
                 )
             }
         }
 
         // --- Category 5: System & Status ---
-        item(key = "cat_service") { 
+        item(key = "cat_service", contentType = "header") { 
             PreferenceCategory(title = "System & Status") 
         }
 
-        item(key = "pref_secure") {
-            val hasWriteSecure = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
+        item(key = "pref_secure", contentType = "preference_item") {
             PreferenceItem(
                 title = "Write Secure Settings",
-                summary = if (hasWriteSecure) "Permission Granted" else "Permission Missing - Tap to grant",
+                summary = if (state.hasWriteSecurePermission) "Permission Granted" else "Permission Missing - Tap to grant",
                 icon = Icons.Default.VpnKey,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    onPermissionRequest()
-                }
+                onClick = onPermissionRequest
             )
         }
         
-        item(key = "pref_notif_access") {
-            val enabledListeners = AndroidSettings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
-            val hasNotifyAccess = enabledListeners?.contains(context.packageName) == true
+        item(key = "pref_notif_access", contentType = "preference_item") {
             PreferenceItem(
                 title = "Notification Access",
-                summary = if (hasNotifyAccess) "Permission Granted" else "Permission Missing - Tap to grant",
+                summary = if (state.hasNotificationAccessPermission) "Permission Granted" else "Permission Missing - Tap to grant",
                 icon = Icons.Default.SettingsSuggest,
                 onClick = { 
                     haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -688,7 +748,7 @@ fun MainSettingsList(
             )
         }
 
-        item(key = "pref_reset_setup") {
+        item(key = "pref_reset_setup", contentType = "preference_item") {
             PreferenceItem(
                 title = "Reset Onboarding",
                 summary = "Re-run first-time setup guide",
@@ -702,10 +762,10 @@ fun MainSettingsList(
             )
         }
 
-        item(key = "footer") {
-            Spacer(Modifier.height(48.dp))
+        item(key = "footer", contentType = "footer") {
+            Spacer(Modifier.height(16.dp))
             MadeWithLoveFooter(haptic)
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
@@ -753,7 +813,10 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
                 tint = Color.Red,
                 modifier = Modifier
                     .size(24.dp)
-                    .scale(scale)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
             )
             Text(
                 " for the Pixel",
@@ -770,8 +833,8 @@ fun PreferenceCategory(title: String, isFirst: Boolean = false) {
         text = title.uppercase(),
         modifier = Modifier.padding(
             start = 16.dp, 
-            top = if (isFirst) 24.dp else 40.dp, 
-            bottom = 12.dp
+            top = if (isFirst) 8.dp else 24.dp, 
+            bottom = 8.dp
         ),
         style = MaterialTheme.typography.labelLarge,
         color = MaterialTheme.colorScheme.primary,
@@ -788,44 +851,65 @@ fun PreferenceItem(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
-    
-    ListItem(
-        headlineContent = { 
-            Text(
-                text = title, 
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
-            ) 
-        },
-        supportingContent = summary?.let { 
-            { 
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
-                ) 
-            } 
-        },
-        leadingContent = { 
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                icon?.let {
+    val shape = MaterialTheme.shapes.medium
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 3.dp)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                shape = shape
+            )
+            .clip(shape)
+            .iosTouchFeedback(enabled = enabled, onClick = onClick)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            color = if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = it, 
-                        contentDescription = null, 
-                        modifier = Modifier.size(24.dp),
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
                         tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
             }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { 
-                AppHaptics.performClick(haptic)
-                onClick() 
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
+                )
+                if (summary != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                    )
+                }
             }
-    )
+        }
+    }
 }
 
 @Composable
@@ -839,62 +923,82 @@ fun PreferenceSwitch(
     showSecondaryAction: Boolean = false,
     onSecondaryActionClick: () -> Unit = {}
 ) {
-    val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
+    val shape = MaterialTheme.shapes.medium
 
-    ListItem(
-        headlineContent = { 
-            Text(
-                text = title, 
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
-            ) 
-        },
-        supportingContent = summary?.let { 
-            { 
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
-                ) 
-            } 
-        },
-        leadingContent = { 
-            Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-                icon?.let {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 3.dp)
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                shape = shape
+            )
+            .clip(shape)
+            .iosTouchFeedback(enabled = enabled) {
+                onCheckedChange(!checked)
+            }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (icon != null) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .background(
+                            color = if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
+                            shape = CircleShape
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = it, 
-                        contentDescription = null, 
-                        modifier = Modifier.size(24.dp),
+                        imageVector = icon,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
                         tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
+                Spacer(modifier = Modifier.width(16.dp))
             }
-        },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (showSecondaryAction) {
-                    IconButton(onClick = onSecondaryActionClick, enabled = enabled) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = "Manage",
-                            tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                }
-                Switch(
-                    checked = checked,
-                    enabled = enabled,
-                    onCheckedChange = null // Let row handle the click to avoid double-toggle
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha)
                 )
+                if (summary != null) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = summary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+                    )
+                }
             }
-        },
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { 
-                val newState = !checked
-                AppHaptics.performClick(haptic)
-                onCheckedChange(newState) 
+
+            if (showSecondaryAction) {
+                IconButton(onClick = onSecondaryActionClick, enabled = enabled) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Manage",
+                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                    )
+                }
+                Spacer(modifier = Modifier.width(4.dp))
             }
-    )
+
+            Switch(
+                checked = checked,
+                enabled = enabled,
+                onCheckedChange = null
+            )
+        }
+    }
 }

@@ -10,7 +10,14 @@ import com.google.android.material.color.DynamicColors
 import com.nssivashankar.pixelaod.workers.UpdateWorker
 import java.util.concurrent.TimeUnit
 
+import com.nssivashankar.pixelaod.data.AppRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
 class AodApplication : Application() {
+
     override fun onCreate() {
         super.onCreate()
         DynamicColors.applyToActivitiesIfAvailable(this)
