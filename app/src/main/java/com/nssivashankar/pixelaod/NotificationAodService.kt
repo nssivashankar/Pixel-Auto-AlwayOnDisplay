@@ -14,11 +14,13 @@ import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.content.res.Configuration
+import android.database.ContentObserver
 import android.graphics.Color
 import android.graphics.drawable.Icon
 import android.hardware.SensorManager
 import android.hardware.TriggerEvent
 import android.hardware.TriggerEventListener
+import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -26,6 +28,7 @@ import android.os.Handler
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.provider.Settings as AndroidSettings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.text.format.DateFormat
@@ -147,6 +150,7 @@ class NotificationAodService : NotificationListenerService() {
                 }
                 ACTION_OPT_80 -> {
                     AodSettings.setChargeOptimizationMode(contentResolver, 1)
+                    AodSettings.setAdaptiveChargingEnabled(contentResolver, false)
                     getPrefs().edit { 
                         putString("charge_optimization", "1")
                         putBoolean("custom_limit_enabled", false)
@@ -344,8 +348,48 @@ class NotificationAodService : NotificationListenerService() {
         return getSharedPreferences("aod_prefs", MODE_PRIVATE)
     }
 
+    private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean, uri: Uri?) {
+            checkAndSyncSystemSettings()
+        }
+    }
+
+    private fun getCurrentBatteryPct(): Int {
+        return try {
+            val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+            bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+        } catch (_: Exception) {
+            -1
+        }
+    }
+
+    private fun checkAndSyncSystemSettings() {
+        val sysMode = AodSettings.getChargeOptimizationMode(contentResolver)
+        val prefs = getPrefs()
+        val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
+        val customTarget = prefs.getInt("custom_charging_limit", 80)
+
+        if (customLimitEnabled) {
+            val pct = getCurrentBatteryPct()
+            val isExpectingLimit = isCharging && pct >= customTarget && pct != -1
+            val expectedSysMode = if (isExpectingLimit) 1 else 0
+            
+            if (sysMode != expectedSysMode) {
+                // System mode was changed externally (e.g. from System Settings)
+                prefs.edit { putBoolean("custom_limit_enabled", false) }
+            }
+        }
+
+        updateChargingNotification(null)
+        updateAodState()
+    }
+
     private val prefListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key in listOf("master_switch", "charging_mode", "charging_info_notif", "dnd_mode", "scheduled_dnd", "scheduled_dnd_start", "scheduled_dnd_end", "live_notif_mode")) {
+        if (key in listOf(
+            "master_switch", "charging_mode", "charging_info_notif", "dnd_mode",
+            "scheduled_dnd", "scheduled_dnd_start", "scheduled_dnd_end", "live_notif_mode",
+            "custom_limit_enabled", "custom_charging_limit", "unit_system"
+        )) {
             syncActiveNotifications()
             updateChargingNotification(null)
         }
@@ -356,6 +400,14 @@ class NotificationAodService : NotificationListenerService() {
         createNotificationChannel()
         updateDndStatus()
         getPrefs().registerOnSharedPreferenceChangeListener(prefListener)
+
+        AodSettings.OBSERVABLE_SECURE_SETTINGS.forEach { setting ->
+            contentResolver.registerContentObserver(
+                AndroidSettings.Secure.getUriFor(setting),
+                false,
+                settingsObserver
+            )
+        }
 
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_POWER_CONNECTED)
@@ -376,6 +428,9 @@ class NotificationAodService : NotificationListenerService() {
     override fun onDestroy() {
         super.onDestroy()
         getPrefs().unregisterOnSharedPreferenceChangeListener(prefListener)
+        try {
+            contentResolver.unregisterContentObserver(settingsObserver)
+        } catch (_: Exception) {}
         unregisterReceiver(receiver)
     }
 
@@ -400,30 +455,22 @@ class NotificationAodService : NotificationListenerService() {
             null 
         } ?: return
 
-        activeNotifKeys.clear()
+        val newKeys = mutableSetOf<String>()
         activeNotifs.forEach { sbn ->
             if (shouldTrigger(sbn, watchedApps, liveMode, blockedLiveApps)) {
-                activeNotifKeys.add(sbn.key)
+                newKeys.add(sbn.key)
             }
         }
+
+        activeNotifKeys.clear()
+        activeNotifKeys.addAll(newKeys)
         updateAodState()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
         val prefs = getPrefs()
         if (!prefs.getBoolean("master_switch", false)) return
-
-        val watchedApps = prefs.getStringSet("watched_apps", emptySet()) ?: emptySet()
-        val liveMode = prefs.getBoolean("live_notif_mode", false)
-        val blockedLiveApps = prefs.getStringSet("live_notif_blocked_apps", emptySet()) ?: emptySet()
-
-        if (shouldTrigger(sbn, watchedApps, liveMode, blockedLiveApps)) {
-            activeNotifKeys.add(sbn.key)
-        } else {
-            activeNotifKeys.remove(sbn.key)
-        }
-
-        updateAodState()
+        syncActiveNotifications()
     }
 
     private fun shouldTrigger(
@@ -439,26 +486,45 @@ class NotificationAodService : NotificationListenerService() {
             return false
         }
 
-        // 1. Explicitly watched apps always trigger
-        if (packageName in watchedApps) return true
+        // Check progress bar status
+        val notification = sbn.notification
+        val extras = notification.extras
+        val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
+        val progress = extras.getInt(Notification.EXTRA_PROGRESS, 0)
+        val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
+        val isProgressBar = max > 0 || indeterminate || notification.category == Notification.CATEGORY_PROGRESS
+
+        // Ignore AOD triggering for silent progressbar notifications
+        if (isProgressBar && isSilentNotification(sbn)) {
+            return false
+        }
+
+        // Progress bar is active if:
+        // - max > 0 and progress < max (download/task actively in progress)
+        // - or indeterminate is true and max == 0 (loading/downloading without fixed max)
+        val hasActiveProgress = (max > 0 && progress < max) || (indeterminate && max == 0)
+
+        // 1. Explicitly watched apps:
+        // Trigger AOD, unless it's a progress notification that has finished (progress >= max)
+        if (packageName in watchedApps) {
+            return !(max > 0 && !indeterminate && progress >= max)
+        }
 
         // 2. Ignore system-level noise
         if ((packageName == "android") || (packageName == "com.android.systemui")) return false
 
         // 3. Live Notification Mode detection
         if (liveMode && packageName !in blockedLiveApps) {
-            val notification = sbn.notification
             val isOngoing = (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0
             
             if (isOngoing) {
-                val extras = notification.extras
                 val category = notification.category
-                val hasProgress = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0) > 0
-                val isLiveCategory = category in listOf("navigation", "service", "progress", "location_sharing", "transport")
+                val isLiveCategory = category in listOf("navigation", "service", "location_sharing", "transport") ||
+                        (category == "progress" && hasActiveProgress)
                 val appKeywords = listOf("uber", "ride", "delivery", "food", "track", "map", "grab", "rapido", "ola", "zomato", "swiggy")
                 val hasKeyword = appKeywords.any { packageName.contains(it, ignoreCase = true) }
 
-                if (isLiveCategory || hasProgress || hasKeyword) {
+                if (hasActiveProgress || isLiveCategory || hasKeyword) {
                     return true
                 }
             }
@@ -467,9 +533,29 @@ class NotificationAodService : NotificationListenerService() {
         return false
     }
 
+    private fun isSilentNotification(sbn: StatusBarNotification): Boolean {
+        try {
+            val rankingMap = currentRanking
+            if (rankingMap != null) {
+                val ranking = Ranking()
+                if (rankingMap.getRanking(sbn.key, ranking)) {
+                    if (ranking.importance <= NotificationManager.IMPORTANCE_LOW || ranking.isAmbient) {
+                        return true
+                    }
+                }
+            }
+        } catch (_: Exception) {}
+
+        @Suppress("DEPRECATION")
+        val priority = sbn.notification.priority
+        @Suppress("DEPRECATION")
+        return priority <= Notification.PRIORITY_LOW
+    }
+
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        activeNotifKeys.remove(sbn.key)
-        updateAodState()
+        val prefs = getPrefs()
+        if (!prefs.getBoolean("master_switch", false)) return
+        syncActiveNotifications()
     }
 
     private fun updateAodState() {

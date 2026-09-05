@@ -4,10 +4,12 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.net.Uri
+import android.os.BatteryManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -46,6 +48,7 @@ import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 import com.nssivashankar.pixelaod.ui.theme.AppHaptics
 import com.nssivashankar.pixelaod.ui.theme.iosTouchFeedback
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -53,7 +56,7 @@ import java.util.Locale
 
 // --- High-Performance Settings State Holder ---
 @Stable
-class SettingsState(context: Context, private val scope: kotlinx.coroutines.CoroutineScope) {
+class SettingsState(private val context: Context, private val scope: CoroutineScope) {
     val prefs = context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
     private val resolver = context.contentResolver
 
@@ -97,13 +100,35 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
         }
     }
 
+    private fun syncSystemSettings() {
+        val sysMode = AodSettings.getChargeOptimizationMode(resolver)
+        val customTarget = prefs.getInt("custom_charging_limit", 80)
+        
+        val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
+        val pct = try { bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1 } catch (_: Exception) { -1 }
+        
+        val isPlugged = try {
+            val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: 0
+            plugged != 0
+        } catch (_: Exception) { false }
+
+        if (customLimitEnabled) {
+            val isExpectingLimit = isPlugged && pct >= customTarget && pct != -1
+            val expectedSysMode = if (isExpectingLimit) 1 else 0
+            if (sysMode != expectedSysMode) {
+                customLimitEnabled = false
+                prefs.edit().putBoolean("custom_limit_enabled", false).apply()
+            }
+        }
+
+        currentOptimizationMode = sysMode
+    }
+
     private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
             scope.launch(Dispatchers.IO) {
-                val mode = AodSettings.getChargeOptimizationMode(resolver)
-                withContext(Dispatchers.Main) {
-                    currentOptimizationMode = mode
-                }
+                syncSystemSettings()
             }
         }
     }
@@ -129,6 +154,9 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
     }
 
     fun startObserving() {
+        scope.launch(Dispatchers.IO) {
+            syncSystemSettings()
+        }
         AodSettings.OBSERVABLE_SECURE_SETTINGS.forEach { setting ->
             resolver.registerContentObserver(
                 AndroidSettings.Secure.getUriFor(setting),
@@ -221,15 +249,22 @@ class SettingsState(context: Context, private val scope: kotlinx.coroutines.Coro
             
             if (!custom) {
                 AodSettings.setChargeOptimizationMode(resolver, mode)
-                if (mode == 2) AodSettings.setAdaptiveChargingEnabled(resolver, true)
-                else if (mode == 0) AodSettings.setAdaptiveChargingEnabled(resolver, false)
-                currentOptimizationMode = mode
+                when (mode) {
+                    0 -> AodSettings.setAdaptiveChargingEnabled(resolver, false)
+                    1 -> AodSettings.setAdaptiveChargingEnabled(resolver, false)
+                    2 -> AodSettings.setAdaptiveChargingEnabled(resolver, true)
+                }
+                withContext(Dispatchers.Main) {
+                    currentOptimizationMode = mode
+                }
             } else {
                 // When Custom Limit is active, we disable system-level Adaptive Charging
                 // to prevent conflicting '0.0W' holds and maintain consistent charging.
                 AodSettings.setChargeOptimizationMode(resolver, 0)
                 AodSettings.setAdaptiveChargingEnabled(resolver, false)
-                currentOptimizationMode = 0
+                withContext(Dispatchers.Main) {
+                    currentOptimizationMode = 0
+                }
             }
         }
     }
@@ -292,7 +327,8 @@ fun SettingsScreen(
                 )
             } else {
                 AboutScreen(
-                    contentPadding = contentPadding
+                    contentPadding = contentPadding,
+                    onPermissionRequest = onPermissionRequest
                 )
             }
         }
@@ -554,9 +590,9 @@ fun MainSettingsList(
         contentPadding = contentPadding,
         state = lazyListState
     ) {
-        // --- Category 1: Charging Automation ---
+        // --- Category 1: CHARGING ---
         item(key = "cat_charging", contentType = "header") { 
-            PreferenceCategory(title = "Charging Automation", isFirst = true) 
+            PreferenceCategory(title = "CHARGING", isFirst = true) 
         }
         
         item(key = "pref_charging", contentType = "preference_switch") {
@@ -599,9 +635,9 @@ fun MainSettingsList(
             )
         }
 
-        // --- Category 2: Notification Triggers ---
+        // --- Category 2: NOTIFICATION ---
         item(key = "cat_notif", contentType = "header") { 
-            PreferenceCategory(title = "Notification Triggers") 
+            PreferenceCategory(title = "NOTIFICATION") 
         }
 
         item(key = "pref_live", contentType = "preference_switch") {
@@ -627,9 +663,9 @@ fun MainSettingsList(
             )
         }
 
-        // --- Category 3: Display Automation ---
+        // --- Category 3: LOCKSCREEN ---
         item(key = "cat_display", contentType = "header") { 
-            PreferenceCategory(title = "Display Automation") 
+            PreferenceCategory(title = "LOCKSCREEN") 
         }
 
         item(key = "pref_screen_off", contentType = "preference_switch") {
@@ -720,46 +756,6 @@ fun MainSettingsList(
                     }
                 )
             }
-        }
-
-        // --- Category 5: System & Status ---
-        item(key = "cat_service", contentType = "header") { 
-            PreferenceCategory(title = "System & Status") 
-        }
-
-        item(key = "pref_secure", contentType = "preference_item") {
-            PreferenceItem(
-                title = "Write Secure Settings",
-                summary = if (state.hasWriteSecurePermission) "Permission Granted" else "Permission Missing - Tap to grant",
-                icon = Icons.Default.VpnKey,
-                onClick = onPermissionRequest
-            )
-        }
-        
-        item(key = "pref_notif_access", contentType = "preference_item") {
-            PreferenceItem(
-                title = "Notification Access",
-                summary = if (state.hasNotificationAccessPermission) "Permission Granted" else "Permission Missing - Tap to grant",
-                icon = Icons.Default.SettingsSuggest,
-                onClick = { 
-                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                    context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) 
-                }
-            )
-        }
-
-        item(key = "pref_reset_setup", contentType = "preference_item") {
-            PreferenceItem(
-                title = "Reset Onboarding",
-                summary = "Re-run first-time setup guide",
-                icon = Icons.Default.RestartAlt,
-                onClick = {
-                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                    state.prefs.edit().putBoolean("is_setup_complete", false).apply()
-                    // Restart activity to trigger SetupScreen
-                    (context as? android.app.Activity)?.recreate()
-                }
-            )
         }
 
         item(key = "footer", contentType = "footer") {
