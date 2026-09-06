@@ -1,6 +1,7 @@
 package com.nssivashankar.pixelaod.ui.screens
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -44,6 +45,7 @@ fun SetupScreen(
     val scope = rememberCoroutineScope()
     val pagerState = rememberPagerState(pageCount = { 6 })
     val lifecycleOwner = LocalLifecycleOwner.current
+    val prefs = remember { context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE) }
 
     var hasSecureSettings by remember {
         mutableStateOf(context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED)
@@ -103,7 +105,11 @@ fun SetupScreen(
                     1 -> SecureSettingsPage(
                         isGranted = hasSecureSettings,
                         onGrant = onGrantSecureSettings,
-                        onCopyAdb = onCopyAdbCommand
+                        onCopyAdb = onCopyAdbCommand,
+                        onSkip = {
+                            prefs.edit().putBoolean("secure_settings_skipped", true).apply()
+                            scope.launch { pagerState.animateScrollToPage(2) }
+                        }
                     )
                     2 -> NotificationAccessPage(
                         isGranted = hasNotificationAccess,
@@ -154,7 +160,7 @@ fun SetupScreen(
                 // Next Button
                 if (pagerState.currentPage < 5) {
                     val canGoNext = when (pagerState.currentPage) {
-                        1 -> hasSecureSettings
+                        1 -> hasSecureSettings || prefs.getBoolean("secure_settings_skipped", false)
                         2 -> hasNotificationAccess
                         3 -> hasPostNotifications
                         else -> true
@@ -235,17 +241,18 @@ private fun WelcomePage() {
 private fun SecureSettingsPage(
     isGranted: Boolean,
     onGrant: () -> Unit,
-    onCopyAdb: () -> Unit
+    onCopyAdb: () -> Unit,
+    onSkip: () -> Unit
 ) {
     SetupPageTemplate(
         icon = Icons.Default.Security,
         title = "Secure Settings",
-        description = "To control system features like AOD and Adaptive Charging, we need a special permission that can only be granted via Shizuku or your PC."
+        description = "Required for AOD Automation & Charge Control.\n\nIf you only need Live Charging Details, you can skip this step."
     ) {
         if (isGranted) {
             PermissionGrantedChip()
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = onGrant,
                     modifier = Modifier.fillMaxWidth(),
@@ -263,6 +270,16 @@ private fun SecureSettingsPage(
                     Icon(Icons.Default.ContentCopy, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
                     Text("Copy ADB Command")
+                }
+                TextButton(
+                    onClick = onSkip,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Skip (Charging Details Only)",
+                        color = MaterialTheme.colorScheme.secondary,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }

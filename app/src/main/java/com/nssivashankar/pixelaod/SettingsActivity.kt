@@ -94,7 +94,8 @@ class SettingsActivity : ComponentActivity() {
         super.onStart()
         val prefs = getSharedPreferences("aod_prefs", MODE_PRIVATE)
         val setupComplete = prefs.getBoolean("is_setup_complete", false)
-        if (setupComplete && !hasPermission()) {
+        val skipped = prefs.getBoolean("secure_settings_skipped", false)
+        if (setupComplete && !hasPermission() && !skipped) {
             handleMissingPermission()
         }
     }
@@ -129,7 +130,9 @@ class SettingsActivity : ComponentActivity() {
     private fun handleShizukuPermissionGranted() {
         val grantWriteSecureSettingsUseCase = GrantWriteSecureSettingsUseCase()
         val granted = grantWriteSecureSettingsUseCase.execute(this)
-        if (!granted) {
+        if (granted) {
+            getSharedPreferences("aod_prefs", MODE_PRIVATE).edit().putBoolean("secure_settings_skipped", false).apply()
+        } else {
             showWriteSecureSettingsPermissionDialog()
         }
     }

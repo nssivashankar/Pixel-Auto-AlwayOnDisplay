@@ -1,6 +1,7 @@
 package com.nssivashankar.pixelaod
 
 import android.Manifest
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -25,6 +26,7 @@ import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
+import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
@@ -35,6 +37,11 @@ import android.text.format.DateFormat
 import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.core.content.edit
+import org.lsposed.hiddenapibypass.HiddenApiBypass
+import rikka.shizuku.ShizukuBinderWrapper
+import rikka.shizuku.SystemServiceHelper
+import com.nssivashankar.pixelaod.permissions.ShizukuStatus
+import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
@@ -52,7 +59,29 @@ class NotificationAodService : NotificationListenerService() {
     private var lastActiveWattageTime = 0L
     private var isScreenOffAodActive = false
     private var isLiftToWakeActive = false
-    private val handler = Handler(Looper.getMainLooper())
+    private var partialWakeLock: PowerManager.WakeLock? = null
+
+    private fun acquirePartialWakeLock(timeoutMs: Long = 12000) {
+        try {
+            if (partialWakeLock == null) {
+                val pm = getSystemService(POWER_SERVICE) as PowerManager
+                partialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "PixelAOD:TimeoutWakeLock")
+            }
+            if (partialWakeLock?.isHeld == false) {
+                partialWakeLock?.acquire(timeoutMs)
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationAodService", "Failed to acquire partial wake lock", e)
+        }
+    }
+
+    private fun releasePartialWakeLock() {
+        try {
+            if (partialWakeLock?.isHeld == true) {
+                partialWakeLock?.release()
+            }
+        } catch (_: Exception) {}
+    }
 
     private val sensorManager by lazy { getSystemService(SENSOR_SERVICE) as SensorManager }
     private val pickUpSensor by lazy { sensorManager.getDefaultSensor(25) } // Sensor.TYPE_PICK_UP_GESTURE
@@ -68,25 +97,95 @@ class NotificationAodService : NotificationListenerService() {
         try { Class.forName("android.app.Notification\$ProgressStyle\$Segment") } catch (_: Throwable) { null }
     }
 
-    private val tokenScreenOff = Any()
-    private val tokenLift = Any()
+    private val timeoutHandler = Handler(Looper.getMainLooper())
+    private var screenOffTimeoutRunnable: Runnable? = null
+    private var liftTimeoutRunnable: Runnable? = null
+
+    private fun pulseDozeAmbient() {
+        try {
+            // Ensure system doze is enabled
+            AndroidSettings.Secure.putInt(contentResolver, "doze_enabled", 1)
+
+            // Pulse Ambient Display / AOD without waking full lockscreen
+            val pulse1 = Intent("com.android.systemui.doze.pulse").apply {
+                setPackage("com.android.systemui")
+            }
+            sendBroadcast(pulse1)
+
+            val pulse2 = Intent("android.intent.action.PULSE_AMBLED_DISPLAY")
+            sendBroadcast(pulse2)
+        } catch (e: Exception) {
+            Log.e("NotificationAodService", "Failed to pulse doze ambient", e)
+        }
+    }
+
+    private fun scheduleAodTimeout(action: String, delayMs: Long) {
+        try {
+            val am = getSystemService(ALARM_SERVICE) as AlarmManager
+            val intent = Intent(action).setPackage(packageName)
+            val requestCode = if (action == ACTION_TIMEOUT_SCREEN_OFF) 101 else 102
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            val triggerAtMs = SystemClock.elapsedRealtime() + delayMs
+            am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, triggerAtMs, pendingIntent)
+
+            if (action == ACTION_TIMEOUT_SCREEN_OFF) {
+                screenOffTimeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
+                val r = Runnable { sendBroadcast(Intent(ACTION_TIMEOUT_SCREEN_OFF).setPackage(packageName)) }
+                screenOffTimeoutRunnable = r
+                timeoutHandler.postDelayed(r, delayMs)
+            } else if (action == ACTION_TIMEOUT_LIFT) {
+                liftTimeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
+                val r = Runnable { sendBroadcast(Intent(ACTION_TIMEOUT_LIFT).setPackage(packageName)) }
+                liftTimeoutRunnable = r
+                timeoutHandler.postDelayed(r, delayMs)
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationAodService", "Failed to schedule AOD timeout alarm", e)
+        }
+    }
+
+    private fun cancelAodTimeout(action: String) {
+        try {
+            val am = getSystemService(ALARM_SERVICE) as AlarmManager
+            val intent = Intent(action).setPackage(packageName)
+            val requestCode = if (action == ACTION_TIMEOUT_SCREEN_OFF) 101 else 102
+            val pendingIntent = PendingIntent.getBroadcast(
+                this,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE
+            )
+            if (pendingIntent != null) {
+                am.cancel(pendingIntent)
+                pendingIntent.cancel()
+            }
+            if (action == ACTION_TIMEOUT_SCREEN_OFF) {
+                screenOffTimeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
+                screenOffTimeoutRunnable = null
+            } else if (action == ACTION_TIMEOUT_LIFT) {
+                liftTimeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
+                liftTimeoutRunnable = null
+            }
+        } catch (_: Exception) {}
+    }
 
     private val triggerEventListener = object : TriggerEventListener() {
         override fun onTrigger(event: TriggerEvent?) {
             if (getPrefs().getBoolean("lift_to_wake_aod", false)) {
                 isLiftToWakeActive = true
                 updateAodState()
-                
-                // Re-use same 10s timer logic
-                handler.removeCallbacksAndMessages(tokenLift)
-                handler.postAtTime({
-                    isLiftToWakeActive = false
-                    updateAodState()
-                }, tokenLift, SystemClock.uptimeMillis() + 10000)
+                pulseDozeAmbient()
+                acquirePartialWakeLock(12000)
+                scheduleAodTimeout(ACTION_TIMEOUT_LIFT, 10000)
                 
                 // Re-register if screen is still off
                 val isScreenOn = (getSystemService(POWER_SERVICE) as PowerManager).isInteractive
-                if (!isScreenOn) {
+                if (!isScreenOn && pickUpSensor != null) {
                     sensorManager.requestTriggerSensor(this, pickUpSensor)
                 }
             }
@@ -103,6 +202,8 @@ class NotificationAodService : NotificationListenerService() {
         private const val ACTION_OPT_80 = "com.nssivashankar.pixelaod.ACTION_OPT_80"
         private const val ACTION_OPT_ADAPTIVE = "com.nssivashankar.pixelaod.ACTION_OPT_ADAPTIVE"
         private const val ACTION_FULL_CHARGE = "com.nssivashankar.pixelaod.ACTION_FULL_CHARGE"
+        private const val ACTION_TIMEOUT_SCREEN_OFF = "com.nssivashankar.pixelaod.ACTION_TIMEOUT_SCREEN_OFF"
+        private const val ACTION_TIMEOUT_LIFT = "com.nssivashankar.pixelaod.ACTION_TIMEOUT_LIFT"
     }
 
     private fun createNotificationChannel() {
@@ -264,16 +365,32 @@ class NotificationAodService : NotificationListenerService() {
                         updateChargingNotification(null)
                     }
                 }
+                ACTION_TIMEOUT_SCREEN_OFF -> {
+                    Log.d("NotificationAodService", "10s timeout reached for Lock Screen AOD")
+                    isScreenOffAodActive = false
+                    releasePartialWakeLock()
+                    updateAodState()
+                }
+                ACTION_TIMEOUT_LIFT -> {
+                    Log.d("NotificationAodService", "10s timeout reached for Lift to Wake AOD")
+                    isLiftToWakeActive = false
+                    releasePartialWakeLock()
+                    updateAodState()
+                }
                 Intent.ACTION_SCREEN_OFF -> {
                     val prefs = getPrefs()
                     if (prefs.getBoolean("screen_off_aod", false)) {
                         isScreenOffAodActive = true
                         updateAodState()
-                        handler.removeCallbacksAndMessages(tokenScreenOff)
-                        handler.postAtTime({
-                            isScreenOffAodActive = false
-                            updateAodState()
-                        }, tokenScreenOff, SystemClock.uptimeMillis() + 10000)
+                        acquirePartialWakeLock(12000)
+                        scheduleAodTimeout(ACTION_TIMEOUT_SCREEN_OFF, 10000)
+
+                        // Allow SystemUI screen-off state transition to settle before sending pulse
+                        timeoutHandler.postDelayed({
+                            if (isScreenOffAodActive) {
+                                pulseDozeAmbient()
+                            }
+                        }, 250)
                     }
                     
                     if (prefs.getBoolean("lift_to_wake_aod", false) && pickUpSensor != null) {
@@ -283,9 +400,12 @@ class NotificationAodService : NotificationListenerService() {
                 Intent.ACTION_SCREEN_ON -> {
                     isScreenOffAodActive = false
                     isLiftToWakeActive = false
-                    handler.removeCallbacksAndMessages(tokenScreenOff)
-                    handler.removeCallbacksAndMessages(tokenLift)
-                    sensorManager.cancelTriggerSensor(triggerEventListener, pickUpSensor)
+                    cancelAodTimeout(ACTION_TIMEOUT_SCREEN_OFF)
+                    cancelAodTimeout(ACTION_TIMEOUT_LIFT)
+                    releasePartialWakeLock()
+                    if (pickUpSensor != null) {
+                        sensorManager.cancelTriggerSensor(triggerEventListener, pickUpSensor)
+                    }
                     updateAodState()
                 }
             }
@@ -421,6 +541,8 @@ class NotificationAodService : NotificationListenerService() {
             addAction(ACTION_OPT_80)
             addAction(ACTION_OPT_ADAPTIVE)
             addAction(ACTION_FULL_CHARGE)
+            addAction(ACTION_TIMEOUT_SCREEN_OFF)
+            addAction(ACTION_TIMEOUT_LIFT)
         }
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
     }
@@ -434,9 +556,49 @@ class NotificationAodService : NotificationListenerService() {
         unregisterReceiver(receiver)
     }
 
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action != null) {
+            when (intent.action) {
+                Intent.ACTION_POWER_CONNECTED -> {
+                    isCharging = true
+                    plugInTime = System.currentTimeMillis()
+                    lastActiveWattageTime = System.currentTimeMillis()
+                    updateAodState()
+                    updateChargingNotification(null)
+                }
+                Intent.ACTION_POWER_DISCONNECTED -> {
+                    isCharging = false
+                    isChargingForegroundStarted = false
+                    plugInTime = 0L
+                    lastActiveWattageTime = 0L
+                    val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    try {
+                        stopForeground(STOP_FOREGROUND_REMOVE)
+                    } catch (_: Exception) {}
+                    nm.cancel(CHARGING_NOTIF_ID)
+                    nm.cancel(COMPLETION_NOTIF_ID)
+                    syncActiveNotifications()
+                    updateAodState()
+                    updateChargingNotification(null)
+                }
+            }
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     override fun onListenerConnected() {
         super.onListenerConnected()
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val batteryIntent = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: 0
+        val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+        if (bm.isCharging || plugged != 0 || status == BatteryManager.BATTERY_STATUS_CHARGING) {
+            isCharging = true
+            if (plugInTime == 0L) plugInTime = System.currentTimeMillis()
+            if (lastActiveWattageTime == 0L) lastActiveWattageTime = System.currentTimeMillis()
+        }
         syncActiveNotifications()
+        updateChargingNotification(batteryIntent)
     }
 
     private fun syncActiveNotifications() {
@@ -601,13 +763,87 @@ class NotificationAodService : NotificationListenerService() {
         } catch (_: Exception) { return false }
     }
 
+    private fun stopDozeDream() {
+        try {
+            if (ShizukuUtils.hasPermission() == ShizukuStatus.PERM_GRANTED) {
+                try {
+                    val powerBinder = SystemServiceHelper.getSystemService(POWER_SERVICE)
+                    if (powerBinder != null) {
+                        val stubClass = Class.forName("android.os.IPowerManager\$Stub")
+                        val asInterfaceMethod = stubClass.getMethod("asInterface", IBinder::class.java)
+                        val powerService = asInterfaceMethod.invoke(null, ShizukuBinderWrapper(powerBinder))
+                        val goToSleepMethod = powerService.javaClass.getMethod(
+                            "goToSleep",
+                            Long::class.javaPrimitiveType,
+                            Int::class.javaPrimitiveType,
+                            Int::class.javaPrimitiveType
+                        )
+                        goToSleepMethod.invoke(powerService, SystemClock.uptimeMillis(), 0, 0)
+                        Log.d("NotificationAodService", "Successfully called goToSleep via Shizuku")
+                        return
+                    }
+                } catch (e: Exception) {
+                    Log.e("NotificationAodService", "Failed to goToSleep via Shizuku", e)
+                }
+            }
+
+            val pm = getSystemService(POWER_SERVICE) as PowerManager
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                try {
+                    HiddenApiBypass.invoke(
+                        PowerManager::class.java,
+                        pm,
+                        "goToSleep",
+                        SystemClock.uptimeMillis()
+                    )
+                } catch (_: Exception) {
+                    pm.javaClass.getMethod("goToSleep", Long::class.javaPrimitiveType).invoke(pm, SystemClock.uptimeMillis())
+                }
+            } else {
+                pm.javaClass.getMethod("goToSleep", Long::class.javaPrimitiveType).invoke(pm, SystemClock.uptimeMillis())
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationAodService", "Failed to stop doze dream via goToSleep", e)
+        }
+    }
+
     private fun setAod(enable: Boolean) {
         if (checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) return
-        val currentState = AodSettings.isAodEnabled(contentResolver)
-        if (currentState == enable) return
         try {
-            AodSettings.setAodEnabled(contentResolver, enable)
-        } catch (e: SecurityException) { Log.e("NotificationAodService", "Failed to set AOD state", e) }
+            val target = if (enable) 1 else 0
+            AndroidSettings.Secure.putInt(contentResolver, AodSettings.DOZE_ALWAYS_ON, target)
+            // Keep doze_enabled = 1 so SystemUI DozeService remains active to transition panel to sleep/suspend
+            AndroidSettings.Secure.putInt(contentResolver, "doze_enabled", 1)
+
+            if (!enable) {
+                // Force display state refresh when turning OFF AOD:
+                // Poke the doze machine via ghost notification to re-evaluate secure settings immediately.
+                val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                val channelId = "aod_refresh_channel"
+                val channel = NotificationChannel(channelId, "AOD Sync", NotificationManager.IMPORTANCE_LOW)
+                nm.createNotificationChannel(channel)
+
+                val ghostNotif = Notification.Builder(this, channelId)
+                    .setSmallIcon(android.R.color.transparent)
+                    .setContentTitle("")
+                    .setGroup("aod_sync_group")
+                    .setGroupAlertBehavior(Notification.GROUP_ALERT_ALL)
+                    .build()
+
+                nm.notify(999, ghostNotif)
+                nm.cancel(999)
+
+                stopDozeDream()
+            }
+
+            // Pulse intent tells SystemUI to transition to the new AOD state NOW
+            val pulseIntent = Intent("com.android.systemui.doze.pulse").apply {
+                setPackage("com.android.systemui")
+            }
+            sendBroadcast(pulseIntent)
+        } catch (e: SecurityException) {
+            Log.e("NotificationAodService", "Failed to set AOD state", e)
+        }
     }
 
     private fun updateChargingNotification(intent: Intent?) {
@@ -617,19 +853,25 @@ class NotificationAodService : NotificationListenerService() {
 
         val batteryIntent = intent ?: registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: 0
-        val isPlugged = isCharging && plugged != 0
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
         val batteryPct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
         val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val isBmCharging = bm.isCharging
+        val isActuallyCharging = isCharging || isBmCharging || plugged != 0 || status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
+        if (isActuallyCharging) {
+            isCharging = true
+        }
+
         val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
         val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
         val customTarget = prefs.getInt("custom_charging_limit", 80)
         
         val isFull = status == BatteryManager.BATTERY_STATUS_FULL || (optMode == 1 && batteryPct >= 80) || (customLimitEnabled && batteryPct >= customTarget) || batteryPct >= 100
 
-        if (!enabled || !isCharging || !isPlugged || isFull) {
+        if (!enabled || !isActuallyCharging || isFull) {
             if (isChargingForegroundStarted) {
                 try {
                     stopForeground(STOP_FOREGROUND_REMOVE)
@@ -643,7 +885,6 @@ class NotificationAodService : NotificationListenerService() {
 
         val temperature = (batteryIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0
         val voltage = batteryIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0 // mV
-        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
         val currentNow = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW) // uA
         val currentWattage = (abs(currentNow).toDouble() / 1_000_000.0) * (voltage.toDouble() / 1000.0)
         val systemTimeToFull = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) bm.computeChargeTimeRemaining() else -1L

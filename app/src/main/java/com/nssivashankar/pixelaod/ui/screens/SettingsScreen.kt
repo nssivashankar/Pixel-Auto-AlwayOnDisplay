@@ -590,9 +590,51 @@ fun MainSettingsList(
         contentPadding = contentPadding,
         state = lazyListState
     ) {
+        if (!state.hasWriteSecurePermission) {
+            item(key = "permission_warning_card", contentType = "warning_card") {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .clickable { onPermissionRequest() },
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.35f)
+                    ),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Security,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(28.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "AOD Automation Permission Required",
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Secure settings permission is required for AOD automation features. Tap to grant via Shizuku or ADB. Live Charging Details works standalone.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.85f)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // --- Category 1: CHARGING ---
         item(key = "cat_charging", contentType = "header") { 
-            PreferenceCategory(title = "CHARGING", isFirst = true) 
+            PreferenceCategory(title = "CHARGING", isFirst = state.hasWriteSecurePermission) 
         }
         
         item(key = "pref_charging", contentType = "preference_switch") {
