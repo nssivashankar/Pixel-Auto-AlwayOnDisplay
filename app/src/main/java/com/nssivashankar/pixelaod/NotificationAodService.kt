@@ -100,6 +100,26 @@ class NotificationAodService : NotificationListenerService() {
     private var screenOffTimeoutRunnable: Runnable? = null
     private var liftTimeoutRunnable: Runnable? = null
 
+    private val chargingUpdateRunnable = object : Runnable {
+        override fun run() {
+            if (isCharging) {
+                updateChargingNotification(null)
+                timeoutHandler.postDelayed(this, 15000L)
+            }
+        }
+    }
+
+    private fun startChargingUpdateLoop() {
+        timeoutHandler.removeCallbacks(chargingUpdateRunnable)
+        if (isCharging) {
+            timeoutHandler.postDelayed(chargingUpdateRunnable, 15000L)
+        }
+    }
+
+    private fun stopChargingUpdateLoop() {
+        timeoutHandler.removeCallbacks(chargingUpdateRunnable)
+    }
+
     private fun pulseDozeAmbient() {
         try {
             // Ensure system doze is enabled
@@ -285,7 +305,7 @@ class NotificationAodService : NotificationListenerService() {
                     plugInTime = System.currentTimeMillis()
                     lastActiveWattageTime = System.currentTimeMillis()
                     updateAodState()
-                    updateChargingNotification(null)
+                    updateChargingNotification(intent)
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> {
                     isCharging = false
@@ -293,12 +313,13 @@ class NotificationAodService : NotificationListenerService() {
                     lastActiveWattageTime = 0L
                     
                     val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+                    try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
                     nm.cancel(CHARGING_NOTIF_ID)
                     nm.cancel(COMPLETION_NOTIF_ID)
                     
                     syncActiveNotifications()
                     updateAodState()
-                    updateChargingNotification(null)
+                    updateChargingNotification(intent)
                     lastAlertedPct = -1
                 }
                 Intent.ACTION_BATTERY_CHANGED -> {
@@ -544,6 +565,7 @@ class NotificationAodService : NotificationListenerService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        stopChargingUpdateLoop()
         getPrefs().unregisterOnSharedPreferenceChangeListener(prefListener)
         try {
             contentResolver.unregisterContentObserver(settingsObserver)
@@ -842,19 +864,37 @@ class NotificationAodService : NotificationListenerService() {
         val enabled = prefs.getBoolean("charging_info_notif", false)
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
-        val batteryIntent = intent ?: registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        val isDisconnect = intent?.action == Intent.ACTION_POWER_DISCONNECTED
+        if (isDisconnect) {
+            isCharging = false
+            stopChargingUpdateLoop()
+            try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
+            nm.cancel(CHARGING_NOTIF_ID)
+            updateAodState()
+            return
+        }
+
+        if (intent?.action == Intent.ACTION_POWER_CONNECTED) {
+            isCharging = true
+        }
+
+        val batteryIntent = if (intent?.action == Intent.ACTION_BATTERY_CHANGED) {
+            intent
+        } else {
+            registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        }
+
+        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
+        val realTimeCap = getCurrentBatteryPct()
+
         val plugged = batteryIntent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: 0
         val level = batteryIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val scale = batteryIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, -1) ?: -1
-        val batteryPct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
+        val intentPct = if (level != -1 && scale != -1) (level * 100 / scale) else -1
+        val batteryPct = if (intentPct in 1..100) intentPct else if (realTimeCap in 1..100) realTimeCap else -1
+
         val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        
-        val bm = getSystemService(BATTERY_SERVICE) as BatteryManager
-        val isBmCharging = bm.isCharging
-        val isActuallyCharging = isCharging || isBmCharging || plugged != 0 || status == BatteryManager.BATTERY_STATUS_CHARGING || status == BatteryManager.BATTERY_STATUS_FULL
-        if (isActuallyCharging) {
-            isCharging = true
-        }
+        val isPlugged = plugged != 0 || isCharging
 
         val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
         val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
@@ -862,7 +902,10 @@ class NotificationAodService : NotificationListenerService() {
         
         val isFull = status == BatteryManager.BATTERY_STATUS_FULL || (optMode == 1 && batteryPct >= 80) || (customLimitEnabled && batteryPct >= customTarget) || batteryPct >= 100
 
-        if (!enabled || !isActuallyCharging || isFull) {
+        if (!enabled || !isPlugged || isFull) {
+            isCharging = false
+            stopChargingUpdateLoop()
+            try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
             nm.cancel(CHARGING_NOTIF_ID)
             updateAodState()
             return
@@ -878,11 +921,29 @@ class NotificationAodService : NotificationListenerService() {
 
         fun estimateTimeTo(targetPct: Int): Long {
             if (batteryPct >= targetPct) return 0L
-            if (systemTimeToFull > 0 && targetPct == 100) return systemTimeToFull
-            if (targetPct == 80 && optMode == 1 && systemTimeToFull > 0) return systemTimeToFull
-            var estimatedMs = (targetPct - batteryPct) * msPerPct
-            if (targetPct > 80 && batteryPct < 80) estimatedMs += ((targetPct - maxOf(80, batteryPct)) * msPerPct * 0.5).toLong() 
-            return estimatedMs
+
+            if (systemTimeToFull > 0) {
+                if (targetPct == 100) return systemTimeToFull
+                if (optMode == 1 && targetPct == 80) return systemTimeToFull
+
+                val pctsToTarget = maxOf(1, targetPct - batteryPct)
+                val pctsAfterTarget = maxOf(0, 100 - targetPct)
+                // Trickle phase (80-100%) takes ~1.8x longer per %
+                val weightTarget = pctsToTarget.toDouble()
+                val weightAfter = pctsAfterTarget.toDouble() * 1.8
+                val ratio = weightTarget / (weightTarget + weightAfter)
+                return (systemTimeToFull * ratio).toLong()
+            }
+
+            if (msPerPct > 0) {
+                var estimatedMs = (targetPct - batteryPct) * msPerPct
+                if (targetPct > 80 && batteryPct < 80) {
+                    estimatedMs += ((targetPct - 80) * msPerPct * 0.8).toLong()
+                }
+                return estimatedMs
+            }
+
+            return 0L
         }
 
         val isLimitActive = optMode == 1 || customLimitEnabled
@@ -917,11 +978,7 @@ class NotificationAodService : NotificationListenerService() {
         val line1 = "$wattageStr \u2022 $tempStr"
         val line2 = when {
             isLimitActive -> {
-                if (batteryPct < targetLimit && clockTimeTarget.isNotEmpty()) {
-                    "$targetLimit% at $clockTimeTarget"
-                } else if (batteryPct >= targetLimit) {
-                    "Limit Reached ($targetLimit%)"
-                } else ""
+                if (clockTimeTarget.isNotEmpty()) "$targetLimit% at $clockTimeTarget" else ""
             }
             else -> { // Off or Adaptive Charging
                 if (batteryPct < 80 && clockTime80.isNotEmpty()) {
@@ -1018,11 +1075,7 @@ class NotificationAodService : NotificationListenerService() {
 
         val pillText = when {
             isLimitActive -> {
-                if (batteryPct < targetLimit && clockTimeTarget.isNotEmpty()) {
-                    "${targetLimit}% $clockTimeTarget"
-                } else if (batteryPct >= targetLimit) {
-                    "Limit $targetLimit%"
-                } else ""
+                if (clockTimeTarget.isNotEmpty()) "${targetLimit}% $clockTimeTarget" else "Limit $targetLimit%"
             }
             else -> { // Off or Adaptive Charging
                 if (batteryPct < 80 && clockTime80.isNotEmpty()) {
@@ -1062,6 +1115,7 @@ class NotificationAodService : NotificationListenerService() {
 
         val chargingNotif = notificationBuilder.build()
         nm.notify(CHARGING_NOTIF_ID, chargingNotif)
+        startChargingUpdateLoop()
         updateAodState()
     }
 
