@@ -947,9 +947,7 @@ class NotificationAodService : NotificationListenerService() {
             else -> Color.parseColor("#00E676")           // Vibrant Emerald Green (80% - 100%)
         }
 
-        val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_outlined_24 else R.drawable.ic_bolt_dark_24
-        val targetTimeMs = if (isLimitActive && batteryPct < targetLimit) currentTime + msToTarget else currentTime + msTo100
-        val pillEtaText = if (targetTimeMs > currentTime) formatToClockTime(targetTimeMs) else ""
+        val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_24 else R.drawable.ic_bolt_dark_24
 
         val notificationBuilder = Notification.Builder(this, CHARGING_CHANNEL_ID)
             .setSmallIcon(liveUpdateIcon)
@@ -1018,11 +1016,27 @@ class NotificationAodService : NotificationListenerService() {
             Log.e("NotificationAodService", "Failed to construct ProgressStyle", e)
         }
 
+        val pillText = when {
+            isLimitActive -> {
+                if (batteryPct < targetLimit && clockTimeTarget.isNotEmpty()) {
+                    "${targetLimit}% $clockTimeTarget"
+                } else if (batteryPct >= targetLimit) {
+                    "Limit $targetLimit%"
+                } else ""
+            }
+            else -> { // Off or Adaptive Charging
+                if (batteryPct < 80 && clockTime80.isNotEmpty()) {
+                    "80% $clockTime80"
+                } else if (clockTime100.isNotEmpty()) {
+                    "Full $clockTime100"
+                } else ""
+            }
+        }
+
         val extras = Bundle()
         extras.putBoolean("android.requestPromotedOngoing", true)
         extras.putCharSequence("android.substName", "Pixel AOD")
-        if (pillEtaText.isNotEmpty()) {
-            val pillText = if (batteryPct < targetLimit) "${targetLimit}% $pillEtaText" else "Full $pillEtaText"
+        if (pillText.isNotEmpty()) {
             extras.putString("android.shortCriticalText", pillText)
         }
         notificationBuilder.addExtras(extras)
