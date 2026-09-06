@@ -51,7 +51,6 @@ class NotificationAodService : NotificationListenerService() {
 
     private val activeNotifKeys = mutableSetOf<String>()
     private var isCharging = false
-    private var isChargingForegroundStarted = false
     private var isChargingPaused = false
     private var isBatteryFull = false
     private var isDndActive = false
@@ -290,14 +289,10 @@ class NotificationAodService : NotificationListenerService() {
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> {
                     isCharging = false
-                    isChargingForegroundStarted = false
                     plugInTime = 0L
                     lastActiveWattageTime = 0L
                     
                     val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                    try {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                    } catch (_: Exception) {}
                     nm.cancel(CHARGING_NOTIF_ID)
                     nm.cancel(COMPLETION_NOTIF_ID)
                     
@@ -568,13 +563,9 @@ class NotificationAodService : NotificationListenerService() {
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> {
                     isCharging = false
-                    isChargingForegroundStarted = false
                     plugInTime = 0L
                     lastActiveWattageTime = 0L
                     val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-                    try {
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                    } catch (_: Exception) {}
                     nm.cancel(CHARGING_NOTIF_ID)
                     nm.cancel(COMPLETION_NOTIF_ID)
                     syncActiveNotifications()
@@ -872,12 +863,6 @@ class NotificationAodService : NotificationListenerService() {
         val isFull = status == BatteryManager.BATTERY_STATUS_FULL || (optMode == 1 && batteryPct >= 80) || (customLimitEnabled && batteryPct >= customTarget) || batteryPct >= 100
 
         if (!enabled || !isActuallyCharging || isFull) {
-            if (isChargingForegroundStarted) {
-                try {
-                    stopForeground(STOP_FOREGROUND_REMOVE)
-                } catch (_: Exception) {}
-                isChargingForegroundStarted = false
-            }
             nm.cancel(CHARGING_NOTIF_ID)
             updateAodState()
             return
@@ -1062,17 +1047,7 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         val chargingNotif = notificationBuilder.build()
-        if (!isChargingForegroundStarted) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(CHARGING_NOTIF_ID, chargingNotif, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            } else {
-                startForeground(CHARGING_NOTIF_ID, chargingNotif)
-            }
-            isChargingForegroundStarted = true
-        } else {
-            nm.notify(CHARGING_NOTIF_ID, chargingNotif)
-        }
-        
+        nm.notify(CHARGING_NOTIF_ID, chargingNotif)
         updateAodState()
     }
 

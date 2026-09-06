@@ -12,9 +12,9 @@ class PowerConnectionReceiver : BroadcastReceiver() {
                 this.action = action
             }
             try {
-                context.startForegroundService(serviceIntent)
+                context.startService(serviceIntent)
             } catch (_: Exception) {
-                // If background service start is restricted by system, NotificationListenerService lifecycle handles binding
+                // If background service start is restricted, NotificationListenerService handles background lifecycle
             }
         }
     }
