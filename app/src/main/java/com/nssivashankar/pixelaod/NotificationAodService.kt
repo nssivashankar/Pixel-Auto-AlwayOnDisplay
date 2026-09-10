@@ -894,13 +894,16 @@ class NotificationAodService : NotificationListenerService() {
         val batteryPct = if (intentPct in 1..100) intentPct else if (realTimeCap in 1..100) realTimeCap else -1
 
         val status = batteryIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
-        val isPlugged = plugged != 0 || isCharging
+        val isBmCharging = bm.isCharging
+        val isPlugged = plugged != 0 || isCharging || isBmCharging
 
         val optMode = AodSettings.getChargeOptimizationMode(contentResolver)
         val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
         val customTarget = prefs.getInt("custom_charging_limit", 80)
         
-        val isFull = status == BatteryManager.BATTERY_STATUS_FULL || (optMode == 1 && batteryPct >= 80) || (customLimitEnabled && batteryPct >= customTarget) || batteryPct >= 100
+        val isFull = batteryPct >= 100 || (status == BatteryManager.BATTERY_STATUS_FULL && batteryPct >= 99) ||
+                    (optMode == 1 && batteryPct >= 80 && !isBmCharging) ||
+                    (customLimitEnabled && batteryPct >= customTarget && !isBmCharging)
 
         if (!enabled || !isPlugged || isFull) {
             isCharging = false
