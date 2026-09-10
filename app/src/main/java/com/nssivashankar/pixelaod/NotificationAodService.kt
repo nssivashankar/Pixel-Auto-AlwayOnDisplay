@@ -309,6 +309,10 @@ class NotificationAodService : NotificationListenerService() {
                 }
                 Intent.ACTION_POWER_DISCONNECTED -> {
                     isCharging = false
+                    isScreenOffAodActive = false
+                    isLiftToWakeActive = false
+                    cancelAodTimeout(ACTION_TIMEOUT_SCREEN_OFF)
+                    cancelAodTimeout(ACTION_TIMEOUT_LIFT)
                     plugInTime = 0L
                     lastActiveWattageTime = 0L
                     
@@ -503,17 +507,10 @@ class NotificationAodService : NotificationListenerService() {
         val sysMode = AodSettings.getChargeOptimizationMode(contentResolver)
         val prefs = getPrefs()
         val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
-        val customTarget = prefs.getInt("custom_charging_limit", 80)
 
-        if (customLimitEnabled) {
-            val pct = getCurrentBatteryPct()
-            val isExpectingLimit = isCharging && pct >= customTarget && pct != -1
-            val expectedSysMode = if (isExpectingLimit) 1 else 0
-            
-            if (sysMode != expectedSysMode) {
-                // System mode was changed externally (e.g. from System Settings)
-                prefs.edit { putBoolean("custom_limit_enabled", false) }
-            }
+        if (customLimitEnabled && sysMode == 2) {
+            // Only disengage custom limit if system mode was explicitly changed to Adaptive Charging (2) externally
+            prefs.edit { putBoolean("custom_limit_enabled", false) }
         }
 
         updateChargingNotification(null)
@@ -661,9 +658,18 @@ class NotificationAodService : NotificationListenerService() {
             return false
         }
 
-        // Check progress bar status
         val notification = sbn.notification
         val extras = notification.extras
+
+        // Exclude media playback notifications (Spotify, YouTube Music, Apple Music, etc.) unless in watchedApps
+        val isMedia = notification.category == Notification.CATEGORY_TRANSPORT ||
+                      extras.containsKey(Notification.EXTRA_MEDIA_SESSION) ||
+                      extras.containsKey("android.mediaSession")
+        if (isMedia && packageName !in watchedApps) {
+            return false
+        }
+
+        // Check progress bar status
         val max = extras.getInt(Notification.EXTRA_PROGRESS_MAX, 0)
         val progress = extras.getInt(Notification.EXTRA_PROGRESS, 0)
         val indeterminate = extras.getBoolean(Notification.EXTRA_PROGRESS_INDETERMINATE, false)
@@ -694,7 +700,7 @@ class NotificationAodService : NotificationListenerService() {
             
             if (isOngoing) {
                 val category = notification.category
-                val isLiveCategory = category in listOf("navigation", "service", "location_sharing", "transport") ||
+                val isLiveCategory = category in listOf("navigation", "service", "location_sharing") ||
                         (category == "progress" && hasActiveProgress)
                 val appKeywords = listOf("uber", "ride", "delivery", "food", "track", "map", "grab", "rapido", "ola", "zomato", "swiggy")
                 val hasKeyword = appKeywords.any { packageName.contains(it, ignoreCase = true) }
@@ -740,9 +746,7 @@ class NotificationAodService : NotificationListenerService() {
         if (!masterEnabled) return
 
         val chargingMode = prefs.getBoolean("charging_mode", false)
-        val isWattageIdle = isCharging && lastActiveWattageTime != 0L && (System.currentTimeMillis() - lastActiveWattageTime > 10 * 60 * 1000)
-
-        val chargingTrigger = chargingMode && isCharging && !isBatteryFull && !isChargingPaused && !isWattageIdle
+        val chargingTrigger = chargingMode && isCharging && !isBatteryFull
         
         val respectDnd = prefs.getBoolean("dnd_mode", false)
         val systemNotifAllowed = if (respectDnd) !isDndActive else true
@@ -820,8 +824,13 @@ class NotificationAodService : NotificationListenerService() {
         }
     }
 
+    private var currentAodState: Boolean? = null
+
     private fun setAod(enable: Boolean) {
         if (checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) != PackageManager.PERMISSION_GRANTED) return
+        if (currentAodState == enable) return
+
+        currentAodState = enable
         try {
             val target = if (enable) 1 else 0
             AndroidSettings.Secure.putInt(contentResolver, AodSettings.DOZE_ALWAYS_ON, target)

@@ -102,21 +102,10 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
 
     private fun syncSystemSettings() {
         val sysMode = AodSettings.getChargeOptimizationMode(resolver)
-        val customTarget = prefs.getInt("custom_charging_limit", 80)
-        
-        val bm = context.getSystemService(Context.BATTERY_SERVICE) as? BatteryManager
-        val pct = try { bm?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1 } catch (_: Exception) { -1 }
-        
-        val isPlugged = try {
-            val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-            val plugged = intent?.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1) ?: 0
-            plugged != 0
-        } catch (_: Exception) { false }
 
         if (customLimitEnabled) {
-            val isExpectingLimit = isPlugged && pct >= customTarget && pct != -1
-            val expectedSysMode = if (isExpectingLimit) 1 else 0
-            if (sysMode != expectedSysMode) {
+            // Only disengage custom limit if system mode was explicitly changed to Adaptive Charging (2) externally
+            if (sysMode == 2) {
                 customLimitEnabled = false
                 prefs.edit().putBoolean("custom_limit_enabled", false).apply()
             }
