@@ -63,6 +63,11 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 -   **Android 13 to 17 Support**: Includes specialized fixes for AOD refresh states and the latest notification standards.
 
 ---
+
+## 🛠️ Building & Releasing
+For AI assistants, developers, and release instructions, please see [RELEASING.md](RELEASING.md) for the strict GitHub Actions tag-driven release workflow.
+
+---
 ## 📜 Credits & License
 - **Original Author**: [Alberto Pedron](https://github.com/albertopedron)
 - **Maintenance & Features**: [Shankar](https://github.com/nssivashankar) (Android 15+ support, Material 3 UI, Custom Battery Limits, Live Tracking)
