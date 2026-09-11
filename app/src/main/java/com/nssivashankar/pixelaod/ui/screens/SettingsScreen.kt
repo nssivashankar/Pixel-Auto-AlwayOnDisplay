@@ -15,6 +15,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.provider.Settings as AndroidSettings
+import com.nssivashankar.pixelaod.config.Constants
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -26,7 +27,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -74,6 +79,12 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
     var customLimit by mutableIntStateOf(prefs.getInt("custom_charging_limit", 80))
     var screenOffAod by mutableStateOf(prefs.getBoolean("screen_off_aod", false))
     var liftToWakeAod by mutableStateOf(prefs.getBoolean("lift_to_wake_aod", false))
+    var previewTimeoutSeconds by mutableIntStateOf(prefs.getInt("preview_timeout_seconds", Constants.DEFAULT_PREVIEW_TIMEOUT_SECONDS))
+    var completionChime by mutableStateOf(prefs.getBoolean("completion_chime_enabled", true))
+    var completionVibrate by mutableStateOf(prefs.getBoolean("completion_vibrate_enabled", true))
+    var lastChargePeak by mutableFloatStateOf(prefs.getFloat("last_charge_peak_wattage", 0f))
+    var lastChargeMaxTemp by mutableFloatStateOf(prefs.getFloat("last_charge_max_temp", 0f))
+    var lastChargeDurationMs by mutableLongStateOf(prefs.getLong("last_charge_duration_ms", 0L))
     var unitSystem by mutableStateOf(prefs.getString("unit_system", "metric") ?: "metric")
     var currentOptimizationMode by mutableIntStateOf(AodSettings.getChargeOptimizationMode(resolver))
 
@@ -102,15 +113,6 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
 
     private fun syncSystemSettings() {
         val sysMode = AodSettings.getChargeOptimizationMode(resolver)
-
-        if (customLimitEnabled) {
-            // Only disengage custom limit if system mode was explicitly changed to Adaptive Charging (2) externally
-            if (sysMode == 2) {
-                customLimitEnabled = false
-                prefs.edit().putBoolean("custom_limit_enabled", false).apply()
-            }
-        }
-
         currentOptimizationMode = sysMode
     }
 
@@ -189,6 +191,21 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
     fun updateScheduledDnd(enabled: Boolean) {
         scheduledDnd = enabled
         prefs.edit().putBoolean("scheduled_dnd", enabled).apply()
+    }
+
+    fun updatePreviewTimeout(seconds: Int) {
+        previewTimeoutSeconds = seconds
+        prefs.edit().putInt("preview_timeout_seconds", seconds).apply()
+    }
+
+    fun updateCompletionChime(enabled: Boolean) {
+        completionChime = enabled
+        prefs.edit().putBoolean("completion_chime_enabled", enabled).apply()
+    }
+
+    fun updateCompletionVibrate(enabled: Boolean) {
+        completionVibrate = enabled
+        prefs.edit().putBoolean("completion_vibrate_enabled", enabled).apply()
     }
 
     fun updateScheduledDndStart(time: String) {
@@ -458,6 +475,7 @@ fun MainSettingsList(
     var showBlockListDialog by remember { mutableStateOf(false) }
     var showChargingModeDialog by remember { mutableStateOf(false) }
     var showTempUnitDialog by remember { mutableStateOf(false) }
+    var showPreviewDurationDialog by remember { mutableStateOf(false) }
 
     val onChargingModeChange = remember(state) { { enabled: Boolean -> state.updateChargingMode(enabled) } }
     val onChargingInfoChange = remember(state) { { enabled: Boolean -> state.updateChargingInfoNotif(enabled) } }
@@ -574,6 +592,50 @@ fun MainSettingsList(
         )
     }
 
+    if (showPreviewDurationDialog) {
+        AlertDialog(
+            onDismissRequest = { showPreviewDurationDialog = false },
+            title = { Text("Preview Duration") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "${state.previewTimeoutSeconds} Seconds",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Slider(
+                        value = state.previewTimeoutSeconds.toFloat(),
+                        onValueChange = { value ->
+                            val snapped = when {
+                                value < 7.5f -> 5
+                                value < 15f -> 10
+                                value < 25f -> 20
+                                value < 35f -> 30
+                                value < 45f -> 40
+                                value < 55f -> 50
+                                else -> 60
+                            }
+                            if (snapped != state.previewTimeoutSeconds) {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                state.updatePreviewTimeout(snapped)
+                            }
+                        },
+                        valueRange = 5f..60f,
+                        steps = 5,
+                        colors = SliderDefaults.colors(
+                            thumbColor = MaterialTheme.colorScheme.primary,
+                            activeTrackColor = MaterialTheme.colorScheme.primary
+                        )
+                    )
+                }
+            },
+            confirmButton = { TextButton(onClick = { showPreviewDurationDialog = false }) { Text("Done") } }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding,
@@ -629,10 +691,11 @@ fun MainSettingsList(
         item(key = "pref_charging", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Charging Mode",
-                summary = "Turn on AOD automatically when charger is connected",
+                summary = "AOD while plugged in",
                 icon = Icons.Default.BatteryChargingFull,
                 checked = state.chargingMode,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.TOP,
                 onCheckedChange = onChargingModeChange
             )
         }
@@ -640,10 +703,11 @@ fun MainSettingsList(
         item(key = "pref_info", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = stringResource(R.string.charging_info_title),
-                summary = stringResource(R.string.charging_info_summary) + " (Standalone Feature)",
+                summary = stringResource(R.string.charging_info_summary),
                 icon = Icons.Default.Info,
                 checked = state.chargingInfoNotif,
                 enabled = true,
+                position = PreferencePosition.MIDDLE,
                 onCheckedChange = onChargingInfoChange,
                 showSecondaryAction = true,
                 onSecondaryActionClick = onShowTempUnitDialog
@@ -662,8 +726,61 @@ fun MainSettingsList(
                 summary = modeSummary,
                 icon = Icons.Default.BatterySaver,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.BOTTOM,
                 onClick = onShowChargingModeDialog
             )
+        }
+
+        if (state.lastChargePeak > 0f) {
+            item(key = "card_last_charge", contentType = "session_card") {
+                val durationMins = state.lastChargeDurationMs / (1000 * 60)
+                val durStr = if (durationMins >= 60) "${durationMins / 60}h ${durationMins % 60}m" else "${durationMins}m"
+                val peakStr = String.format(Locale.US, "%.1fW", state.lastChargePeak)
+                val tempStr = if (state.unitSystem == "imperial") String.format(Locale.US, "%.1f°F", (state.lastChargeMaxTemp * 9/5) + 32)
+                              else String.format(Locale.US, "%.1f°C", state.lastChargeMaxTemp)
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.surfaceContainerLow,
+                            shape = MaterialTheme.shapes.extraLarge
+                        )
+                        .padding(16.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(MaterialTheme.colorScheme.primaryContainer, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = "Last Charge Session",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "$peakStr Peak \u2022 $tempStr Max \u2022 $durStr",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
         }
 
         // --- Category 2: NOTIFICATION ---
@@ -674,10 +791,11 @@ fun MainSettingsList(
         item(key = "pref_live", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Live Notification Mode",
-                summary = "AOD for Maps, Uber etc.",
+                summary = "Maps, rides & deliveries",
                 icon = Icons.Default.Map,
                 checked = state.liveNotifMode,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.TOP,
                 onCheckedChange = onLiveNotifChange,
                 showSecondaryAction = true,
                 onSecondaryActionClick = onShowBlockListDialog
@@ -687,9 +805,10 @@ fun MainSettingsList(
         item(key = "pref_apps", contentType = "preference_item") {
             PreferenceItem(
                 title = "Per-App Notifications",
-                summary = "Always trigger AOD for these apps",
+                summary = "Selected apps",
                 icon = Icons.Default.Notifications,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.BOTTOM,
                 onClick = onShowAppListDialog
             )
         }
@@ -702,10 +821,11 @@ fun MainSettingsList(
         item(key = "pref_screen_off", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Lock Screen AOD",
-                summary = "Show AOD for 10 seconds after locking",
+                summary = "Preview AOD on locking screen",
                 icon = Icons.Default.LockClock,
                 checked = state.screenOffAod,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.TOP,
                 onCheckedChange = onScreenOffAodChange
             )
         }
@@ -713,11 +833,23 @@ fun MainSettingsList(
         item(key = "pref_lift_to_wake", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Lift to Wake AOD",
-                summary = "Show AOD for 10 seconds when you pick up your phone",
+                summary = "Preview AOD on pickup",
                 icon = Icons.Default.VerticalAlignTop,
                 checked = state.liftToWakeAod,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.MIDDLE,
                 onCheckedChange = onLiftToWakeAodChange
+            )
+        }
+
+        item(key = "pref_preview_duration", contentType = "preference_item") {
+            PreferenceItem(
+                title = "Preview Duration",
+                summary = "${state.previewTimeoutSeconds}s duration",
+                icon = Icons.Default.Timer,
+                enabled = state.masterSwitch && (state.screenOffAod || state.liftToWakeAod),
+                position = PreferencePosition.BOTTOM,
+                onClick = { showPreviewDurationDialog = true }
             )
         }
 
@@ -733,6 +865,7 @@ fun MainSettingsList(
                 icon = Icons.Default.DoNotDisturbOn,
                 checked = state.dndMode,
                 enabled = state.masterSwitch,
+                position = PreferencePosition.TOP,
                 onCheckedChange = onDndModeChange
             )
         }
@@ -740,10 +873,11 @@ fun MainSettingsList(
         item(key = "pref_scheduled", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Scheduled Sleep",
-                summary = "Disable AOD during specific hours",
+                summary = stringResource(R.string.scheduled_dnd_summary),
                 icon = Icons.Default.Schedule,
                 checked = state.scheduledDnd,
                 enabled = state.masterSwitch,
+                position = if (state.scheduledDnd) PreferencePosition.MIDDLE else PreferencePosition.BOTTOM,
                 onCheckedChange = onScheduledDndChange
             )
         }
@@ -759,6 +893,7 @@ fun MainSettingsList(
                     summary = currentStart,
                     icon = Icons.Default.VerticalAlignTop,
                     enabled = state.masterSwitch,
+                    position = PreferencePosition.MIDDLE,
                     onClick = {
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -778,6 +913,7 @@ fun MainSettingsList(
                     summary = currentEnd,
                     icon = Icons.Default.VerticalAlignBottom,
                     enabled = state.masterSwitch,
+                    position = PreferencePosition.BOTTOM,
                     onClick = {
                         TimePickerDialog(context, { _, h, m ->
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -854,19 +990,31 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
     }
 }
 
+enum class PreferencePosition {
+    TOP, MIDDLE, BOTTOM, SINGLE
+}
+
+fun getPositionShape(position: PreferencePosition): Shape {
+    return when (position) {
+        PreferencePosition.TOP -> RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp, bottomStart = 4.dp, bottomEnd = 4.dp)
+        PreferencePosition.MIDDLE -> RoundedCornerShape(4.dp)
+        PreferencePosition.BOTTOM -> RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp, bottomStart = 24.dp, bottomEnd = 24.dp)
+        PreferencePosition.SINGLE -> RoundedCornerShape(24.dp)
+    }
+}
+
 @Composable
 fun PreferenceCategory(title: String, isFirst: Boolean = false) {
     Text(
-        text = title.uppercase(),
+        text = title,
         modifier = Modifier.padding(
-            start = 16.dp, 
-            top = if (isFirst) 8.dp else 24.dp, 
-            bottom = 8.dp
+            start = 20.dp, 
+            top = if (isFirst) 8.dp else 20.dp, 
+            bottom = 6.dp
         ),
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Black,
-        letterSpacing = 1.2.sp
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        fontWeight = FontWeight.Medium
     )
 }
 
@@ -876,21 +1024,24 @@ fun PreferenceItem(
     summary: String? = null,
     icon: ImageVector? = null,
     enabled: Boolean = true,
+    position: PreferencePosition = PreferencePosition.SINGLE,
     onClick: () -> Unit
 ) {
+    val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
-    val shape = MaterialTheme.shapes.medium
+    val shape = getPositionShape(position)
 
-    Box(
+    Surface(
+        onClick = {
+            AppHaptics.performClick(haptic)
+            onClick()
+        },
+        enabled = enabled,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 3.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                shape = shape
-            )
-            .clip(shape)
-            .iosTouchFeedback(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -901,9 +1052,9 @@ fun PreferenceItem(
             if (icon != null) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(36.dp)
                         .background(
-                            color = if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            color = if (enabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
                             shape = CircleShape
                         ),
@@ -912,11 +1063,11 @@ fun PreferenceItem(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        modifier = Modifier.size(18.dp),
+                        tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -946,25 +1097,30 @@ fun PreferenceSwitch(
     icon: ImageVector? = null,
     checked: Boolean,
     enabled: Boolean = true,
+    position: PreferencePosition = PreferencePosition.SINGLE,
     onCheckedChange: (Boolean) -> Unit,
     showSecondaryAction: Boolean = false,
     onSecondaryActionClick: () -> Unit = {}
 ) {
+    val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
-    val shape = MaterialTheme.shapes.medium
+    val shape = getPositionShape(position)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 3.dp)
-            .background(
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                shape = shape
-            )
-            .clip(shape)
-            .iosTouchFeedback(enabled = enabled) {
+    Surface(
+        onClick = {
+            AppHaptics.performClick(haptic)
+            if (showSecondaryAction) {
+                onSecondaryActionClick()
+            } else {
                 onCheckedChange(!checked)
             }
+        },
+        enabled = enabled,
+        shape = shape,
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 1.dp)
     ) {
         Row(
             modifier = Modifier
@@ -975,9 +1131,9 @@ fun PreferenceSwitch(
             if (icon != null) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(36.dp)
                         .background(
-                            color = if (enabled) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
+                            color = if (enabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
                             shape = CircleShape
                         ),
@@ -986,11 +1142,11 @@ fun PreferenceSwitch(
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        modifier = Modifier.size(18.dp),
+                        tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(14.dp))
             }
 
             Column(modifier = Modifier.weight(1f)) {
@@ -1011,20 +1167,30 @@ fun PreferenceSwitch(
             }
 
             if (showSecondaryAction) {
-                IconButton(onClick = onSecondaryActionClick, enabled = enabled) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Manage",
-                        tint = if (enabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
-                    )
-                }
-                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Options",
+                    tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .size(22.dp)
+                )
+                VerticalDivider(
+                    modifier = Modifier
+                        .height(20.dp)
+                        .padding(horizontal = 6.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
             }
 
             Switch(
                 checked = checked,
                 enabled = enabled,
-                onCheckedChange = null
+                onCheckedChange = { isChecked ->
+                    AppHaptics.performClick(haptic)
+                    onCheckedChange(isChecked)
+                },
+                modifier = Modifier.padding(start = 4.dp)
             )
         }
     }

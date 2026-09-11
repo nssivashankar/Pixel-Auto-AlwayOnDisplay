@@ -21,6 +21,7 @@ import android.graphics.drawable.Icon
 import android.hardware.SensorManager
 import android.hardware.TriggerEvent
 import android.hardware.TriggerEventListener
+import android.media.RingtoneManager
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
@@ -30,6 +31,9 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.os.SystemClock
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.provider.Settings as AndroidSettings
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -45,6 +49,7 @@ import com.nssivashankar.pixelaod.permissions.ShizukuUtils
 import java.util.Calendar
 import java.util.Locale
 import kotlin.math.abs
+import com.nssivashankar.pixelaod.config.Constants
 import com.nssivashankar.pixelaod.config.Settings as AodSettings
 
 class NotificationAodService : NotificationListenerService() {
@@ -60,7 +65,7 @@ class NotificationAodService : NotificationListenerService() {
     private var isLiftToWakeActive = false
     private var partialWakeLock: PowerManager.WakeLock? = null
 
-    private fun acquirePartialWakeLock(timeoutMs: Long = 12000) {
+    private fun acquirePartialWakeLock(timeoutMs: Long = Constants.WAKELOCK_TIMEOUT_MS) {
         try {
             if (partialWakeLock == null) {
                 val pm = getSystemService(POWER_SERVICE) as PowerManager
@@ -83,7 +88,7 @@ class NotificationAodService : NotificationListenerService() {
     }
 
     private val sensorManager by lazy { getSystemService(SENSOR_SERVICE) as SensorManager }
-    private val pickUpSensor by lazy { sensorManager.getDefaultSensor(25) } // Sensor.TYPE_PICK_UP_GESTURE
+    private val pickUpSensor by lazy { sensorManager.getDefaultSensor(Constants.SENSOR_TYPE_PICK_UP) }
 
     // Cached Reflection classes to eliminate Class.forName overhead on battery events
     private val progressStyleClass by lazy {
@@ -104,7 +109,7 @@ class NotificationAodService : NotificationListenerService() {
         override fun run() {
             if (isCharging) {
                 updateChargingNotification(null)
-                timeoutHandler.postDelayed(this, 15000L)
+                timeoutHandler.postDelayed(this, Constants.CHARGING_UPDATE_INTERVAL_MS)
             }
         }
     }
@@ -112,7 +117,7 @@ class NotificationAodService : NotificationListenerService() {
     private fun startChargingUpdateLoop() {
         timeoutHandler.removeCallbacks(chargingUpdateRunnable)
         if (isCharging) {
-            timeoutHandler.postDelayed(chargingUpdateRunnable, 15000L)
+            timeoutHandler.postDelayed(chargingUpdateRunnable, Constants.CHARGING_UPDATE_INTERVAL_MS)
         }
     }
 
@@ -193,14 +198,20 @@ class NotificationAodService : NotificationListenerService() {
         } catch (_: Exception) {}
     }
 
+    private fun getPreviewTimeoutMs(): Long {
+        val seconds = getPrefs().getInt("preview_timeout_seconds", Constants.DEFAULT_PREVIEW_TIMEOUT_SECONDS)
+        return seconds * 1000L
+    }
+
     private val triggerEventListener = object : TriggerEventListener() {
         override fun onTrigger(event: TriggerEvent?) {
             if (getPrefs().getBoolean("lift_to_wake_aod", false)) {
+                val previewMs = getPreviewTimeoutMs()
                 isLiftToWakeActive = true
                 updateAodState()
                 pulseDozeAmbient()
-                acquirePartialWakeLock(12000)
-                scheduleAodTimeout(ACTION_TIMEOUT_LIFT, 10000)
+                acquirePartialWakeLock(previewMs + 2000L)
+                scheduleAodTimeout(ACTION_TIMEOUT_LIFT, previewMs)
                 
                 // Re-register if screen is still off
                 val isScreenOn = (getSystemService(POWER_SERVICE) as PowerManager).isInteractive
@@ -212,17 +223,17 @@ class NotificationAodService : NotificationListenerService() {
     }
 
     companion object {
-        private const val CHARGING_NOTIF_ID = 1001
-        private const val COMPLETION_NOTIF_ID = 1002
-        private const val CHARGING_CHANNEL_ID = "charging_live_v11_fix"
-        private const val COMPLETION_CHANNEL_ID = "battery_completion_v1"
+        private const val CHARGING_NOTIF_ID = Constants.CHARGING_NOTIF_ID
+        private const val COMPLETION_NOTIF_ID = Constants.COMPLETION_NOTIF_ID
+        private const val CHARGING_CHANNEL_ID = Constants.CHARGING_CHANNEL_ID
+        private const val COMPLETION_CHANNEL_ID = Constants.COMPLETION_CHANNEL_ID
         
-        private const val ACTION_OPT_OFF = "com.nssivashankar.pixelaod.ACTION_OPT_OFF"
-        private const val ACTION_OPT_80 = "com.nssivashankar.pixelaod.ACTION_OPT_80"
-        private const val ACTION_OPT_ADAPTIVE = "com.nssivashankar.pixelaod.ACTION_OPT_ADAPTIVE"
-        private const val ACTION_FULL_CHARGE = "com.nssivashankar.pixelaod.ACTION_FULL_CHARGE"
-        private const val ACTION_TIMEOUT_SCREEN_OFF = "com.nssivashankar.pixelaod.ACTION_TIMEOUT_SCREEN_OFF"
-        private const val ACTION_TIMEOUT_LIFT = "com.nssivashankar.pixelaod.ACTION_TIMEOUT_LIFT"
+        private const val ACTION_OPT_OFF = Constants.ACTION_OPT_OFF
+        private const val ACTION_OPT_80 = Constants.ACTION_OPT_80
+        private const val ACTION_OPT_ADAPTIVE = Constants.ACTION_OPT_ADAPTIVE
+        private const val ACTION_FULL_CHARGE = Constants.ACTION_FULL_CHARGE
+        private const val ACTION_TIMEOUT_SCREEN_OFF = Constants.ACTION_TIMEOUT_SCREEN_OFF
+        private const val ACTION_TIMEOUT_LIFT = Constants.ACTION_TIMEOUT_LIFT
     }
 
     private fun createNotificationChannel() {
@@ -400,17 +411,18 @@ class NotificationAodService : NotificationListenerService() {
                 Intent.ACTION_SCREEN_OFF -> {
                     val prefs = getPrefs()
                     if (prefs.getBoolean("screen_off_aod", false)) {
+                        val previewMs = getPreviewTimeoutMs()
                         isScreenOffAodActive = true
                         updateAodState()
-                        acquirePartialWakeLock(12000)
-                        scheduleAodTimeout(ACTION_TIMEOUT_SCREEN_OFF, 10000)
+                        acquirePartialWakeLock(previewMs + 2000L)
+                        scheduleAodTimeout(ACTION_TIMEOUT_SCREEN_OFF, previewMs)
 
                         // Allow SystemUI screen-off state transition to settle before sending pulse
                         timeoutHandler.postDelayed({
                             if (isScreenOffAodActive) {
                                 pulseDozeAmbient()
                             }
-                        }, 250)
+                        }, Constants.DOZE_SETTLE_DELAY_MS)
                     }
                     
                     if (prefs.getBoolean("lift_to_wake_aod", false) && pickUpSensor != null) {
@@ -474,6 +486,28 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         nm.notify(COMPLETION_NOTIF_ID, builder.build())
+
+        // Play completion chime by default
+        try {
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val ringtone = RingtoneManager.getRingtone(applicationContext, soundUri)
+            ringtone?.play()
+        } catch (_: Exception) {}
+
+        // Trigger completion vibration pulse by default
+        try {
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val vm = getSystemService(VIBRATOR_MANAGER_SERVICE) as VibratorManager
+                vm.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(VIBRATOR_SERVICE) as Vibrator
+            }
+            if (vibrator.hasVibrator()) {
+                val effect = VibrationEffect.createWaveform(longArrayOf(0, 150, 100, 150), -1)
+                vibrator.vibrate(effect)
+            }
+        } catch (_: Exception) {}
     }
 
     private fun updateDndStatus() {
@@ -504,15 +538,6 @@ class NotificationAodService : NotificationListenerService() {
     }
 
     private fun checkAndSyncSystemSettings() {
-        val sysMode = AodSettings.getChargeOptimizationMode(contentResolver)
-        val prefs = getPrefs()
-        val customLimitEnabled = prefs.getBoolean("custom_limit_enabled", false)
-
-        if (customLimitEnabled && sysMode == 2) {
-            // Only disengage custom limit if system mode was explicitly changed to Adaptive Charging (2) externally
-            prefs.edit { putBoolean("custom_limit_enabled", false) }
-        }
-
         updateChargingNotification(null)
         updateAodState()
     }
@@ -562,6 +587,8 @@ class NotificationAodService : NotificationListenerService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        pendingNotifAodRunnable?.let { timeoutHandler.removeCallbacks(it) }
+        pendingNotifAodRunnable = null
         stopChargingUpdateLoop()
         getPrefs().unregisterOnSharedPreferenceChangeListener(prefListener)
         try {
@@ -692,7 +719,7 @@ class NotificationAodService : NotificationListenerService() {
         }
 
         // 2. Ignore system-level noise
-        if ((packageName == "android") || (packageName == "com.android.systemui")) return false
+        if (packageName in Constants.SYSTEM_NOISE_PACKAGES) return false
 
         // 3. Live Notification Mode detection
         if (liveMode && packageName !in blockedLiveApps) {
@@ -702,8 +729,7 @@ class NotificationAodService : NotificationListenerService() {
                 val category = notification.category
                 val isLiveCategory = category in listOf("navigation", "service", "location_sharing") ||
                         (category == "progress" && hasActiveProgress)
-                val appKeywords = listOf("uber", "ride", "delivery", "food", "track", "map", "grab", "rapido", "ola", "zomato", "swiggy")
-                val hasKeyword = appKeywords.any { packageName.contains(it, ignoreCase = true) }
+                val hasKeyword = Constants.DEFAULT_LIVE_APP_KEYWORDS.any { packageName.contains(it, ignoreCase = true) }
 
                 if (hasActiveProgress || isLiveCategory || hasKeyword) {
                     return true
@@ -739,15 +765,19 @@ class NotificationAodService : NotificationListenerService() {
         syncActiveNotifications()
     }
 
+    private var pendingNotifAodRunnable: Runnable? = null
+
     private fun updateAodState() {
         val prefs = getPrefs()
         val masterEnabled = prefs.getBoolean("master_switch", false)
         
-        if (!masterEnabled) return
+        if (!masterEnabled) {
+            pendingNotifAodRunnable?.let { timeoutHandler.removeCallbacks(it) }
+            pendingNotifAodRunnable = null
+            setAod(false)
+            return
+        }
 
-        val chargingMode = prefs.getBoolean("charging_mode", false)
-        val chargingTrigger = chargingMode && isCharging && !isBatteryFull
-        
         val respectDnd = prefs.getBoolean("dnd_mode", false)
         val systemNotifAllowed = if (respectDnd) !isDndActive else true
         
@@ -758,10 +788,40 @@ class NotificationAodService : NotificationListenerService() {
             )
         } else { false }
 
-        val notifTrigger = systemNotifAllowed && !isQuietHours && activeNotifKeys.isNotEmpty()
-        val shouldBeOn = chargingTrigger || notifTrigger || isScreenOffAodActive || isLiftToWakeActive
+        val isQuietOrDndActive = isQuietHours || !systemNotifAllowed
 
-        setAod(enable = shouldBeOn)
+        val chargingMode = prefs.getBoolean("charging_mode", false)
+        val chargingTrigger = chargingMode && isCharging && !isBatteryFull && !isQuietOrDndActive
+        
+        val notifTrigger = !isQuietOrDndActive && activeNotifKeys.isNotEmpty()
+        val immediateTrigger = chargingTrigger || isScreenOffAodActive || isLiftToWakeActive
+
+        // Cancel any pending delayed turn-on runnable
+        pendingNotifAodRunnable?.let { timeoutHandler.removeCallbacks(it) }
+        pendingNotifAodRunnable = null
+
+        if (immediateTrigger) {
+            pendingNotifAodRunnable?.let { timeoutHandler.removeCallbacks(it) }
+            pendingNotifAodRunnable = null
+            setAod(enable = true)
+        } else if (notifTrigger) {
+            if (currentAodState != true) {
+                val r = Runnable {
+                    pendingNotifAodRunnable = null
+                    if (activeNotifKeys.isNotEmpty()) {
+                        setAod(enable = true)
+                    }
+                }
+                pendingNotifAodRunnable = r
+                timeoutHandler.postDelayed(r, 5500L)
+            } else {
+                setAod(enable = true)
+            }
+        } else {
+            pendingNotifAodRunnable?.let { timeoutHandler.removeCallbacks(it) }
+            pendingNotifAodRunnable = null
+            setAod(enable = false)
+        }
     }
 
     private fun isInQuietHours(startStr: String, endStr: String): Boolean {
@@ -914,7 +974,14 @@ class NotificationAodService : NotificationListenerService() {
                     (optMode == 1 && batteryPct >= 80 && !isBmCharging) ||
                     (customLimitEnabled && batteryPct >= customTarget && !isBmCharging)
 
-        if (!enabled || !isPlugged || isFull) {
+        if (!enabled) {
+            stopChargingUpdateLoop()
+            try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
+            nm.cancel(CHARGING_NOTIF_ID)
+            return
+        }
+
+        if (!isPlugged || isFull) {
             isCharging = false
             stopChargingUpdateLoop()
             try { stopForeground(STOP_FOREGROUND_REMOVE) } catch (_: Exception) {}
@@ -1008,13 +1075,7 @@ class NotificationAodService : NotificationListenerService() {
         val contentIntent = PendingIntent.getActivity(this, 0, Intent(this, SettingsActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
         val isDark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         // Dynamic percentage-based color scheme for charging progress
-        val progressColor = when {
-            batteryPct < 20 -> Color.parseColor("#E53935") // Red (0% - 19%)
-            batteryPct < 35 -> Color.parseColor("#FB8C00") // Orange (20% - 34%)
-            batteryPct < 60 -> Color.parseColor("#FDD835") // Gold / Amber (35% - 59%)
-            batteryPct < 80 -> Color.parseColor("#4CAF50") // Light Green (60% - 79%)
-            else -> Color.parseColor("#00E676")           // Vibrant Emerald Green (80% - 100%)
-        }
+        val progressColor = Constants.getBatteryProgressColor(batteryPct)
 
         val liveUpdateIcon = if (isDark) R.drawable.ic_bolt_24 else R.drawable.ic_bolt_dark_24
 

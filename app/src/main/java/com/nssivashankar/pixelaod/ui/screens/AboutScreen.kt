@@ -280,12 +280,13 @@ fun AboutScreen(
             }
 
             item(key = "about_feedback", contentType = "preference_item") {
-                PreferenceCategory(title = "Support & Community")
+                PreferenceCategory(title = "SUPPORT & COMMUNITY")
 
                 PreferenceItem(
                     title = "Send Bug Report / Feedback",
                     summary = "Email developer with device info & issue template",
                     icon = Icons.Default.Email,
+                    position = PreferencePosition.TOP,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         val hasWriteSecurePermission = context.checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS) == PackageManager.PERMISSION_GRANTED
@@ -336,6 +337,7 @@ fun AboutScreen(
                     title = "GitHub Issues & Requests",
                     summary = "Report issues or suggest features directly on GitHub",
                     icon = Icons.Default.Forum,
+                    position = PreferencePosition.BOTTOM,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/issues"))
@@ -345,26 +347,27 @@ fun AboutScreen(
             }
 
             item(key = "about_info", contentType = "preference_item") {
-                PreferenceCategory(title = "Information")
+                var isUpToDate by remember { mutableStateOf(false) }
+
+                PreferenceCategory(title = "INFORMATION")
+
                 PreferenceItem(
                     title = "View on GitHub",
                     summary = "Check source code and releases",
                     icon = Icons.Default.Code,
+                    position = PreferencePosition.TOP,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay"))
                         context.startActivity(intent)
                     }
                 )
-            }
-
-            item(key = "about_updates", contentType = "preference_item") {
-                var isUpToDate by remember { mutableStateOf(false) }
 
                 PreferenceItem(
                     title = "Check for Updates",
                     summary = if (isCheckingUpdates) "Checking backend..." else "Manually verify latest version",
                     icon = Icons.Default.Update,
+                    position = PreferencePosition.BOTTOM,
                     onClick = {
                         if (!isCheckingUpdates) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -383,7 +386,7 @@ fun AboutScreen(
                                         UpdateChecker.showUpdateDialog(context, latest, notes, url)
                                     }
                                 )
-                                delay(1200) // allow the morphing loader to display smoothly
+                                delay(1200)
                                 isCheckingUpdates = false
                                 if (upToDateDetected) {
                                     isUpToDate = true

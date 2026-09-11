@@ -34,12 +34,7 @@ object Settings {
 
     fun getChargeOptimizationMode(contentResolver: ContentResolver): Int {
         return try {
-            val mode = AndroidSettings.Secure.getInt(contentResolver, CHARGE_OPTIMIZATION_MODE, 0)
-            if (mode == 0 && isAdaptiveChargingEnabled(contentResolver)) {
-                2
-            } else {
-                mode
-            }
+            AndroidSettings.Secure.getInt(contentResolver, CHARGE_OPTIMIZATION_MODE)
         } catch (_: Exception) {
             if (isAdaptiveChargingEnabled(contentResolver)) 2 else 0
         }

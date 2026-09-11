@@ -1,17 +1,17 @@
 <resources>
     <string name="app_name">Pixel AOD</string>
     <string name="toggle_name">PIXEL AOD</string>
-    <string name="grant_write_secure_settings">Please install Shizuku or run the following command from your pc:\nadb shell pm grant %1$s %2$s</string>
-    <string name="grant_shizuku_permission">Please open Shizuku and authorize the app \"%1$s\"</string>
+    <string name="grant_write_secure_settings">Grant permission via Shizuku or ADB:\nadb shell pm grant %1$s %2$s</string>
+    <string name="grant_shizuku_permission">Authorize \"%1$s\" in Shizuku</string>
     <string name="unsupported_device">Unsupported device</string>
     <string name="dnd_mode_title">Respect System DND</string>
-    <string name="dnd_mode_summary">Don\'t trigger AOD when system Do Not Disturb is active</string>
-    <string name="scheduled_dnd_title">Scheduled Quiet Hours</string>
-    <string name="scheduled_dnd_summary">Disable notification triggers during specific times</string>
+    <string name="dnd_mode_summary">Pause AOD in DND</string>
+    <string name="scheduled_dnd_title">Scheduled Sleep</string>
+    <string name="scheduled_dnd_summary">Pause AOD at night</string>
     <string name="start_time_title">Start Time</string>
     <string name="end_time_title">End Time</string>
-    <string name="charging_info_title">Charging Details Notification</string>
-    <string name="charging_info_summary">Show wattage, temp and estimated charge time when charging</string>
+    <string name="charging_info_title">Live Charging Status</string>
+    <string name="charging_info_summary">Wattage, temp &amp; ETA on lockscreen</string>
     <string name="charging_info_channel_name">Charging Information</string>
     <string name="charging_info_notification_title">Charging: %1$d%%</string>
     <string name="charging_info_notification_content">%1$s \u2022 %2$s \u2022 %3$s</string>
@@ -21,9 +21,9 @@
     <string name="temp_unit_title">Temperature Unit</string>
     <string name="temp_unit_celsius">Celsius (°C)</string>
     <string name="temp_unit_fahrenheit">Fahrenheit (°F)</string>
-    <string name="battery_health_title">Battery Health (Pixel Only)</string>
+    <string name="battery_health_title">Battery Health</string>
     <string name="charge_optimization_title">Charging Optimization</string>
-    <string name="charge_optimization_summary">Limit charging to 80%% or use Adaptive Charging</string>
+    <string name="charge_optimization_summary">Limit to 80%% or Adaptive</string>
     <string name="adaptive_charging_title">Legacy Adaptive Charging</string>
-    <string name="adaptive_charging_summary">Toggle for older Pixel devices</string>
+    <string name="adaptive_charging_summary">Toggle for older Pixels</string>
 </resources>
