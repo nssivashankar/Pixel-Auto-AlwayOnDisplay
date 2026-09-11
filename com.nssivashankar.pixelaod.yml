@@ -22,7 +22,6 @@ Description: |-
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
-UpdateCheckData: v%v
 CurrentVersion: 1.4.35
 CurrentVersionCode: 58
 
