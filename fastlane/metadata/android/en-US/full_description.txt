@@ -1,7 +1,13 @@
-This app adds a tile to the quick settings panel that turns Always on Display on or off.
-The app needs to write to the system settings. Therefore the related permission has to be granted via Shizuku or from your computer with adb in order for the app to work properly:
+Pixel Auto AOD is a high-performance utility designed specifically for Google Pixel devices. It intelligently manages your Always-On Display (AOD) while providing integrated Pixel battery health management and smart notification tracking.
 
-adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SETTINGS
+Key Features:
+- Charging Mode Automation: Automatically enables AOD when your Pixel is connected to a charger and disables it upon disconnection.
+- Custom Battery Charging Limits: Set your own charging limit (80%–100%). The app intelligently holds charging when your target limit is reached to preserve long-term battery health.
+- Live Charging Status: View charging wattage, battery temperature, and target completion ETAs on your Always-On Display.
+- Live Notification Mode: Keeps AOD active for ongoing tracking apps like Google Maps Navigation, Uber, and food delivery.
+- Per-App Notifications: Choose specifically which apps trigger AOD when unread notifications arrive.
+- Lock Screen & Lift-to-Wake Previews: Customizable 5s to 60s AOD preview timeouts on locking or picking up your phone.
+- Quiet Hours & DND Respect: Automatically pauses AOD triggers during Do Not Disturb or scheduled sleep hours.
+- Material 3 Expressive UI: Built with Material You dynamic wallpaper colors and fluid touch feedback.
 
-Please note that this app has only been tested on Google Pixel.
-Different manufacturers may have implemented AoD their own way and therefore the app might not work.
+100% Free & Open Source (MIT License). No ads, no analytics, no tracking.

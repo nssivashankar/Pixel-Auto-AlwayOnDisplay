@@ -1,1 +1,1 @@
-Automate your Pixel's Always-On Display intelligently.
+Intelligent Always-On Display automation & battery health management for Google Pixel.

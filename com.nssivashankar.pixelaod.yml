@@ -1,0 +1,23 @@
+Categories:
+  - System
+  - Utilities
+License: MIT
+AuthorName: Shankar
+SourceCode: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay
+IssueTracker: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/issues
+
+AutoUpdateMode: Version v%v
+UpdateCheckMode: Tags ^v[0-9.]+$
+CurrentVersion: 1.4.35
+CurrentVersionCode: 58
+
+RepoType: git
+Repo: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay.git
+
+Builds:
+  - versionName: 1.4.35
+    versionCode: 58
+    commit: v1.4.35
+    subdir: app
+    gradle:
+      - yes

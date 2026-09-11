@@ -1,0 +1,4 @@
+1. Fixed charging mode independence.
+2. Fixed custom charging limit persistence.
+3. Added customizable preview timeout slider (5s to 60s).
+4. Material 3 Expressive UI with Pixel System Settings card grouping.
