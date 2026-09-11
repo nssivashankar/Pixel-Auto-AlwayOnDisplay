@@ -20,8 +20,8 @@ Description: |-
   - Customizable Preview Duration: Set 5s to 60s AOD preview timeouts on lock or pickup
   - Material 3 Expressive UI: Built with Material You dynamic colors and smooth touch feedback
 
-AutoUpdateMode: Version
-UpdateCheckMode: RepoManifest
+AutoUpdateMode: None
+UpdateCheckMode: None
 CurrentVersion: 1.4.35
 CurrentVersionCode: 58
 
@@ -31,7 +31,7 @@ Repo: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay.git
 Builds:
   - versionName: 1.4.35
     versionCode: 58
-    commit: v1.4.35
+    commit: 7a21916613e4f770b62b58fb4b07987638a37e5f
     subdir: app
     gradle:
       - yes
