@@ -5,25 +5,7 @@ AuthorName: Shankar
 SourceCode: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay
 IssueTracker: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/issues
 
-Summary: Intelligent Always-On Display automation & battery health for Google Pixel
-Description: |-
-  Pixel Auto AOD is a high-performance utility designed specifically for Google Pixel devices.
-  It intelligently manages your Always-On Display (AOD) while providing integrated Pixel
-  battery health management and smart notification tracking.
-
-  Features:
-  - Charging Mode Automation: Automatically enables AOD when connected to a charger
-  - Custom Battery Charging Limits: Set custom charging limits (80%–100%) to preserve battery health
-  - Live Charging Status: View charging wattage, battery temperature, and ETAs on AOD
-  - Live Notification Mode: Keeps AOD active for active tracking apps like Google Maps and Uber
-  - Per-App Notifications: Select specific apps that trigger AOD when unread notifications arrive
-  - Customizable Preview Duration: Set 5s to 60s AOD preview timeouts on lock or pickup
-  - Material 3 Expressive UI: Built with Material You dynamic colors and smooth touch feedback
-
-AutoUpdateMode: None
-UpdateCheckMode: None
-CurrentVersion: 1.4.35
-CurrentVersionCode: 58
+AutoName: Pixel Auto AOD
 
 RepoType: git
 Repo: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay.git
@@ -35,3 +17,8 @@ Builds:
     subdir: app
     gradle:
       - yes
+
+AutoUpdateMode: None
+UpdateCheckMode: None
+CurrentVersion: 1.4.35
+CurrentVersionCode: 58
