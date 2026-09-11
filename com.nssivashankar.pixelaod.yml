@@ -20,7 +20,7 @@ Description: |-
   - Customizable Preview Duration: Set 5s to 60s AOD preview timeouts on lock or pickup
   - Material 3 Expressive UI: Built with Material You dynamic colors and smooth touch feedback
 
-AutoUpdateMode: Version
+AutoUpdateMode: Version +v%v
 UpdateCheckMode: Tags
 CurrentVersion: 1.4.35
 CurrentVersionCode: 58
