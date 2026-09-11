@@ -21,8 +21,7 @@ Description: |-
   - Material 3 Expressive UI: Built with Material You dynamic colors and smooth touch feedback
 
 AutoUpdateMode: Version
-UpdateCheckMode: Tags
-UpdateCheckIgnore: latest
+UpdateCheckMode: RepoManifest
 CurrentVersion: 1.4.35
 CurrentVersionCode: 58
 
