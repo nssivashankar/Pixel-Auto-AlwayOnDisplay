@@ -62,21 +62,14 @@
               android:value="Charging and AOD automation service for Pixel devices"/>
 </service>
 
-<receiver
-    android:name=".PowerConnectionReceiver"
-    android:exported="true">
-    <intent-filter>
-        <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
-        <action android:name="android.intent.action.POWER_CONNECTED" />
-        <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
-        <action android:name="android.intent.action.POWER_DISCONNECTED" />
-    </intent-filter>
-</receiver>
 
-<activity android:name=".SettingsActivity" android:exported="true">
+<activity
+    android:name=".SettingsActivity"
+    android:exported="true"
+    android:launchMode="singleTop">
     <intent-filter>
-        <action android:name="android.intent.action.MAIN"/>
-        <category android:name="android.intent.category.LAUNCHER"/>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
     </intent-filter>
 </activity>
     </application>

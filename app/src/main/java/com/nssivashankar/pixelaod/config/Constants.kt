@@ -40,13 +40,23 @@ object Constants {
     )
 
     // --- Battery Level Progress Colors ---
-    fun getBatteryProgressColor(batteryPct: Int): Int {
-        return when {
-            batteryPct < 20 -> android.graphics.Color.parseColor("#E53935") // Red
-            batteryPct < 35 -> android.graphics.Color.parseColor("#FB8C00") // Orange
-            batteryPct < 60 -> android.graphics.Color.parseColor("#FDD835") // Gold
-            batteryPct < 80 -> android.graphics.Color.parseColor("#4CAF50") // Light Green
-            else -> android.graphics.Color.parseColor("#00E676")           // Emerald Green
+    fun getBatteryProgressColor(batteryPct: Int, isDark: Boolean = true): Int {
+        return if (isDark) {
+            when {
+                batteryPct < 20 -> android.graphics.Color.parseColor("#E53935") // Bright Red
+                batteryPct < 35 -> android.graphics.Color.parseColor("#FB8C00") // Bright Orange
+                batteryPct < 60 -> android.graphics.Color.parseColor("#FDD835") // Bright Gold
+                batteryPct < 80 -> android.graphics.Color.parseColor("#4CAF50") // Light Green
+                else -> android.graphics.Color.parseColor("#00E676")           // Emerald Green
+            }
+        } else {
+            when {
+                batteryPct < 20 -> android.graphics.Color.parseColor("#B71C1C") // Deep Crimson Red
+                batteryPct < 35 -> android.graphics.Color.parseColor("#BF360C") // Deep Rust Orange
+                batteryPct < 60 -> android.graphics.Color.parseColor("#E65100") // Deep Amber
+                batteryPct < 80 -> android.graphics.Color.parseColor("#1B5E20") // Deep Forest Green
+                else -> android.graphics.Color.parseColor("#004D40")           // Deep Teal
+            }
         }
     }
 }

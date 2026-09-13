@@ -3,10 +3,13 @@ package com.nssivashankar.pixelaod
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -54,16 +57,6 @@ class SettingsActivity : ComponentActivity() {
             WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED
         )
 
-        // Force lock window to highest display refresh rate (120Hz/144Hz) to eliminate Smooth Display 60Hz drop
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val maxMode = display?.supportedModes?.maxByOrNull { it.refreshRate }
-            if (maxMode != null) {
-                val params = window.attributes
-                params.preferredDisplayModeId = maxMode.modeId
-                window.attributes = params
-            }
-        }
-
         // --- In-App Update Checker ---
         val currentVersion = try {
             packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0.0"
@@ -97,6 +90,17 @@ class SettingsActivity : ComponentActivity() {
         val skipped = prefs.getBoolean("secure_settings_skipped", false)
         if (setupComplete && !hasPermission() && !skipped) {
             handleMissingPermission()
+        }
+
+        if (!NotificationAodServiceState.isConnected) {
+            try {
+                val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                if (enabledListeners?.contains(packageName) == true) {
+                    NotificationListenerService.requestRebind(
+                        ComponentName(this, NotificationAodService::class.java)
+                    )
+                }
+            } catch (_: Exception) {}
         }
     }
 

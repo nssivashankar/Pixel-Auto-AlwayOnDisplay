@@ -21,6 +21,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -113,7 +114,16 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
 
     private fun syncSystemSettings() {
         val sysMode = AodSettings.getChargeOptimizationMode(resolver)
-        currentOptimizationMode = sysMode
+        val prefModeStr = prefs.getString("charge_optimization", null)
+        val prefMode = prefModeStr?.toIntOrNull()
+        if (prefMode != null && !customLimitEnabled && prefMode in 0..2 && sysMode != prefMode) {
+            AodSettings.setChargeOptimizationMode(resolver, prefMode)
+            if (prefMode == 2) AodSettings.setAdaptiveChargingEnabled(resolver, true)
+            else if (prefMode == 0) AodSettings.setAdaptiveChargingEnabled(resolver, false)
+            currentOptimizationMode = prefMode
+        } else {
+            currentOptimizationMode = sysMode
+        }
     }
 
     private val settingsObserver = object : ContentObserver(Handler(Looper.getMainLooper())) {
@@ -251,13 +261,16 @@ class SettingsState(private val context: Context, private val scope: CoroutineSc
     fun setOptimization(mode: Int, custom: Boolean) {
         scope.launch(Dispatchers.IO) {
             customLimitEnabled = custom
-            prefs.edit().putBoolean("custom_limit_enabled", custom).apply()
+            prefs.edit()
+                .putBoolean("custom_limit_enabled", custom)
+                .putString("charge_optimization", if (custom) "3" else mode.toString())
+                .apply()
             
             if (!custom) {
                 AodSettings.setChargeOptimizationMode(resolver, mode)
                 when (mode) {
                     0 -> AodSettings.setAdaptiveChargingEnabled(resolver, false)
-                    1 -> AodSettings.setAdaptiveChargingEnabled(resolver, false)
+                    1 -> { /* Keep adaptive_charging_enabled unchanged so Pixel OS doesn't force-revert 80% limit */ }
                     2 -> AodSettings.setAdaptiveChargingEnabled(resolver, true)
                 }
                 withContext(Dispatchers.Main) {
@@ -683,16 +696,17 @@ fun MainSettingsList(
             }
         }
 
-        // --- Category 1: CHARGING ---
-        item(key = "cat_charging", contentType = "header") { 
-            PreferenceCategory(title = "CHARGING", isFirst = state.hasWriteSecurePermission) 
+        // --- Group 1: CHARGING ---
+        item(key = "space_top") {
+            Spacer(Modifier.height(8.dp))
         }
-        
+
         item(key = "pref_charging", contentType = "preference_switch") {
             PreferenceSwitch(
                 title = "Charging Mode",
                 summary = "AOD while plugged in",
                 icon = Icons.Default.BatteryChargingFull,
+                colorStyle = PixelColors.Charging,
                 checked = state.chargingMode,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.TOP,
@@ -705,6 +719,7 @@ fun MainSettingsList(
                 title = stringResource(R.string.charging_info_title),
                 summary = stringResource(R.string.charging_info_summary),
                 icon = Icons.Default.Info,
+                colorStyle = PixelColors.Charging,
                 checked = state.chargingInfoNotif,
                 enabled = true,
                 position = PreferencePosition.MIDDLE,
@@ -725,6 +740,7 @@ fun MainSettingsList(
                 title = "Charging Optimization",
                 summary = modeSummary,
                 icon = Icons.Default.BatterySaver,
+                colorStyle = PixelColors.Charging,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.BOTTOM,
                 onClick = onShowChargingModeDialog
@@ -783,9 +799,9 @@ fun MainSettingsList(
             }
         }
 
-        // --- Category 2: NOTIFICATION ---
-        item(key = "cat_notif", contentType = "header") { 
-            PreferenceCategory(title = "NOTIFICATION") 
+        // --- Group 2: NOTIFICATION ---
+        item(key = "space_notif") {
+            Spacer(Modifier.height(16.dp))
         }
 
         item(key = "pref_live", contentType = "preference_switch") {
@@ -793,6 +809,7 @@ fun MainSettingsList(
                 title = "Live Notification Mode",
                 summary = "Maps, rides & deliveries",
                 icon = Icons.Default.Map,
+                colorStyle = PixelColors.Notification,
                 checked = state.liveNotifMode,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.TOP,
@@ -807,15 +824,16 @@ fun MainSettingsList(
                 title = "Per-App Notifications",
                 summary = "Selected apps",
                 icon = Icons.Default.Notifications,
+                colorStyle = PixelColors.Notification,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.BOTTOM,
                 onClick = onShowAppListDialog
             )
         }
 
-        // --- Category 3: LOCKSCREEN ---
-        item(key = "cat_display", contentType = "header") { 
-            PreferenceCategory(title = "LOCKSCREEN") 
+        // --- Group 3: LOCKSCREEN ---
+        item(key = "space_lockscreen") {
+            Spacer(Modifier.height(16.dp))
         }
 
         item(key = "pref_screen_off", contentType = "preference_switch") {
@@ -823,6 +841,7 @@ fun MainSettingsList(
                 title = "Lock Screen AOD",
                 summary = "Preview AOD on locking screen",
                 icon = Icons.Default.LockClock,
+                colorStyle = PixelColors.Lockscreen,
                 checked = state.screenOffAod,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.TOP,
@@ -835,6 +854,7 @@ fun MainSettingsList(
                 title = "Lift to Wake AOD",
                 summary = "Preview AOD on pickup",
                 icon = Icons.Default.VerticalAlignTop,
+                colorStyle = PixelColors.Lockscreen,
                 checked = state.liftToWakeAod,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.MIDDLE,
@@ -847,15 +867,16 @@ fun MainSettingsList(
                 title = "Preview Duration",
                 summary = "${state.previewTimeoutSeconds}s duration",
                 icon = Icons.Default.Timer,
+                colorStyle = PixelColors.Lockscreen,
                 enabled = state.masterSwitch && (state.screenOffAod || state.liftToWakeAod),
                 position = PreferencePosition.BOTTOM,
                 onClick = { showPreviewDurationDialog = true }
             )
         }
 
-        // --- Category 4: Quiet Hours ---
-        item(key = "cat_restrict", contentType = "header") { 
-            PreferenceCategory(title = "Quiet Hours") 
+        // --- Group 4: Quiet Hours ---
+        item(key = "space_quiet") {
+            Spacer(Modifier.height(16.dp))
         }
 
         item(key = "pref_dnd", contentType = "preference_switch") {
@@ -863,6 +884,7 @@ fun MainSettingsList(
                 title = "Respect System DND",
                 summary = stringResource(R.string.dnd_mode_summary),
                 icon = Icons.Default.DoNotDisturbOn,
+                colorStyle = PixelColors.QuietHours,
                 checked = state.dndMode,
                 enabled = state.masterSwitch,
                 position = PreferencePosition.TOP,
@@ -875,6 +897,7 @@ fun MainSettingsList(
                 title = "Scheduled Sleep",
                 summary = stringResource(R.string.scheduled_dnd_summary),
                 icon = Icons.Default.Schedule,
+                colorStyle = PixelColors.QuietHours,
                 checked = state.scheduledDnd,
                 enabled = state.masterSwitch,
                 position = if (state.scheduledDnd) PreferencePosition.MIDDLE else PreferencePosition.BOTTOM,
@@ -892,6 +915,7 @@ fun MainSettingsList(
                     title = "Start Time",
                     summary = currentStart,
                     icon = Icons.Default.VerticalAlignTop,
+                    colorStyle = PixelColors.QuietHours,
                     enabled = state.masterSwitch,
                     position = PreferencePosition.MIDDLE,
                     onClick = {
@@ -912,6 +936,7 @@ fun MainSettingsList(
                     title = "End Time",
                     summary = currentEnd,
                     icon = Icons.Default.VerticalAlignBottom,
+                    colorStyle = PixelColors.QuietHours,
                     enabled = state.masterSwitch,
                     position = PreferencePosition.BOTTOM,
                     onClick = {
@@ -973,7 +998,7 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
             Icon(
                 imageVector = Icons.Default.Favorite,
                 contentDescription = "Love",
-                tint = Color.Red,
+                tint = Color(0xFFFF2B4A),
                 modifier = Modifier
                     .size(24.dp)
                     .graphicsLayer {
@@ -988,6 +1013,52 @@ fun MadeWithLoveFooter(haptic: androidx.compose.ui.hapticfeedback.HapticFeedback
             )
         }
     }
+}
+
+data class PreferenceColorStyle(
+    val lightBadge: Color,
+    val lightIcon: Color,
+    val darkBadge: Color,
+    val darkIcon: Color
+) {
+    @Composable
+    fun getBadgeColor(): Color = if (isSystemInDarkTheme()) darkBadge else lightBadge
+
+    @Composable
+    fun getIconColor(): Color = if (isSystemInDarkTheme()) darkIcon else lightIcon
+}
+
+object PixelColors {
+    // CHARGING Section (Pixel Settings Cyan / Power)
+    val Charging = PreferenceColorStyle(
+        lightBadge = Color(0xFFC2E7FF), lightIcon = Color(0xFF001D35),
+        darkBadge = Color(0xFF004A77), darkIcon = Color(0xFFC2E7FF)
+    )
+    // NOTIFICATION Section (Pixel Settings Soft Pink)
+    val Notification = PreferenceColorStyle(
+        lightBadge = Color(0xFFFFD8E4), lightIcon = Color(0xFF31111D),
+        darkBadge = Color(0xFF630B30), darkIcon = Color(0xFFFFD8E4)
+    )
+    // LOCKSCREEN Section (Pixel Settings Peach / Orange)
+    val Lockscreen = PreferenceColorStyle(
+        lightBadge = Color(0xFFFFDCC2), lightIcon = Color(0xFF301400),
+        darkBadge = Color(0xFF622E00), darkIcon = Color(0xFFFFDCC2)
+    )
+    // Quiet Hours Section (Pixel Settings Soft Purple / Lavender)
+    val QuietHours = PreferenceColorStyle(
+        lightBadge = Color(0xFFE8DEF8), lightIcon = Color(0xFF1D192B),
+        darkBadge = Color(0xFF4A4458), darkIcon = Color(0xFFE8DEF8)
+    )
+    // SUPPORT Section (Pixel Settings Mint / Teal)
+    val Support = PreferenceColorStyle(
+        lightBadge = Color(0xFFC4EDD8), lightIcon = Color(0xFF002116),
+        darkBadge = Color(0xFF00513B), darkIcon = Color(0xFFC4EDD8)
+    )
+    // INFORMATION Section (Pixel Settings Amber Gold)
+    val Information = PreferenceColorStyle(
+        lightBadge = Color(0xFFFFE088), lightIcon = Color(0xFF241A00),
+        darkBadge = Color(0xFF574500), darkIcon = Color(0xFFFFE088)
+    )
 }
 
 enum class PreferencePosition {
@@ -1023,6 +1094,7 @@ fun PreferenceItem(
     title: String,
     summary: String? = null,
     icon: ImageVector? = null,
+    colorStyle: PreferenceColorStyle? = null,
     enabled: Boolean = true,
     position: PreferencePosition = PreferencePosition.SINGLE,
     onClick: () -> Unit
@@ -1030,6 +1102,9 @@ fun PreferenceItem(
     val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
     val shape = getPositionShape(position)
+
+    val badgeColor = colorStyle?.getBadgeColor() ?: MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+    val iconColor = colorStyle?.getIconColor() ?: MaterialTheme.colorScheme.onSecondaryContainer
 
     Surface(
         onClick = {
@@ -1054,7 +1129,7 @@ fun PreferenceItem(
                     modifier = Modifier
                         .size(36.dp)
                         .background(
-                            color = if (enabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                            color = if (enabled) badgeColor
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
                             shape = CircleShape
                         ),
@@ -1064,7 +1139,7 @@ fun PreferenceItem(
                         imageVector = icon,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (enabled) iconColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
                 Spacer(modifier = Modifier.width(14.dp))
@@ -1095,6 +1170,7 @@ fun PreferenceSwitch(
     title: String,
     summary: String? = null,
     icon: ImageVector? = null,
+    colorStyle: PreferenceColorStyle? = null,
     checked: Boolean,
     enabled: Boolean = true,
     position: PreferencePosition = PreferencePosition.SINGLE,
@@ -1105,6 +1181,9 @@ fun PreferenceSwitch(
     val haptic = LocalHapticFeedback.current
     val contentAlpha = if (enabled) 1f else 0.38f
     val shape = getPositionShape(position)
+
+    val badgeColor = colorStyle?.getBadgeColor() ?: MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+    val iconColor = colorStyle?.getIconColor() ?: MaterialTheme.colorScheme.onSecondaryContainer
 
     Surface(
         onClick = {
@@ -1133,7 +1212,7 @@ fun PreferenceSwitch(
                     modifier = Modifier
                         .size(36.dp)
                         .background(
-                            color = if (enabled) MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                            color = if (enabled) badgeColor
                                     else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.38f),
                             shape = CircleShape
                         ),
@@ -1143,7 +1222,7 @@ fun PreferenceSwitch(
                         imageVector = icon,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp),
-                        tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                        tint = if (enabled) iconColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     )
                 }
                 Spacer(modifier = Modifier.width(14.dp))

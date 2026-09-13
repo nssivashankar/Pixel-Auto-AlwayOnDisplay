@@ -1,6 +1,10 @@
 package com.nssivashankar.pixelaod
 
 import android.app.Application
+import android.content.ComponentName
+import android.os.Build
+import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
@@ -22,6 +26,24 @@ class AodApplication : Application() {
         super.onCreate()
         DynamicColors.applyToActivitiesIfAvailable(this)
         scheduleUpdateCheck()
+        requestServiceRebind()
+    }
+
+    private fun requestServiceRebind() {
+        if (!NotificationAodServiceState.isConnected) {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val enabledListeners = Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+                    if (enabledListeners?.contains(packageName) == true) {
+                        NotificationListenerService.requestRebind(
+                            ComponentName(this, NotificationAodService::class.java)
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun scheduleUpdateCheck() {

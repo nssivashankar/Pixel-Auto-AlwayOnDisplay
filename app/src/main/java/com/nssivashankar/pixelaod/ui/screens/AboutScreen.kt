@@ -18,7 +18,10 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Article
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -27,16 +30,20 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.filled.VerticalAlignTop
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -47,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nssivashankar.pixelaod.R
 import com.nssivashankar.pixelaod.ui.components.M3OfficialExpressiveLoader
+import com.nssivashankar.pixelaod.ui.theme.AppHaptics
 import com.nssivashankar.pixelaod.utils.UpdateChecker
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -81,20 +89,64 @@ fun AboutScreen(
         ) {
             item(key = "about_header", contentType = "header") {
                 Spacer(Modifier.height(32.dp))
-                // App Logo
+
+                // 1. Organic Breathing Pulse Transition
+                val infiniteTransition = rememberInfiniteTransition(label = "aboutLogoPulse")
+                val breathScale by infiniteTransition.animateFloat(
+                    initialValue = 1.0f,
+                    targetValue = 1.06f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "aboutBreathScale"
+                )
+
+                // 2. Interactive Tap Scale & Spring Bounce
+                var isTapped by remember { mutableStateOf(false) }
+                val tapScale by animateFloatAsState(
+                    targetValue = if (isTapped) 1.18f else 1.0f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessLow
+                    ),
+                    finishedListener = { isTapped = false },
+                    label = "aboutTapScale"
+                )
+
+                // App Logo Badge Container
                 Box(
                     modifier = Modifier
-                        .size(96.dp)
+                        .graphicsLayer {
+                            val currentScale = breathScale * tapScale
+                            scaleX = currentScale
+                            scaleY = currentScale
+                        }
+                        .size(118.dp)
                         .clip(CircleShape)
-                        .background(Color.Black),
+                        .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                        .clickable {
+                            isTapped = true
+                            AppHaptics.performClick(haptic)
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    // Outer Glow Ring
+                    Box(
+                        modifier = Modifier
+                            .size(118.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                    )
+
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_launcher_monochrome),
                         contentDescription = "Pixel Auto AOD Logo",
-                        modifier = Modifier.requiredSize(140.dp)
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.requiredSize(165.dp)
                     )
                 }
+
                 Spacer(Modifier.height(20.dp))
                 Text(
                     text = "Pixel Auto AOD",
@@ -119,8 +171,6 @@ fun AboutScreen(
                 val enabledListeners = AndroidSettings.Secure.getString(context.contentResolver, "enabled_notification_listeners")
                 val hasNotificationAccess = enabledListeners?.contains(context.packageName) == true
 
-                PreferenceCategory(title = "TROUBLESHOOTING")
-
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -141,16 +191,29 @@ fun AboutScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Build,
-                                contentDescription = null,
-                                tint = if (hasWriteSecurePermission && hasNotificationAccess)
-                                    MaterialTheme.colorScheme.primary
-                                else
-                                    MaterialTheme.colorScheme.error,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(Modifier.width(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(
+                                        color = if (hasWriteSecurePermission && hasNotificationAccess)
+                                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.5f)
+                                        else
+                                            MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
+                                        shape = CircleShape
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Build,
+                                    contentDescription = null,
+                                    tint = if (hasWriteSecurePermission && hasNotificationAccess)
+                                        MaterialTheme.colorScheme.primary
+                                    else
+                                        MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                            Spacer(Modifier.width(14.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = "App not working as expected?",
@@ -171,108 +234,114 @@ fun AboutScreen(
                             )
                         }
 
-                        if (isExpanded) {
-                            Spacer(Modifier.height(16.dp))
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            Spacer(Modifier.height(8.dp))
+                        AnimatedVisibility(
+                            visible = isExpanded,
+                            enter = expandVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeIn(),
+                            exit = shrinkVertically(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)) + fadeOut()
+                        ) {
+                            Column {
+                                Spacer(Modifier.height(16.dp))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                                Spacer(Modifier.height(8.dp))
 
-                            // 1. Write Secure Settings
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        onPermissionRequest()
+                                // 1. Write Secure Settings
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            onPermissionRequest()
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Write Secure Settings",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = if (hasWriteSecurePermission) "Permission Granted" else "Permission Missing - Tap to grant via Shizuku/ADB",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (hasWriteSecurePermission) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                                        )
                                     }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Write Secure Settings",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = if (hasWriteSecurePermission) "Permission Granted" else "Permission Missing - Tap to grant via Shizuku/ADB",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (hasWriteSecurePermission) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                                    Icon(
+                                        imageVector = if (hasWriteSecurePermission) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (hasWriteSecurePermission) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Icon(
-                                    imageVector = if (hasWriteSecurePermission) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = if (hasWriteSecurePermission) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
 
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // 2. Notification Access
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                // 2. Notification Access
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            context.startActivity(Intent(AndroidSettings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Notification Access",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = if (hasNotificationAccess) "Permission Granted" else "Permission Missing - Tap to grant in system settings",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (hasNotificationAccess) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                                        )
                                     }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Notification Access",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = if (hasNotificationAccess) "Permission Granted" else "Permission Missing - Tap to grant in system settings",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (hasNotificationAccess) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error
+                                    Icon(
+                                        imageVector = if (hasNotificationAccess) Icons.Default.CheckCircle else Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = if (hasNotificationAccess) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Icon(
-                                    imageVector = if (hasNotificationAccess) Icons.Default.CheckCircle else Icons.Default.Warning,
-                                    contentDescription = null,
-                                    tint = if (hasNotificationAccess) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
 
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-                            // 3. Reset Onboarding
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
-                                            .edit().putBoolean("is_setup_complete", false).apply()
-                                        (context as? Activity)?.recreate()
+                                // 3. Reset Onboarding
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            context.getSharedPreferences("aod_prefs", Context.MODE_PRIVATE)
+                                                .edit().putBoolean("is_setup_complete", false).apply()
+                                            (context as? Activity)?.recreate()
+                                        }
+                                        .padding(vertical = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Reset Onboarding",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = "Re-run first-time setup guide",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
                                     }
-                                    .padding(vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Reset Onboarding",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = "Re-run first-time setup guide",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    Icon(
+                                        imageVector = Icons.Default.RestartAlt,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
-                                Icon(
-                                    imageVector = Icons.Default.RestartAlt,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(20.dp)
-                                )
                             }
                         }
                     }
@@ -280,12 +349,13 @@ fun AboutScreen(
             }
 
             item(key = "about_feedback", contentType = "preference_item") {
-                PreferenceCategory(title = "SUPPORT & COMMUNITY")
+                Spacer(Modifier.height(8.dp))
 
                 PreferenceItem(
                     title = "Send Bug Report / Feedback",
                     summary = "Email developer with device info & issue template",
                     icon = Icons.Default.Email,
+                    colorStyle = PixelColors.Support,
                     position = PreferencePosition.TOP,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -337,6 +407,7 @@ fun AboutScreen(
                     title = "GitHub Issues & Requests",
                     summary = "Report issues or suggest features directly on GitHub",
                     icon = Icons.Default.Forum,
+                    colorStyle = PixelColors.Support,
                     position = PreferencePosition.BOTTOM,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -348,13 +419,51 @@ fun AboutScreen(
 
             item(key = "about_info", contentType = "preference_item") {
                 var isUpToDate by remember { mutableStateOf(false) }
+                var isFetchingNotes by remember { mutableStateOf(false) }
+                var releaseInfo by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
+                var showNotesDialog by remember { mutableStateOf(false) }
 
-                PreferenceCategory(title = "INFORMATION")
+                if (showNotesDialog && releaseInfo != null) {
+                    val info = releaseInfo!!
+                    AlertDialog(
+                        onDismissRequest = { showNotesDialog = false },
+                        title = { Text("What's New (${info.version})") },
+                        text = {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(max = 360.dp)
+                                    .verticalScroll(rememberScrollState())
+                            ) {
+                                Text(
+                                    text = info.changelog.ifBlank { "No detailed release notes provided." },
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = { showNotesDialog = false }) {
+                                Text("Close")
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))
+                                context.startActivity(intent)
+                            }) {
+                                Text("View on GitHub")
+                            }
+                        }
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 PreferenceItem(
                     title = "View on GitHub",
                     summary = "Check source code and releases",
                     icon = Icons.Default.Code,
+                    colorStyle = PixelColors.Information,
                     position = PreferencePosition.TOP,
                     onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -366,8 +475,9 @@ fun AboutScreen(
                 PreferenceItem(
                     title = "Check for Updates",
                     summary = if (isCheckingUpdates) "Checking backend..." else "Manually verify latest version",
-                    icon = Icons.Default.Update,
-                    position = PreferencePosition.BOTTOM,
+                    icon = Icons.Default.SystemUpdate,
+                    colorStyle = PixelColors.Information,
+                    position = PreferencePosition.MIDDLE,
                     onClick = {
                         if (!isCheckingUpdates) {
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -395,8 +505,31 @@ fun AboutScreen(
                         }
                     }
                 )
-                
-                // Official M3 Expressive Morphing Loader for Updates
+
+                PreferenceItem(
+                    title = "Latest Release Notes",
+                    summary = if (isFetchingNotes) "Fetching changelog..." else "View full changelog from GitHub",
+                    icon = Icons.AutoMirrored.Filled.Article,
+                    colorStyle = PixelColors.Information,
+                    position = PreferencePosition.BOTTOM,
+                    onClick = {
+                        if (!isFetchingNotes) {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            scope.launch {
+                                isFetchingNotes = true
+                                val result = UpdateChecker.fetchLatestReleaseInfo()
+                                isFetchingNotes = false
+                                if (result != null) {
+                                    releaseInfo = result
+                                    showNotesDialog = true
+                                } else {
+                                    Toast.makeText(context, "Could not fetch release notes", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                )
+
                 if (isCheckingUpdates) {
                     Box(modifier = Modifier.fillMaxWidth().padding(vertical = 20.dp), contentAlignment = Alignment.Center) {
                         M3OfficialExpressiveLoader(
@@ -436,127 +569,6 @@ fun AboutScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-            }
-
-            item(key = "about_whats_new", contentType = "card") {
-                var isFetchingNotes by remember { mutableStateOf(false) }
-                var releaseInfo by remember { mutableStateOf<UpdateChecker.ReleaseInfo?>(null) }
-                var showDialog by remember { mutableStateOf(false) }
-
-                if (showDialog && releaseInfo != null) {
-                    val info = releaseInfo!!
-                    AlertDialog(
-                        onDismissRequest = { showDialog = false },
-                        title = { Text("What's New (${info.version})") },
-                        text = {
-                            Column(modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(
-                                rememberScrollState()
-                            )) {
-                                Text(
-                                    text = info.changelog.ifBlank { "No detailed release notes provided." },
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                            }
-                        },
-                        confirmButton = {
-                            TextButton(onClick = { showDialog = false }) {
-                                Text("Close")
-                            }
-                        },
-                        dismissButton = {
-                            TextButton(onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(info.downloadUrl))
-                                context.startActivity(intent)
-                            }) {
-                                Text("View on GitHub")
-                            }
-                        }
-                    )
-                }
-
-                PreferenceCategory(title = "What's New!")
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .clip(MaterialTheme.shapes.large)
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            if (!isFetchingNotes) {
-                                scope.launch {
-                                    isFetchingNotes = true
-                                    val result = UpdateChecker.fetchLatestReleaseInfo()
-                                    isFetchingNotes = false
-                                    if (result != null) {
-                                        releaseInfo = result
-                                        showDialog = true
-                                    } else {
-                                        Toast.makeText(context, "Could not fetch release notes", Toast.LENGTH_SHORT).show()
-                                    }
-                                }
-                            }
-                        },
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f),
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier.padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.VerticalAlignTop,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(Modifier.width(16.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "Latest Release Notes",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                if (isFetchingNotes) "Fetching from GitHub..." else "Tap to view full changelog from GitHub",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                }
-            }
-
-            item(key = "about_credits", contentType = "card") {
-                PreferenceCategory(title = "Credits")
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    shape = MaterialTheme.shapes.large,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                        contentColor = MaterialTheme.colorScheme.onSurface
-                    )
-                ) {
-                    Column(Modifier.padding(20.dp)) {
-                        Text(
-                            "Maintaining & Modernizing AOD automation for the Pixel community.",
-                            style = MaterialTheme.typography.bodyLarge,
-                            lineHeight = 24.sp
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            "Developed with love for Pixel users.",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
-                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

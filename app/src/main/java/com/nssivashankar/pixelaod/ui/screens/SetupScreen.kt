@@ -10,12 +10,15 @@ import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -23,15 +26,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nssivashankar.pixelaod.R
+import com.nssivashankar.pixelaod.ui.theme.AppHaptics
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -98,7 +108,7 @@ fun SetupScreen(
             HorizontalPager(
                 state = pagerState,
                 modifier = Modifier.weight(1f),
-                userScrollEnabled = false
+                userScrollEnabled = true
             ) { page ->
                 when (page) {
                     0 -> WelcomePage()
@@ -157,22 +167,36 @@ fun SetupScreen(
                     }
                 }
 
-                // Next Button
-                if (pagerState.currentPage < 5) {
-                    val canGoNext = when (pagerState.currentPage) {
-                        1 -> hasSecureSettings || prefs.getBoolean("secure_settings_skipped", false)
-                        2 -> hasNotificationAccess
-                        3 -> hasPostNotifications
-                        else -> true
+                // Navigation Buttons (Back & Next)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (pagerState.currentPage > 0) {
+                        OutlinedButton(
+                            onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } },
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
+                        }
                     }
 
-                    Button(
-                        onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
-                        enabled = canGoNext,
-                        shape = MaterialTheme.shapes.medium
-                    ) {
-                        Text("Next")
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.padding(start = 8.dp))
+                    if (pagerState.currentPage < 5) {
+                        val canGoNext = when (pagerState.currentPage) {
+                            1 -> hasSecureSettings || prefs.getBoolean("secure_settings_skipped", false)
+                            2 -> hasNotificationAccess
+                            3 -> hasPostNotifications
+                            else -> true
+                        }
+
+                        Button(
+                            onClick = { scope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } },
+                            enabled = canGoNext,
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Text("Next")
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.padding(start = 8.dp))
+                        }
                     }
                 }
             }
@@ -180,11 +204,109 @@ fun SetupScreen(
     }
 }
 
+private enum class SetupAnimationType {
+    PULSE_SHIELD,
+    SWAY_BELL,
+    FLOAT_MESSAGE,
+    ENERGY_BATTERY,
+    CELEBRATE_CHECK
+}
+
+@Composable
+private fun AnimatedIconContainer(
+    icon: ImageVector,
+    animationType: SetupAnimationType,
+    isGranted: Boolean
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pageAnimation")
+
+    val (scale, rotation, offsetY) = when (animationType) {
+        SetupAnimationType.PULSE_SHIELD -> {
+            val s by infiniteTransition.animateFloat(
+                initialValue = 1.0f, targetValue = 1.08f,
+                animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "shieldScale"
+            )
+            val r by infiniteTransition.animateFloat(
+                initialValue = -4f, targetValue = 4f,
+                animationSpec = infiniteRepeatable(tween(2200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "shieldRotate"
+            )
+            Triple(s, r, 0f)
+        }
+        SetupAnimationType.SWAY_BELL -> {
+            val r by infiniteTransition.animateFloat(
+                initialValue = -12f, targetValue = 12f,
+                animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "bellSway"
+            )
+            Triple(1.0f, r, 0f)
+        }
+        SetupAnimationType.FLOAT_MESSAGE -> {
+            val y by infiniteTransition.animateFloat(
+                initialValue = -6f, targetValue = 6f,
+                animationSpec = infiniteRepeatable(tween(1500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "msgFloat"
+            )
+            Triple(1.0f, 0f, y)
+        }
+        SetupAnimationType.ENERGY_BATTERY -> {
+            val s by infiniteTransition.animateFloat(
+                initialValue = 1.0f, targetValue = 1.10f,
+                animationSpec = infiniteRepeatable(tween(1300, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "batteryPulse"
+            )
+            Triple(s, 0f, 0f)
+        }
+        SetupAnimationType.CELEBRATE_CHECK -> {
+            val s by infiniteTransition.animateFloat(
+                initialValue = 1.0f, targetValue = 1.15f,
+                animationSpec = infiniteRepeatable(tween(1600, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+                label = "celebrateScale"
+            )
+            Triple(s, 0f, 0f)
+        }
+    }
+
+    val grantedScale by animateFloatAsState(
+        targetValue = if (isGranted) 1.12f else 1.0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
+        label = "grantedScale"
+    )
+
+    Box(
+        modifier = Modifier
+            .graphicsLayer {
+                val finalScale = scale * grantedScale
+                scaleX = finalScale
+                scaleY = finalScale
+                rotationZ = rotation
+                translationY = offsetY
+            }
+            .size(118.dp)
+            .clip(CircleShape)
+            .background(
+                if (isGranted) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.75f)
+                else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(60.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
 @Composable
 private fun SetupPageTemplate(
     icon: ImageVector,
+    animationType: SetupAnimationType,
     title: String,
     description: String,
+    isGranted: Boolean = false,
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
     Column(
@@ -194,20 +316,11 @@ private fun SetupPageTemplate(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
-        }
+        AnimatedIconContainer(
+            icon = icon,
+            animationType = animationType,
+            isGranted = isGranted
+        )
         Spacer(Modifier.height(32.dp))
         Text(
             text = title,
@@ -230,11 +343,115 @@ private fun SetupPageTemplate(
 
 @Composable
 private fun WelcomePage() {
-    SetupPageTemplate(
-        icon = Icons.Default.AutoAwesome,
-        title = "Welcome to Pixel Auto AOD",
-        description = "Let's get your Pixel set up for intelligent Always-On Display automation and battery health management."
+    val haptic = LocalHapticFeedback.current
+
+    // Trigger initial Pixel Welcome Haptic Sequence on entrance
+    LaunchedEffect(Unit) {
+        delay(300)
+        AppHaptics.performTabSelect(haptic)
+        delay(180)
+        AppHaptics.performClick(haptic)
+    }
+
+    // 1. Organic Breathing Pulse Transition
+    val infiniteTransition = rememberInfiniteTransition(label = "welcomePulse")
+    val breathScale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathScale"
     )
+
+    // 2. Interactive Tap Scale & Spring Bounce
+    var isTapped by remember { mutableStateOf(false) }
+    val tapScale by animateFloatAsState(
+        targetValue = if (isTapped) 1.18f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        finishedListener = { isTapped = false },
+        label = "tapScale"
+    )
+
+    // 3. Staggered Entrance Animations
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Pixel Organic Logo Badge Container
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    val currentScale = breathScale * tapScale
+                    scaleX = currentScale
+                    scaleY = currentScale
+                }
+                .size(118.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f))
+                .clickable {
+                    isTapped = true
+                    AppHaptics.performClick(haptic)
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            // Subtle Outer Glow Ring
+            Box(
+                modifier = Modifier
+                    .size(118.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+            )
+
+            Icon(
+                painter = painterResource(id = R.drawable.ic_launcher_monochrome),
+                contentDescription = "Pixel Auto AOD Logo",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.requiredSize(165.dp)
+            )
+        }
+
+        Spacer(Modifier.height(32.dp))
+
+        // Headline Text with Slide-Up & Fade-In
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = fadeIn(tween(600, delayMillis = 150)) + slideInVertically(
+                initialOffsetY = { 40 },
+                animationSpec = spring(stiffness = Spring.StiffnessLow)
+            )
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Pixel Auto AOD",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    text = "Intelligent AOD automation & battery health for your Pixel.",
+                    style = MaterialTheme.typography.bodyLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+    }
 }
 
 @Composable
@@ -246,8 +463,10 @@ private fun SecureSettingsPage(
 ) {
     SetupPageTemplate(
         icon = Icons.Default.Security,
+        animationType = SetupAnimationType.PULSE_SHIELD,
         title = "Secure Settings",
-        description = "Required for AOD Automation & Charge Control.\n\nIf you only need Live Charging Details, you can skip this step."
+        description = "Required for AOD automation & charging limits.",
+        isGranted = isGranted
     ) {
         if (isGranted) {
             PermissionGrantedChip()
@@ -293,8 +512,10 @@ private fun NotificationAccessPage(
 ) {
     SetupPageTemplate(
         icon = Icons.Default.NotificationsActive,
+        animationType = SetupAnimationType.SWAY_BELL,
         title = "Smart Tracking",
-        description = "This allows the app to detect ongoing events from other apps (like Navigation or Uber) to intelligently keep your display awake during active tasks."
+        description = "Keeps AOD active for Maps, Uber & live tasks.",
+        isGranted = isGranted
     ) {
         if (isGranted) {
             PermissionGrantedChip()
@@ -317,8 +538,10 @@ private fun PostNotificationsPage(
 ) {
     SetupPageTemplate(
         icon = Icons.Default.Notifications,
+        animationType = SetupAnimationType.FLOAT_MESSAGE,
         title = "Battery Alerts",
-        description = "To receive important health alerts, like when your battery reaches its custom limit or is fully charged, please allow the app to post notifications."
+        description = "Notifies when custom charging limit or 100% is reached.",
+        isGranted = isGranted
     ) {
         if (isGranted) {
             PermissionGrantedChip()
@@ -341,8 +564,10 @@ private fun BatteryOptimizationPage(
 ) {
     SetupPageTemplate(
         icon = Icons.Default.BatteryChargingFull,
+        animationType = SetupAnimationType.ENERGY_BATTERY,
         title = "Reliable Background",
-        description = "To ensure automation works every time, the system must not put the service to sleep. Please allow 'Unrestricted' battery usage."
+        description = "Allows background automation to run reliably.",
+        isGranted = isGranted
     ) {
         if (isGranted) {
             PermissionGrantedChip()
@@ -362,8 +587,10 @@ private fun BatteryOptimizationPage(
 private fun FinalPage(onStart: () -> Unit) {
     SetupPageTemplate(
         icon = Icons.Default.CheckCircle,
+        animationType = SetupAnimationType.CELEBRATE_CHECK,
         title = "All Set!",
-        description = "You're ready to enjoy a more intelligent Always-On Display. You can customize all triggers in the dashboard."
+        description = "Your Pixel is ready. Customize options in dashboard.",
+        isGranted = true
     ) {
         Button(
             onClick = onStart,
