@@ -14,9 +14,8 @@ Builds:
   - versionName: 1.4.40
     versionCode: 60
     commit: v1.4.40
-    java: 21
 
-AutoUpdateMode: Version %v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 1.4.40
 CurrentVersionCode: 60
