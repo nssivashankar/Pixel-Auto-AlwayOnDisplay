@@ -4,14 +4,16 @@
 
 **Smart Always-On Display & Battery Health Automation for Google Pixel.**
 
-[![Latest Release](https://img.shields.io/github/v/release/nssivashankar/Pixel-Auto-AlwayOnDisplay?style=flat-square&color=34a853)](https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases)
-[![Platform](https://img.shields.io/badge/Platform-Android%2013%20--%2016-4285f4?style=flat-square&logo=android)](https://developer.android.com)
-[![Device](https://img.shields.io/badge/Device-Google%20Pixel%20Exclusive-ea4335?style=flat-square&logo=googlepixel)](https://store.google.com)
-[![License](https://img.shields.io/github/license/nssivashankar/Pixel-Auto-AlwayOnDisplay?style=flat-square&color=fbbc05)](LICENSE)
+<p align="center">
+  <a href="https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/releases"><img src="https://img.shields.io/github/v/release/nssivashankar/Pixel-Auto-AlwayOnDisplay?style=flat-square&color=34a853" alt="Latest Release"></a>
+  <a href="https://developer.android.com"><img src="https://img.shields.io/badge/Platform-Android%2013%20--%2016-4285f4?style=flat-square&logo=android" alt="Platform"></a>
+  <a href="https://store.google.com"><img src="https://img.shields.io/badge/Device-Google%20Pixel%20Exclusive-ea4335?style=flat-square&logo=googlepixel" alt="Device"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/nssivashankar/Pixel-Auto-AlwayOnDisplay?style=flat-square&color=fbbc05" alt="License"></a>
+</p>
 
 <br/>
 
-<video src="https://github.com/user-attachments/assets/8eb3a271-120a-4d18-9030-ed0ce7ee6406" width="320" muted autoplay loop></video>
+<video src="https://github.com/user-attachments/assets/8eb3a271-120a-4d18-9030-ed0ce7ee6406" style="max-width: 100%; width: 280px;" muted autoplay loop></video>
 
 </div>
 
@@ -36,15 +38,12 @@ Pixel Auto AOD seamlessly automates your Pixel's Always-On Display (AOD). It tur
 
 ### 📸 Showcase
 
-<div align="center">
-  <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" width="22%" alt="Health Controls" />
-  &nbsp;
-  <img src="https://github.com/user-attachments/assets/1463e0dc-89a0-450f-88b3-00b0c79e4f91" width="22%" alt="Custom Limits" />
-  &nbsp;
-  <img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" width="22%" alt="AOD Info" />
-  &nbsp;
-  <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" width="22%" alt="Live Tracking" />
-</div>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/01842e2f-60e8-44cb-a8b0-260719ac7974" style="max-width: 48%; width: 190px; margin: 4px;" alt="Health Controls" />
+  <img src="https://github.com/user-attachments/assets/1463e0dc-89a0-450f-88b3-00b0c79e4f91" style="max-width: 48%; width: 190px; margin: 4px;" alt="Custom Limits" />
+  <img src="https://github.com/user-attachments/assets/9d673555-feae-4293-92f2-051842babe1d" style="max-width: 48%; width: 190px; margin: 4px;" alt="AOD Info" />
+  <img src="https://github.com/user-attachments/assets/b2435a10-c60e-491b-80ac-722eeaea6706" style="max-width: 48%; width: 190px; margin: 4px;" alt="Live Tracking" />
+</p>
 
 ---
 
