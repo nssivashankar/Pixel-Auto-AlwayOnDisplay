@@ -8,8 +8,6 @@ plugins {
 
 android {
     namespace 'com.nssivashankar.pixelaod'
-    // compileSdk must be 37+ because newer androidx dependencies (activity 1.13.0, core 1.18.0)
-    // require Android 16/15QPR APIs to compile.
     compileSdk = 37
 
     def versionPropsFile = file('../version.properties')

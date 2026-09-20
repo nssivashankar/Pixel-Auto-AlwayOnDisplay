@@ -17,6 +17,7 @@ Builds:
     subdir: app
     gradle:
       - yes
+    target: 36
 
 AutoUpdateMode: None
 UpdateCheckMode: None
