@@ -14,6 +14,9 @@ Builds:
   - versionName: 1.4.40
     versionCode: 60
     commit: v1.4.40
+    subdir: app
+    gradle:
+      - yes
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags
