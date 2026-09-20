@@ -64,6 +64,6 @@ adb shell pm grant com.nssivashankar.pixelaod android.permission.WRITE_SECURE_SE
 
 ### 📜 Credits & License
 
-* **Original Author**: [Alberto Pedron](https://github.com/albertopedron)
-* **Maintainer**: [Shankar](https://github.com/nssivashankar)
+* **Lead Developer & Creator**: **[Shankar (nssivashankar)](https://github.com/nssivashankar)** — *App architecture, Material 3 Expressive UI, custom charging limits, live activity tracking, and ongoing development.*
+* **Original Code Logic**: **[Alberto Pedron](https://github.com/albertopedron)** — *Early base code logic.*
 * **License**: [MIT License](LICENSE)
