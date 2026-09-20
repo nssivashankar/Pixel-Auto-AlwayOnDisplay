@@ -1,7 +1,7 @@
 Categories:
   - System
 License: MIT
-AuthorName: Shankar
+AuthorName: Naga Sai Siva Shankar
 SourceCode: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay
 IssueTracker: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay/issues
 
@@ -11,14 +11,12 @@ RepoType: git
 Repo: https://github.com/nssivashankar/Pixel-Auto-AlwayOnDisplay.git
 
 Builds:
-  - versionName: 1.4.35
-    versionCode: 58
-    commit: 7a21916613e4f770b62b58fb4b07987638a37e5f
-    subdir: app
-    gradle:
-      - yes
+  - versionName: 1.4.40
+    versionCode: 60
+    commit: v1.4.40
+    java: 21
 
-AutoUpdateMode: None
-UpdateCheckMode: None
-CurrentVersion: 1.4.35
-CurrentVersionCode: 58
+AutoUpdateMode: Version %v
+UpdateCheckMode: Tags
+CurrentVersion: 1.4.40
+CurrentVersionCode: 60
